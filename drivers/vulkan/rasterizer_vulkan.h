@@ -37,7 +37,10 @@ class RasterizerVK : public Rasterizer {
 		"VK_LAYER_LUNARG_standard_validation"
 	};
 
-	std::vector<const char *> vk_instance_extensions = {};
+	std::vector<const char *> vk_instance_extensions = {
+		VK_EXT_DEBUG_REPORT_EXTENSION_NAME
+		// THIS IS NOT PLATFORM-INDEPENDENT == I'll have to create something like the gl_context class for the vulkan instance
+	};
 
 	void SetupDebugCallback();
 
