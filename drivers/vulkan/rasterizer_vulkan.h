@@ -1,15 +1,11 @@
-
-#ifndef RASTERIZERVK_H
-#define RASTERIZERVK_H
-
-#include <vector>
-
-#include "vulkan/vulkan.hpp"
+#pragma once
 
 #include "rasterizer_canvas_vulkan.h"
 #include "rasterizer_scene_vulkan.h"
 #include "rasterizer_storage_vulkan.h"
 #include "servers/visual/rasterizer.h"
+#include "vulkan/vulkan.hpp"
+#include <vector>
 
 class RasterizerVK : public Rasterizer {
 
@@ -21,28 +17,6 @@ class RasterizerVK : public Rasterizer {
 
 	uint64_t prev_ticks;
 	double time_total;
-
-	/* VULKAN STUFF */
-
-#ifdef NDEBUG
-	const bool enable_validation_layers = false;
-#else
-	const bool enable_validation_layers = true;
-#endif
-
-	vk::Instance vk_instance;
-	vk::DebugReportCallbackEXT vk_debug_callback;
-
-	const std::vector<const char *> vk_instance_layers = {
-		"VK_LAYER_LUNARG_standard_validation"
-	};
-
-	std::vector<const char *> vk_instance_extensions = {
-		VK_EXT_DEBUG_REPORT_EXTENSION_NAME
-		// THIS IS NOT PLATFORM-INDEPENDENT == I'll have to create something like the gl_context class for the vulkan instance
-	};
-
-	void SetupDebugCallback();
 
 public:
 	virtual RasterizerStorage *get_storage();
@@ -72,5 +46,3 @@ public:
 	RasterizerVK();
 	~RasterizerVK();
 };
-
-#endif //RASTERIZERVK_H
