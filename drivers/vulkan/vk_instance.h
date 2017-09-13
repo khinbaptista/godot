@@ -20,14 +20,15 @@ protected:
 	const char *engine_name = "Godot Engine";
 	const uint32_t engine_version = VK_MAKE_VERSION(3, 0, 0);
 
-#ifdef NDEBUG
-	const bool enable_validation_layers = false;
-#else
+#ifdef DEBUG_ENABLED
 	const bool enable_validation_layers = true;
+#else
+	const bool enable_validation_layers = false;
 #endif
 
 	vk::Instance instance;
 	vk::DebugReportCallbackEXT debug_callback;
+	vk::Surface surface;
 
 	const std::vector<const char *> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -40,6 +41,7 @@ protected:
 public:
 	static VkInstance *get_singleton();
 	vk::Instance &vk(); // get vulkan instance object
+	vk::Surface &get_surface();
 
 	virtual Error initialize() = 0;
 

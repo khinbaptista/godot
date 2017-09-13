@@ -17,6 +17,10 @@ vk::Instance &VkInstance::vk() {
 	return instance;
 }
 
+vk::Surface &VkInstance::get_surface() {
+	return surface;
+}
+
 bool VkInstance::check_validation_layer_support() {
 	vector<vk::LayerProperties> available_layers;
 	available_layers = vk::enumerateInstanceLayerProperties();
@@ -53,9 +57,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL _vk_debug_print(
 	ERR_PRINTS(output);
 }
 
-void VkInstance::setup_debug_callback() {
-	// called from initialize()
-
+void VkInstance::setup_debug_callback() { // called from initialize()
 	if (!enable_validation_layers) return;
 
 	vk::DebugReportCallbackCreateInfoEXT debug_info = {};
