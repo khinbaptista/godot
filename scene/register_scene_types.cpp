@@ -66,7 +66,6 @@
 #include "scene/audio/audio_player.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/button.h"
-#include "scene/gui/button_group.h"
 #include "scene/gui/center_container.h"
 #include "scene/gui/check_box.h"
 #include "scene/gui/check_button.h"
@@ -431,6 +430,7 @@ void register_scene_types() {
 	ClassDB::register_class<StaticBody2D>();
 	ClassDB::register_class<RigidBody2D>();
 	ClassDB::register_class<KinematicBody2D>();
+	ClassDB::register_class<KinematicCollision2D>();
 	ClassDB::register_class<Area2D>();
 	ClassDB::register_class<CollisionShape2D>();
 	ClassDB::register_class<CollisionPolygon2D>();

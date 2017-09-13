@@ -491,9 +491,8 @@ void VisualScriptEditor::_update_graph(int p_only_id) {
 			gnode->set_overlay(GraphNode::OVERLAY_BREAKPOINT);
 		}
 
-		if (EditorSettings::get_singleton()->has("editors/visual_script/color_" + node->get_category())) {
-			Color c = EditorSettings::get_singleton()->get("editors/visual_script/color_" + node->get_category());
-			gnode->set_self_modulate(c);
+		if (node_styles.has(node->get_category())) {
+			gnode->add_style_override("frame", node_styles[node->get_category()]);
 		}
 
 		gnode->set_meta("__vnode", node);
@@ -506,7 +505,7 @@ void VisualScriptEditor::_update_graph(int p_only_id) {
 			gnode->set_show_close_button(true);
 		}
 
-		if (Object::cast_to<VisualScriptExpression>(*node)) {
+		if (Object::cast_to<VisualScriptExpression>(node.ptr())) {
 
 			LineEdit *line_edit = memnew(LineEdit);
 			line_edit->set_text(node->get_text());
@@ -520,7 +519,7 @@ void VisualScriptEditor::_update_graph(int p_only_id) {
 			gnode->add_child(text);
 		}
 
-		if (Object::cast_to<VisualScriptExpression>(*node)) {
+		if (Object::cast_to<VisualScriptComment>(node.ptr())) {
 			Ref<VisualScriptComment> vsc = node;
 			gnode->set_comment(true);
 			gnode->set_resizable(true);
@@ -926,48 +925,6 @@ void VisualScriptEditor::_member_edited() {
 	}
 }
 
-void VisualScriptEditor::_override_pressed(int p_id) {
-
-	//override a virtual function or method from base type
-
-	ERR_FAIL_COND(!virtuals_in_menu.has(p_id));
-
-	VirtualInMenu vim = virtuals_in_menu[p_id];
-
-	String name = _validate_name(vim.name);
-	selected = name;
-	edited_func = selected;
-	Ref<VisualScriptFunction> func_node;
-	func_node.instance();
-	func_node->set_name(vim.name);
-
-	undo_redo->create_action(TTR("Add Function"));
-	undo_redo->add_do_method(script.ptr(), "add_function", name);
-	for (int i = 0; i < vim.args.size(); i++) {
-		func_node->add_argument(vim.args[i].first, vim.args[i].second);
-	}
-
-	undo_redo->add_do_method(script.ptr(), "add_node", name, script->get_available_id(), func_node);
-	if (vim.ret != Variant::NIL || vim.ret_variant) {
-		Ref<VisualScriptReturn> ret_node;
-		ret_node.instance();
-		ret_node->set_return_type(vim.ret);
-		ret_node->set_enable_return_value(true);
-		ret_node->set_name(vim.name);
-		undo_redo->add_do_method(script.ptr(), "add_node", name, script->get_available_id() + 1, ret_node, Vector2(500, 0));
-	}
-
-	undo_redo->add_undo_method(script.ptr(), "remove_function", name);
-	undo_redo->add_do_method(this, "_update_members");
-	undo_redo->add_undo_method(this, "_update_members");
-	undo_redo->add_do_method(this, "_update_graph");
-	undo_redo->add_undo_method(this, "_update_graph");
-
-	undo_redo->commit_action();
-
-	_update_graph();
-}
-
 void VisualScriptEditor::_member_button(Object *p_item, int p_column, int p_button) {
 
 	TreeItem *ti = Object::cast_to<TreeItem>(p_item);
@@ -980,64 +937,9 @@ void VisualScriptEditor::_member_button(Object *p_item, int p_column, int p_butt
 			//add function, this one uses menu
 
 			if (p_button == 1) {
-				new_function_menu->clear();
-				new_function_menu->set_size(Size2(0, 0));
-				int idx = 0;
 
-				virtuals_in_menu.clear();
+				new_virtual_method_select->select_method_from_base_type(script->get_instance_base_type(), String(), true);
 
-				List<MethodInfo> mi;
-				ClassDB::get_method_list(script->get_instance_base_type(), &mi);
-				for (List<MethodInfo>::Element *E = mi.front(); E; E = E->next()) {
-					MethodInfo mi = E->get();
-					if (mi.flags & METHOD_FLAG_VIRTUAL) {
-
-						VirtualInMenu vim;
-						vim.name = mi.name;
-						vim.ret = mi.return_val.type;
-						if (mi.return_val.name != String())
-							vim.ret_variant = true;
-						else
-							vim.ret_variant = false;
-
-						String desc;
-
-						if (mi.return_val.type == Variant::NIL)
-							desc = "var";
-						else
-							desc = Variant::get_type_name(mi.return_val.type);
-						desc += " " + mi.name + " ( ";
-
-						for (int i = 0; i < mi.arguments.size(); i++) {
-
-							if (i > 0)
-								desc += ", ";
-
-							if (mi.arguments[i].type == Variant::NIL)
-								desc += "var ";
-							else
-								desc += Variant::get_type_name(mi.arguments[i].type) + " ";
-
-							desc += mi.arguments[i].name;
-
-							Pair<Variant::Type, String> p;
-							p.first = mi.arguments[i].type;
-							p.second = mi.arguments[i].name;
-							vim.args.push_back(p);
-						}
-
-						desc += " )";
-
-						virtuals_in_menu[idx] = vim;
-
-						new_function_menu->add_item(desc, idx);
-						idx++;
-					}
-				}
-
-				Rect2 pos = members->get_item_rect(ti);
-				new_function_menu->set_position(members->get_global_position() + pos.position + Vector2(0, pos.size.y));
-				new_function_menu->popup();
 				return;
 			} else if (p_button == 0) {
 
@@ -2686,21 +2588,21 @@ void VisualScriptEditor::_selected_connect_node_method_or_setget(const String &p
 
 	Ref<VisualScriptNode> vsn = script->get_node(edited_func, port_action_new_node);
 
-	if (Object::cast_to<VisualScriptFunctionCall>(*vsn)) {
+	if (Object::cast_to<VisualScriptFunctionCall>(vsn.ptr())) {
 
 		Ref<VisualScriptFunctionCall> vsfc = vsn;
 		vsfc->set_function(p_text);
 		script->data_connect(edited_func, port_action_node, port_action_output, port_action_new_node, 0);
 	}
 
-	if (Object::cast_to<VisualScriptPropertySet>(*vsn)) {
+	if (Object::cast_to<VisualScriptPropertySet>(vsn.ptr())) {
 
 		Ref<VisualScriptPropertySet> vsp = vsn;
 		vsp->set_property(p_text);
 		script->data_connect(edited_func, port_action_node, port_action_output, port_action_new_node, 0);
 	}
 
-	if (Object::cast_to<VisualScriptPropertyGet>(*vsn)) {
+	if (Object::cast_to<VisualScriptPropertyGet>(vsn.ptr())) {
 
 		Ref<VisualScriptPropertyGet> vsp = vsn;
 		vsp->set_property(p_text);
@@ -2709,6 +2611,63 @@ void VisualScriptEditor::_selected_connect_node_method_or_setget(const String &p
 
 	_update_graph(port_action_new_node);
 	_update_graph_connections();
+}
+
+void VisualScriptEditor::_selected_new_virtual_method(const String &p_text) {
+
+	String name = p_text;
+	if (script->has_function(name)) {
+		EditorNode::get_singleton()->show_warning(vformat(TTR("Script already has function '%s'"), name));
+		return;
+	}
+
+	MethodInfo minfo;
+	{
+		List<MethodInfo> methods;
+		bool found = false;
+		ClassDB::get_virtual_methods(script->get_instance_base_type(), &methods);
+		for (List<MethodInfo>::Element *E = methods.front(); E; E = E->next()) {
+			if (E->get().name == name) {
+				minfo = E->get();
+				found = true;
+			}
+		}
+
+		ERR_FAIL_COND(!found);
+	}
+
+	selected = name;
+	edited_func = selected;
+	Ref<VisualScriptFunction> func_node;
+	func_node.instance();
+	func_node->set_name(name);
+
+	undo_redo->create_action(TTR("Add Function"));
+	undo_redo->add_do_method(script.ptr(), "add_function", name);
+
+	for (int i = 0; i < minfo.arguments.size(); i++) {
+		func_node->add_argument(minfo.arguments[i].type, minfo.arguments[i].name);
+	}
+
+	undo_redo->add_do_method(script.ptr(), "add_node", name, script->get_available_id(), func_node);
+	if (minfo.return_val.type != Variant::NIL || minfo.return_val.usage & PROPERTY_USAGE_NIL_IS_VARIANT) {
+		Ref<VisualScriptReturn> ret_node;
+		ret_node.instance();
+		ret_node->set_return_type(minfo.return_val.type);
+		ret_node->set_enable_return_value(true);
+		ret_node->set_name(name);
+		undo_redo->add_do_method(script.ptr(), "add_node", name, script->get_available_id() + 1, ret_node, Vector2(500, 0));
+	}
+
+	undo_redo->add_undo_method(script.ptr(), "remove_function", name);
+	undo_redo->add_do_method(this, "_update_members");
+	undo_redo->add_undo_method(this, "_update_members");
+	undo_redo->add_do_method(this, "_update_graph");
+	undo_redo->add_undo_method(this, "_update_graph");
+
+	undo_redo->commit_action();
+
+	_update_graph();
 }
 
 void VisualScriptEditor::_cancel_connect_node_method_or_setget() {
@@ -2783,6 +2742,27 @@ void VisualScriptEditor::_notification(int p_what) {
 		node_filter->add_icon_override("right_icon", Control::get_icon("Search", "EditorIcons"));
 		variable_editor->connect("changed", this, "_update_members");
 		signal_editor->connect("changed", this, "_update_members");
+
+		List<Pair<String, Color> > colors;
+		colors.push_back(Pair<String, Color>("functions", Color(1, 0.9, 0.9)));
+		colors.push_back(Pair<String, Color>("data", Color(0.9, 1.0, 0.9)));
+		colors.push_back(Pair<String, Color>("operators", Color(0.9, 0.9, 1.0)));
+		colors.push_back(Pair<String, Color>("flow_control", Color(1.0, 1.0, 1.0)));
+		colors.push_back(Pair<String, Color>("custom", Color(0.8, 1.0, 1.0)));
+		colors.push_back(Pair<String, Color>("constants", Color(1.0, 0.8, 1.0)));
+
+		for (List<Pair<String, Color> >::Element *E = colors.front(); E; E = E->next()) {
+			print_line(E->get().first);
+			Ref<StyleBoxFlat> sb = EditorNode::get_singleton()->get_theme_base()->get_theme()->get_stylebox("frame", "GraphNode");
+			if (sb != NULL) {
+				Ref<StyleBoxFlat> frame_style = sb->duplicate();
+				Color c = sb->get_border_color(MARGIN_TOP);
+				Color cn = E->get().second;
+				cn.a = c.a;
+				frame_style->set_border_color_all(cn);
+				node_styles[E->get().first] = frame_style;
+			}
+		}
 	}
 	if (p_what == NOTIFICATION_VISIBILITY_CHANGED) {
 		left_vsplit->set_visible(is_visible_in_tree());
@@ -3014,7 +2994,7 @@ void VisualScriptEditor::_member_rmb_selected(const Vector2 &p_pos) {
 
 	TreeItem *root = members->get_root();
 
-	Ref<Texture> del_icon = Control::get_icon("Del", "EditorIcons");
+	Ref<Texture> del_icon = Control::get_icon("Remove", "EditorIcons");
 
 	Ref<Texture> edit_icon = Control::get_icon("Edit", "EditorIcons");
 
@@ -3147,7 +3127,6 @@ void VisualScriptEditor::_bind_methods() {
 	ClassDB::bind_method("_update_members", &VisualScriptEditor::_update_members);
 	ClassDB::bind_method("_change_base_type", &VisualScriptEditor::_change_base_type);
 	ClassDB::bind_method("_change_base_type_callback", &VisualScriptEditor::_change_base_type_callback);
-	ClassDB::bind_method("_override_pressed", &VisualScriptEditor::_override_pressed);
 	ClassDB::bind_method("_node_selected", &VisualScriptEditor::_node_selected);
 	ClassDB::bind_method("_node_moved", &VisualScriptEditor::_node_moved);
 	ClassDB::bind_method("_move_node", &VisualScriptEditor::_move_node);
@@ -3166,6 +3145,8 @@ void VisualScriptEditor::_bind_methods() {
 	ClassDB::bind_method("_button_resource_previewed", &VisualScriptEditor::_button_resource_previewed);
 	ClassDB::bind_method("_port_action_menu", &VisualScriptEditor::_port_action_menu);
 	ClassDB::bind_method("_selected_connect_node_method_or_setget", &VisualScriptEditor::_selected_connect_node_method_or_setget);
+	ClassDB::bind_method("_selected_new_virtual_method", &VisualScriptEditor::_selected_new_virtual_method);
+
 	ClassDB::bind_method("_cancel_connect_node_method_or_setget", &VisualScriptEditor::_cancel_connect_node_method_or_setget);
 	ClassDB::bind_method("_expression_text_changed", &VisualScriptEditor::_expression_text_changed);
 
@@ -3344,9 +3325,6 @@ VisualScriptEditor::VisualScriptEditor() {
 
 	undo_redo = EditorNode::get_singleton()->get_undo_redo();
 
-	new_function_menu = memnew(PopupMenu);
-	new_function_menu->connect("id_pressed", this, "_override_pressed");
-	add_child(new_function_menu);
 	updating_members = false;
 
 	set_process_input(true); //for revert on drag
@@ -3365,6 +3343,11 @@ VisualScriptEditor::VisualScriptEditor() {
 	add_child(new_connect_node_select);
 	new_connect_node_select->connect("selected", this, "_selected_connect_node_method_or_setget");
 	new_connect_node_select->get_cancel()->connect("pressed", this, "_cancel_connect_node_method_or_setget");
+
+	new_virtual_method_select = memnew(PropertySelector);
+	add_child(new_virtual_method_select);
+	new_virtual_method_select->connect("selected", this, "_selected_new_virtual_method");
+	new_virtual_method_select->get_cancel()->connect("pressed", this, "_selected_new_virtual_method");
 
 	port_action_popup = memnew(PopupMenu);
 	add_child(port_action_popup);
@@ -3403,12 +3386,6 @@ void VisualScriptEditor::free_clipboard() {
 static void register_editor_callback() {
 
 	ScriptEditor::register_create_script_editor_function(create_editor);
-	EditorSettings::get_singleton()->set("editors/visual_script/color_functions", Color(1, 0.9, 0.9));
-	EditorSettings::get_singleton()->set("editors/visual_script/color_data", Color(0.9, 1.0, 0.9));
-	EditorSettings::get_singleton()->set("editors/visual_script/color_operators", Color(0.9, 0.9, 1.0));
-	EditorSettings::get_singleton()->set("editors/visual_script/color_flow_control", Color(1.0, 1.0, 1.0));
-	EditorSettings::get_singleton()->set("editors/visual_script/color_custom", Color(0.8, 1.0, 1.0));
-	EditorSettings::get_singleton()->set("editors/visual_script/color_constants", Color(1.0, 0.8, 1.0));
 
 	ED_SHORTCUT("visual_script_editor/delete_selected", TTR("Delete Selected"));
 	ED_SHORTCUT("visual_script_editor/toggle_breakpoint", TTR("Toggle Breakpoint"), KEY_F9);

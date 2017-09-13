@@ -58,6 +58,7 @@
 
 #ifdef TOOLS_ENABLED
 #include "editor/doc/doc_data.h"
+#include "editor/doc/doc_data_class_path.gen.h"
 #include "editor/editor_node.h"
 #include "editor/project_manager.h"
 #endif
@@ -177,7 +178,7 @@ void Main::print_help(const char *p_binary) {
 	OS::get_singleton()->print("  -w, --windowed                   Request windowed mode.\n");
 	OS::get_singleton()->print("  --resolution <W>x<H>             Request window resolution.\n");
 	OS::get_singleton()->print("  --position <X>,<Y>               Request window position.\n");
-	OS::get_singleton()->print("  --low-dpi                        Force low-DPI mode (macOS only).\n");
+	OS::get_singleton()->print("  --low-dpi                        Force low-DPI mode (macOS and Windows only).\n");
 	OS::get_singleton()->print("  --no-window                      Disable window creation (Windows only). Useful together with --script.\n");
 	OS::get_singleton()->print("\n");
 
@@ -1143,26 +1144,46 @@ bool Main::start() {
 #ifdef TOOLS_ENABLED
 	if (doc_tool != "") {
 
+		{
+			DirAccessRef da = DirAccess::open(doc_tool);
+			if (!da) {
+				ERR_EXPLAIN("Argument supplied to --doctool must be a base godot build directory");
+				ERR_FAIL_V(false);
+			}
+		}
 		DocData doc;
 		doc.generate(doc_base);
 
 		DocData docsrc;
-		if (docsrc.load(doc_tool) == OK) {
-			print_line("Doc exists. Merging..");
-			doc.merge_from(docsrc);
-		} else {
-			print_line("No Doc exists. Generating empty.");
-		}
+		Map<String, String> doc_data_classes;
+		Set<String> checked_paths;
+		print_line("Loading docs..");
 
-		for (List<String>::Element *E = removal_docs.front(); E; E = E->next()) {
-			DocData rmdoc;
-			if (rmdoc.load(E->get()) == OK) {
-				print_line(String("Removing classes in ") + E->get());
-				doc.remove_from(rmdoc);
+		for (int i = 0; i < _doc_data_class_path_count; i++) {
+			String path = doc_tool.plus_file(_doc_data_class_paths[i].path);
+			String name = _doc_data_class_paths[i].name;
+			doc_data_classes[name] = path;
+			if (!checked_paths.has(path)) {
+				checked_paths.insert(path);
+				docsrc.load_classes(path);
+				print_line("Loading docs from: " + path);
 			}
 		}
 
-		doc.save(doc_tool);
+		String index_path = doc_tool.plus_file("doc/classes");
+		docsrc.load_classes(index_path);
+		checked_paths.insert(index_path);
+		print_line("Loading docs from: " + index_path);
+
+		print_line("Merging docs..");
+		doc.merge_from(docsrc);
+		for (Set<String>::Element *E = checked_paths.front(); E; E = E->next()) {
+			print_line("Erasing old docs at: " + E->get());
+			DocData::erase_classes(E->get());
+		}
+
+		print_line("Generating new docs..");
+		doc.save_classes(index_path, doc_data_classes);
 
 		return false;
 	}
@@ -1333,6 +1354,9 @@ bool Main::start() {
 			Viewport::Usage usage = Viewport::Usage(int(GLOBAL_GET("rendering/quality/intended_usage/framebuffer_allocation")));
 			sml->get_root()->set_usage(usage);
 
+			bool snap_controls = GLOBAL_DEF("gui/common/snap_controls_to_pixels", true);
+			sml->get_root()->set_snap_controls_to_pixels(snap_controls);
+
 		} else {
 			GLOBAL_DEF("display/window/stretch/mode", "disabled");
 			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/mode", PropertyInfo(Variant::STRING, "display/window/stretch/mode", PROPERTY_HINT_ENUM, "disabled,2d,viewport"));
@@ -1342,6 +1366,7 @@ bool Main::start() {
 			ProjectSettings::get_singleton()->set_custom_property_info("display/window/stretch/shrink", PropertyInfo(Variant::STRING, "display/window/stretch/shrink", PROPERTY_HINT_RANGE, "1,8,1"));
 			sml->set_auto_accept_quit(GLOBAL_DEF("application/config/auto_accept_quit", true));
 			sml->set_quit_on_go_back(GLOBAL_DEF("application/config/quit_on_go_back", true));
+			GLOBAL_DEF("gui/common/snap_controls_to_pixels", true);
 		}
 
 		String local_game_path;
@@ -1383,6 +1408,8 @@ bool Main::start() {
 			if (editor) {
 
 				Error serr = editor_node->load_scene(local_game_path);
+				if (serr != OK)
+					ERR_PRINT("Failed to load scene");
 				OS::get_singleton()->set_context(OS::CONTEXT_EDITOR);
 			}
 #endif
