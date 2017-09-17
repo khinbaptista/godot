@@ -2,8 +2,9 @@
 
 #include "os/os.h"
 #include "project_settings.h"
-#include "vulkan/vulkan.hpp"
+#include "vk_instance.h"
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
 using std::vector;
 

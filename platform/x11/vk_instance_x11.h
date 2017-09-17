@@ -16,6 +16,9 @@ private:
 public:
 	virtual Error initialize();
 
+	virtual int get_window_width();
+	virtual int get_window_height();
+
 	VkInstance_X11(::Display *, ::Window &);
 	~VkInstance_X11();
 };

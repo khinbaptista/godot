@@ -1,9 +1,10 @@
 #if defined(VULKAN_ENABLED)
 
 #include "vk_instance.h"
-#include "vulkan/vulkan.hpp"
 #include <cstring>
+#include <set>
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
 using std::vector;
 
@@ -19,6 +20,14 @@ vk::Instance &VkInstance::vk() {
 
 vk::Surface &VkInstance::get_surface() {
 	return surface;
+}
+
+vk::PhysicalDevice &VkInstance::get_physical_device() {
+	return physical_device;
+}
+
+vk::Device &VkInstance::get_device() {
+	return device;
 }
 
 bool VkInstance::check_validation_layer_support() {
@@ -73,9 +82,91 @@ void VkInstance::setup_debug_callback() { // called from initialize()
 	vkCreateDebugReportCallbackEXT(instance, &debug_info, nullptr, vk_debug_callback);
 }
 
+VkQueueFamilyIndices VkInstance::find_queue_families(vk::PhysicalDevice device) {
+	VkQueueFamilyIndices indices;
+	vector<vk::QueueFamilyProperties> families = device.getQueueFamilyProperties();
+
+	int i = 0;
+	for (const auto &family : families) {
+		if (family.queueCount > 0 && family.queueFlags & vk::QueueFlagBits::eGraphics) {
+			indices.graphics = i;
+		}
+
+		VkBool32 present_support = device.getSurfaceSupportKHR(i, surface);
+		if (family.queueCount > 0 && present_support) {
+			indices.present = i;
+		}
+
+		if (indices.is_complete()) break;
+
+		i++;
+	}
+
+	return indices;
+}
+
+bool VkInstance::is_device_suitable(vk::PhysicalDevice device) {
+	vk::PhysicalDeviceProperties properties = device.getProperties();
+	vk::PhysicalDeviceFeatures features = device.getFeatures();
+	auto queues = find_queue_families(device);
+
+	return (properties.deviceType == physical_device_type) && queues.is_complete();
+	// expand as desired
+}
+
+void VkInstance::pick_physical_device() {
+	vector<vk::PhysicalDevice> devices = instance.enumeratePhysicalDevices();
+
+	for (const auto &device : devices) {
+		if (is_device_suitable(device)) {
+			physical_device = device;
+			break; // select the first suitable device
+		}
+	}
+
+	if (!physical_device) {
+		ERR_EXPLAIN("Couldn't find a suitable physical device");
+	}
+}
+
+void VkInstance::create_logical_device() {
+	auto indices = find_queue_families(physical_device);
+
+	vector<vk::DeviceQueueCreateInfo> queue_infos;
+	std::set<int> family_indices = { indices.graphics, indices.present };
+
+	for (int family : family_indices) {
+		vk::DeviceQueueCreateInfo queue_info = {};
+		queue_info.queueFamilyIndex = family;
+		queue_info.queueCount = 1;
+		queue_info.pQueuePriorities = nullptr;
+
+		queue_infos.push_back(queue_info);
+	}
+
+	vk::DeviceCreateInfo device_info = {};
+	device_info.queueCreateInfoCount = static_cast<uint32_t>(queue_infos.size());
+	device_info.pQueueCreateInfos = queue_infos.data();
+	device_info.pEnabledFeatures = &physical_device_features;
+	device_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
+	device_info.ppEnabledExtensionNames = device_extensions.data();
+	device_info.enabledLayerCount = enable_validation_layers ? static_cast<uint32_t>(validation_layers.size()) : 0;
+	device_info.ppEnabledLayerNames = validation_layers.data();
+
+	device = physical_device.createDevice(device_info);
+
+	if (!device) {
+		ERR_EXPLAIN("Failed to create logical device");
+		return;
+	}
+
+	graphics_queue = device.getQueue(indices.graphics);
+	present_queue = device.getQueue(indices.present);
+}
+
 VkInstance::VkInstance() {
 	if (enable_validation_layers) {
-		extensions.push_back("VK_EXT_debug_report");
+		instance_extensions.push_back("VK_EXT_debug_report");
 	}
 
 	ERR_FAIL_COND(singleton);

@@ -4,8 +4,8 @@
 
 #if defined(VULKAN_ENABLED)
 
-#include "vulkan/vulkan.hpp"
 #include <Xlib/Xutil.h> // VisualScreenMask
+#include <vulkan/vulkan.hpp>
 
 static bool ctxErrorOccurred = false;
 static int ctxErrorHandler(Display *dpy, XErrorEvent *ev) {
@@ -28,7 +28,7 @@ static void set_class_hint(Display *p_display, Window p_window) {
 
 Error VkInstance_X11::initialize() {
 	{ // create instance
-		extensions.push_back("VK_KHR_xlib_surface");
+		instance_extensions.push_back("VK_KHR_xlib_surface");
 
 		vk::ApplicationInfo app_info = {};
 		app_info.pApplicationName = application_name;
@@ -41,8 +41,8 @@ Error VkInstance_X11::initialize() {
 		instance_info.pApplicationInfo = &app_info;
 		instance_info.enabledLayerCount = 0;
 		instance_info.ppEnabledLayerNames = nullptr;
-		instance_info.enabledExtensionCount = extensions.count();
-		instance_info.ppEnabledExtensionNames = extensions.data();
+		instance_info.enabledExtensionCount = instance_extensions.count();
+		instance_info.ppEnabledExtensionNames = instance_extensions.data();
 
 		if (enable_validation_layers)
 			if (!check_validation_layer_support()) {
@@ -100,7 +100,27 @@ Error VkInstance_X11::initialize() {
 		ERR_FAIL_COND_V(!surface, ERR_UNCONFIGURED);
 	}
 
+	pick_physical_device();
+	ERR_FAIL_COND_V(!physical_device, ERR_UNCONFIGURED);
+
+	create_logical_device();
+	ERR_FAIL_COND_V(!device, ERR_UNCONFIGURED);
+
 	return OK;
+}
+
+int VkInstance_X11::get_window_width() {
+	XWindowAttributes xwa;
+	XGetWindowAttributes(x11_display, x11_window, &xwa);
+
+	return xwa.height;
+}
+
+inf VkInstance_X11::get_window_height() {
+	XWindowAttributes xwa;
+	XGetWindowAttributes(x11_display, x11_window, &xwa);
+
+	return xwa.height;
 }
 
 VkInstance_X11::VkInstance_X11(::Display *display, ::Window &window)

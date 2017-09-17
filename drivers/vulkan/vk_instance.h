@@ -3,8 +3,17 @@
 #if defined(VULKAN_ENABLED)
 
 #include "typedefs.h"
-#include "vulkan/vulkan.hpp"
 #include <vector>
+#include <vulkan/vulkan.hpp>
+
+struct VkQueueFamilyIndices {
+	int graphics = -1;
+	int present = -1;
+
+	_FORCE_INLINE_ bool is_complete() {
+		return graphics >= 0 && present >= 0;
+	};
+}
 
 class VkInstance {
 
@@ -26,23 +35,45 @@ protected:
 	const bool enable_validation_layers = false;
 #endif
 
+	const vk::PhysicalDeviceType physical_device_type = vk::PhysicalDeviceType::eDiscreteGpu;
+	const vk::PhysicalDeviceFeatures physical_device_features = {};
+	bool is_device_suitable(vk::PhysicalDevice);
+	VkQueueFamilyIndices find_queue_families(vk::PhysicalDevice);
+
 	vk::Instance instance;
 	vk::DebugReportCallbackEXT debug_callback;
 	vk::Surface surface;
+
+	vk::PhysicalDevice physical_device;
+	vk::Device device;
+
+	vk::Queue graphics_queue;
+	vk::Queue present_queue;
 
 	const std::vector<const char *> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
 	};
 
-	std::vector<const char *> extensions = {
+	std::vector<const char *> instance_extensions = {
 		"VK_KHR_surface"
 	};
+
+	std::vector<const char *> device_extensions = {
+		"VK_KHR_swapchain"
+	};
+
+	void pick_physical_device();
+	void create_logical_device();
 
 public:
 	static VkInstance *get_singleton();
 	vk::Instance &vk(); // get vulkan instance object
 	vk::Surface &get_surface();
+	vk::PhysicalDevice &get_physical_device();
+	vk::Device &get_device();
 
+	virtual int get_window_width() = 0;
+	virtual int get_window_height() = 0;
 	virtual Error initialize() = 0;
 
 	virtual void setup_debug_callback();

@@ -4,8 +4,8 @@
 #include "rasterizer_scene_vulkan.h"
 #include "rasterizer_storage_vulkan.h"
 #include "servers/visual/rasterizer.h"
-#include "vulkan/vulkan.hpp"
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
 class RasterizerVK : public Rasterizer {
 
@@ -33,7 +33,8 @@ public:
 	virtual void set_current_render_target(RID p_render_target);
 	virtual void restore_render_target();
 	virtual void clear_render_target(const Color &p_color);
-	virtual void blit_render_target_to_screen(RID p_render_target,
+	virtual void blit_render_target_to_screen(
+			RID p_render_target,
 			const Rect2 &p_screen_rect,
 			int p_screen = 0);
 	virtual void end_frame();
@@ -42,7 +43,6 @@ public:
 	static void make_current();
 
 	static void register_config();
-
 	RasterizerVK();
 	~RasterizerVK();
 };
