@@ -4,8 +4,6 @@
 #include "rasterizer_scene_vulkan.h"
 #include "rasterizer_storage_vulkan.h"
 #include "servers/visual/rasterizer.h"
-#include <vector>
-#include <vulkan/vulkan.hpp>
 
 class RasterizerVK : public Rasterizer {
 

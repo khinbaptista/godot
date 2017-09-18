@@ -1,6 +1,7 @@
 #if defined(VULKAN_ENABLED)
 
 #include "vk_instance.h"
+#include <string.h>
 #include <cstring>
 #include <set>
 #include <vector>
@@ -28,6 +29,14 @@ vk::PhysicalDevice &VkInstance::get_physical_device() {
 
 vk::Device &VkInstance::get_device() {
 	return device;
+}
+
+vk::Queue &VkInstance::get_queue_graphics() {
+	return graphics_queue;
+}
+
+vk::Queue &VkInstance::get_queue_present() {
+	return present_queue;
 }
 
 bool VkInstance::check_validation_layer_support() {

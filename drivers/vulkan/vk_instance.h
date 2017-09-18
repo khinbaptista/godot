@@ -71,6 +71,8 @@ public:
 	vk::Surface &get_surface();
 	vk::PhysicalDevice &get_physical_device();
 	vk::Device &get_device();
+	vk::Queue &get_queue_graphics();
+	vk::Queue &get_queue_present();
 
 	virtual int get_window_width() = 0;
 	virtual int get_window_height() = 0;
