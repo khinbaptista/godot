@@ -174,6 +174,9 @@ VkInstance::VkInstance() {
 }
 
 VkInstance::~VkInstance() {
+	device.destroy();
+	physical_device.destroy();
+
 	instance.destroyDebugReportCallbackEXT(debug_callback);
 	instance.destroy();
 
