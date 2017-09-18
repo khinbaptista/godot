@@ -233,7 +233,7 @@
 			</description>
 		</method>
 		<method name="get_power_state">
-			<return type="int" enum="PowerState">
+			<return type="int" enum="OS.PowerState">
 			</return>
 			<description>
 			</description>
@@ -286,7 +286,7 @@
 			</description>
 		</method>
 		<method name="get_screen_orientation" qualifiers="const">
-			<return type="int" enum="_OS.ScreenOrientation">
+			<return type="int" enum="OS.ScreenOrientation">
 			</return>
 			<description>
 				Returns the current screen orientation, the return value will be one of the SCREEN_ORIENTATION constants in this class.
@@ -331,7 +331,7 @@
 		<method name="get_system_dir" qualifiers="const">
 			<return type="String">
 			</return>
-			<argument index="0" name="dir" type="int" enum="_OS.SystemDir">
+			<argument index="0" name="dir" type="int" enum="OS.SystemDir">
 			</argument>
 			<description>
 			</description>
@@ -660,7 +660,7 @@
 		<method name="set_screen_orientation">
 			<return type="void">
 			</return>
-			<argument index="0" name="orientation" type="int" enum="_OS.ScreenOrientation">
+			<argument index="0" name="orientation" type="int" enum="OS.ScreenOrientation">
 			</argument>
 			<description>
 				Sets the current screen orientation, the argument value must be one of the SCREEN_ORIENTATION constants in this class.

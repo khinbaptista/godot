@@ -464,11 +464,7 @@ void OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, i
 	print_line("Init Audio");
 
 	AudioDriverManager::add_driver(&audio_driver_javascript);
-	audio_driver_javascript.set_singleton();
-	if (audio_driver_javascript.init() != OK) {
-
-		ERR_PRINT("Initializing audio failed.");
-	}
+	AudioDriverManager::initialize(p_audio_driver);
 
 	RasterizerGLES3::register_config();
 	RasterizerGLES3::make_current();
@@ -976,7 +972,7 @@ String OS_JavaScript::get_joy_guid(int p_device) const {
 	return input->get_joy_guid_remapped(p_device);
 }
 
-PowerState OS_JavaScript::get_power_state() {
+OS::PowerState OS_JavaScript::get_power_state() {
 	return power_manager->get_power_state();
 }
 

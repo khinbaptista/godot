@@ -84,6 +84,7 @@
 #include "editor/plugins/mesh_editor_plugin.h"
 #include "editor/plugins/mesh_instance_editor_plugin.h"
 #include "editor/plugins/multimesh_editor_plugin.h"
+#include "editor/plugins/navigation_mesh_editor_plugin.h"
 #include "editor/plugins/navigation_polygon_editor_plugin.h"
 #include "editor/plugins/particles_2d_editor_plugin.h"
 #include "editor/plugins/particles_editor_plugin.h"
@@ -253,6 +254,7 @@ void EditorNode::_notification(int p_what) {
 		get_tree()->get_root()->set_as_audio_listener_2d(false);
 		get_tree()->set_auto_accept_quit(false);
 		get_tree()->connect("files_dropped", this, "_dropped_files");
+		property_editable_warning->set_icon(gui_base->get_icon("NodeWarning", "EditorIcons"));
 	}
 
 	if (p_what == NOTIFICATION_EXIT_TREE) {
@@ -1386,6 +1388,11 @@ static bool overrides_external_editor(Object *p_object) {
 	return script->get_language()->overrides_external_editor();
 }
 
+void EditorNode::_property_editable_warning_pressed() {
+
+	property_editable_warning_dialog->popup_centered_minsize();
+}
+
 void EditorNode::_edit_current() {
 
 	uint32_t current = editor_history.get_current();
@@ -1396,6 +1403,9 @@ void EditorNode::_edit_current() {
 
 	this->current = current_obj;
 	editor_path->update_path();
+
+	String editable_warning; //none by default
+	property_editable_warning->hide(); //hide by default
 
 	if (!current_obj) {
 
@@ -1424,6 +1434,22 @@ void EditorNode::_edit_current() {
 		node_dock->set_node(NULL);
 		object_menu->set_disabled(false);
 		EditorNode::get_singleton()->get_import_dock()->set_edit_path(current_res->get_path());
+
+		int subr_idx = current_res->get_path().find("::");
+		if (subr_idx != -1) {
+			String base_path = current_res->get_path().substr(0, subr_idx);
+			if (FileAccess::exists(base_path + ".import")) {
+				editable_warning = TTR("This resource belongs to a scene that was imported, so it's not editable.\nPlease read the documentation relevant to importing scenes to better understand this workflow.");
+			} else {
+				if (!get_edited_scene() || get_edited_scene()->get_filename() != base_path) {
+					editable_warning = TTR("This resource belongs to a scene that was instanced or inherited.\nChanges to it will not be kept when saving the current scene.");
+				}
+			}
+		} else if (current_res->get_path().is_resource_file()) {
+			if (FileAccess::exists(current_res->get_path() + ".import")) {
+				editable_warning = TTR("This resource was imported, so it's not editable. Change it's settings in the import panel and re-import.");
+			}
+		}
 	} else if (is_node) {
 
 		Node *current_node = Object::cast_to<Node>(current_obj);
@@ -1439,10 +1465,22 @@ void EditorNode::_edit_current() {
 		}
 		object_menu->get_popup()->clear();
 
+		if (get_edited_scene() && get_edited_scene()->get_filename() != String()) {
+			String source_scene = get_edited_scene()->get_filename();
+			if (FileAccess::exists(source_scene + ".import")) {
+				editable_warning = TTR("This scene was imported, so changes to it will not be kept.\nInstancing it or inheriting will allow making changes to it.\nPlease read the documentation relevant to importing scenes to better understand this workflow.");
+			}
+		}
+
 	} else {
 
 		property_editor->edit(current_obj);
 		node_dock->set_node(NULL);
+	}
+
+	if (editable_warning != String()) {
+		property_editable_warning->show(); //hide by default
+		property_editable_warning_dialog->set_text(editable_warning);
 	}
 
 	/* Take care of PLUGIN EDITOR */
@@ -2742,14 +2780,6 @@ Dictionary EditorNode::_get_main_scene_state() {
 	state["property_edit_offset"] = get_property_editor()->get_scene_tree()->get_vscroll_bar()->get_value();
 	state["saved_version"] = saved_version;
 	state["node_filter"] = scene_tree_dock->get_filter();
-	int current = -1;
-	for (int i = 0; i < editor_table.size(); i++) {
-		if (editor_plugin_screen == editor_table[i]) {
-			current = i;
-			break;
-		}
-	}
-	state["editor_index"] = current;
 	return state;
 }
 
@@ -2760,29 +2790,32 @@ void EditorNode::_set_main_scene_state(Dictionary p_state, Node *p_for_scene) {
 
 	changing_scene = false;
 
-	if (p_state.has("editor_index")) {
-
-		int index = p_state["editor_index"];
-		int current = -1;
-		for (int i = 0; i < editor_table.size(); i++) {
-			if (editor_plugin_screen == editor_table[i]) {
-				current = i;
-				break;
-			}
+	int current = -1;
+	for (int i = 0; i < editor_table.size(); i++) {
+		if (editor_plugin_screen == editor_table[i]) {
+			current = i;
+			break;
 		}
+	}
 
+	if (p_state.has("editor_index")) {
+		int index = p_state["editor_index"];
 		if (current < 2) { //if currently in spatial/2d, only switch to spatial/2d. if curently in script, stay there
 			if (index < 2 || !get_edited_scene()) {
 				_editor_select(index);
-			} else {
-				//use heuristic instead
-				int n2d = 0, n3d = 0;
-				_find_node_types(get_edited_scene(), n2d, n3d);
-				if (n2d > n3d) {
-					_editor_select(EDITOR_2D);
-				} else if (n3d > n2d) {
-					_editor_select(EDITOR_3D);
-				}
+			}
+		}
+	}
+
+	if (get_edited_scene()) {
+		if (current < 2) {
+			//use heuristic instead
+			int n2d = 0, n3d = 0;
+			_find_node_types(get_edited_scene(), n2d, n3d);
+			if (n2d > n3d) {
+				_editor_select(EDITOR_2D);
+			} else if (n3d > n2d) {
+				_editor_select(EDITOR_3D);
 			}
 		}
 	}
@@ -3213,9 +3246,9 @@ void EditorNode::register_editor_types() {
 	ClassDB::register_class<EditorFileSystemDirectory>();
 	ClassDB::register_virtual_class<ScriptEditor>();
 	ClassDB::register_virtual_class<EditorInterface>();
+	ClassDB::register_class<EditorExportPlugin>();
 
 	// FIXME: Is this stuff obsolete, or should it be ported to new APIs?
-	//ClassDB::register_class<EditorExportPlugin>();
 	//ClassDB::register_class<EditorScenePostImport>();
 	//ClassDB::register_type<EditorImportExport>();
 }
@@ -3305,9 +3338,9 @@ void EditorNode::_editor_file_dialog_unregister(EditorFileDialog *p_dialog) {
 
 Vector<EditorNodeInitCallback> EditorNode::_init_callbacks;
 
-Error EditorNode::export_preset(const String &preset, const String &p_path, bool p_debug, const String &p_password, bool p_quit_after) {
+Error EditorNode::export_preset(const String &p_preset, const String &p_path, bool p_debug, const String &p_password, bool p_quit_after) {
 
-	export_defer.preset = preset;
+	export_defer.preset = p_preset;
 	export_defer.path = p_path;
 	export_defer.debug = p_debug;
 	export_defer.password = p_password;
@@ -4028,6 +4061,13 @@ void EditorNode::_bottom_panel_switch(bool p_enable, int p_idx) {
 	ERR_FAIL_INDEX(p_idx, bottom_panel_items.size());
 
 	if (p_enable) {
+		// this is the debug panel wich uses tabs, so the top section should be smaller
+		if (ScriptEditor::get_singleton()->get_debugger() == bottom_panel_items[p_idx].control) {
+			Ref<StyleBoxFlat> style_panel_invisible_top = gui_base->get_stylebox("debugger_panel", "EditorStyles");
+			bottom_panel->add_style_override("panel", style_panel_invisible_top);
+		} else {
+			bottom_panel->add_style_override("panel", gui_base->get_stylebox("panel", "TabContainer"));
+		}
 		for (int i = 0; i < bottom_panel_items.size(); i++) {
 
 			bottom_panel_items[i].button->set_pressed(i == p_idx);
@@ -4036,11 +4076,14 @@ void EditorNode::_bottom_panel_switch(bool p_enable, int p_idx) {
 		center_split->set_dragger_visibility(SplitContainer::DRAGGER_VISIBLE);
 		center_split->set_collapsed(false);
 	} else {
+		bottom_panel->add_style_override("panel", gui_base->get_stylebox("panel", "TabContainer"));
+
 		for (int i = 0; i < bottom_panel_items.size(); i++) {
 
 			bottom_panel_items[i].button->set_pressed(false);
 			bottom_panel_items[i].control->set_visible(false);
 		}
+
 		center_split->set_dragger_visibility(SplitContainer::DRAGGER_HIDDEN);
 		center_split->set_collapsed(true);
 	}
@@ -4470,6 +4513,7 @@ void EditorNode::_bind_methods() {
 	ClassDB::bind_method("_clear_undo_history", &EditorNode::_clear_undo_history);
 	ClassDB::bind_method("_dropped_files", &EditorNode::_dropped_files);
 	ClassDB::bind_method("_toggle_distraction_free_mode", &EditorNode::_toggle_distraction_free_mode);
+	ClassDB::bind_method("_property_editable_warning_pressed", &EditorNode::_property_editable_warning_pressed);
 
 	ClassDB::bind_method(D_METHOD("get_gui_base"), &EditorNode::get_gui_base);
 	ClassDB::bind_method(D_METHOD("_bottom_panel_switch"), &EditorNode::_bottom_panel_switch);
@@ -4815,7 +4859,7 @@ EditorNode::EditorNode() {
 	scene_root_parent = memnew(PanelContainer);
 	scene_root_parent->set_custom_minimum_size(Size2(0, 80) * EDSCALE);
 	scene_root_parent->add_style_override("panel", gui_base->get_stylebox("Content", "EditorStyles"));
-
+	scene_root_parent->set_draw_behind_parent(true);
 	srt->add_child(scene_root_parent);
 	scene_root_parent->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 
@@ -5231,6 +5275,14 @@ EditorNode::EditorNode() {
 	search_bar->add_child(clear_button);
 	clear_button->connect("pressed", this, "_clear_search_box");
 
+	property_editable_warning = memnew(Button);
+	property_editable_warning->set_text(TTR("Changes may be lost!"));
+	prop_editor_base->add_child(property_editable_warning);
+	property_editable_warning_dialog = memnew(AcceptDialog);
+	gui_base->add_child(property_editable_warning_dialog);
+	property_editable_warning->hide();
+	property_editable_warning->connect("pressed", this, "_property_editable_warning_pressed");
+
 	property_editor = memnew(PropertyEditor);
 	property_editor->set_autoclear(true);
 	property_editor->set_show_categories(true);
@@ -5243,6 +5295,7 @@ EditorNode::EditorNode() {
 	property_editor->hide_top_label();
 	property_editor->register_text_enter(search_box);
 
+	Button *property_editable_warning;
 	prop_editor_base->add_child(property_editor);
 	property_editor->set_undo_redo(&editor_data.get_undo_redo());
 
@@ -5440,6 +5493,7 @@ EditorNode::EditorNode() {
 	add_editor_plugin(memnew(TextureEditorPlugin(this)));
 	add_editor_plugin(memnew(MeshEditorPlugin(this)));
 	add_editor_plugin(memnew(AudioBusesEditorPlugin(audio_bus_editor)));
+	add_editor_plugin(memnew(NavigationMeshEditorPlugin(this)));
 
 	// FIXME: Disabled as (according to reduz) users were complaining that it gets in the way
 	// Waiting for PropertyEditor rewrite (planned for 3.1) to be refactored.

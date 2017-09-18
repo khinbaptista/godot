@@ -164,6 +164,8 @@ const char *OS_Windows::get_audio_driver_name(int p_driver) const {
 
 void OS_Windows::initialize_core() {
 
+	crash_handler.initialize();
+
 	last_button_state = 0;
 
 	//RedirectIOToConsole();
@@ -1079,12 +1081,7 @@ void OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int 
 
 	power_manager = memnew(PowerWindows);
 
-	AudioDriverManager::get_driver(p_audio_driver)->set_singleton();
-
-	if (AudioDriverManager::get_driver(p_audio_driver)->init() != OK) {
-
-		ERR_PRINT("Initializing audio failed.");
-	}
+	AudioDriverManager::initialize(p_audio_driver);
 
 	TRACKMOUSEEVENT tme;
 	tme.cbSize = sizeof(TRACKMOUSEEVENT);
@@ -2351,7 +2348,7 @@ bool OS_Windows::is_vsync_enabled() const {
 	return true;
 }
 
-PowerState OS_Windows::get_power_state() {
+OS::PowerState OS_Windows::get_power_state() {
 	return power_manager->get_power_state();
 }
 
@@ -2366,6 +2363,14 @@ int OS_Windows::get_power_percent_left() {
 bool OS_Windows::_check_internal_feature_support(const String &p_feature) {
 
 	return p_feature == "pc" || p_feature == "s3tc";
+}
+
+void OS_Windows::disable_crash_handler() {
+	crash_handler.disable();
+}
+
+bool OS_Windows::is_disable_crash_handler() const {
+	return crash_handler.is_disabled();
 }
 
 OS_Windows::OS_Windows(HINSTANCE _hInstance) {

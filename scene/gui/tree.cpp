@@ -333,6 +333,15 @@ bool TreeItem::is_collapsed() {
 	return collapsed;
 }
 
+void TreeItem::set_custom_minimum_height(int p_height) {
+	custom_min_height = p_height;
+	_changed_notify();
+}
+
+int TreeItem::get_custom_minimum_height() const {
+	return custom_min_height;
+}
+
 TreeItem *TreeItem::get_next() {
 
 	return next;
@@ -703,6 +712,9 @@ void TreeItem::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_collapsed", "enable"), &TreeItem::set_collapsed);
 	ClassDB::bind_method(D_METHOD("is_collapsed"), &TreeItem::is_collapsed);
 
+	ClassDB::bind_method(D_METHOD("set_custom_minimum_height", "height"), &TreeItem::set_custom_minimum_height);
+	ClassDB::bind_method(D_METHOD("get_custom_minimum_height"), &TreeItem::get_custom_minimum_height);
+
 	ClassDB::bind_method(D_METHOD("get_next"), &TreeItem::get_next);
 	ClassDB::bind_method(D_METHOD("get_prev"), &TreeItem::get_prev);
 	ClassDB::bind_method(D_METHOD("get_parent"), &TreeItem::get_parent);
@@ -759,6 +771,10 @@ void TreeItem::_bind_methods() {
 	BIND_ENUM_CONSTANT(CELL_MODE_RANGE_EXPRESSION);
 	BIND_ENUM_CONSTANT(CELL_MODE_ICON);
 	BIND_ENUM_CONSTANT(CELL_MODE_CUSTOM);
+
+	BIND_ENUM_CONSTANT(ALIGN_LEFT);
+	BIND_ENUM_CONSTANT(ALIGN_CENTER);
+	BIND_ENUM_CONSTANT(ALIGN_RIGHT);
 }
 
 void TreeItem::clear_children() {
@@ -780,6 +796,7 @@ TreeItem::TreeItem(Tree *p_tree) {
 	tree = p_tree;
 	collapsed = false;
 	disable_folding = false;
+	custom_min_height = 0;
 
 	parent = 0; // parent item
 	next = 0; // next in list
@@ -921,6 +938,9 @@ int Tree::compute_item_height(TreeItem *p_item) const {
 			default: {}
 		}
 	}
+	int item_min_height = p_item->get_custom_minimum_height();
+	if (height < item_min_height)
+		height = item_min_height;
 
 	height += cache.vseparation;
 
@@ -1990,7 +2010,7 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 
 		if (!k->is_pressed())
 			return;
-		if (k->get_alt() || k->get_command() || (k->get_shift() && k->get_unicode() == 0) || k->get_metakey())
+		if (k->get_command() || (k->get_shift() && k->get_unicode() == 0) || k->get_metakey())
 			return;
 		if (!root)
 			return;
@@ -2005,48 +2025,47 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 		break;                                     \
 	}
 			case KEY_RIGHT: {
+				bool dobreak = true;
 
 				//TreeItem *next = NULL;
 				if (!selected_item)
 					break;
-				if (select_mode == SELECT_ROW)
+				if (select_mode == SELECT_ROW) {
 					EXIT_BREAK;
-				if (selected_col >= (columns.size() - 1))
-					EXIT_BREAK;
-				if (select_mode == SELECT_MULTI) {
-					selected_col++;
-					emit_signal("cell_selected");
-				} else {
-
-					selected_item->select(selected_col + 1);
 				}
+				if (selected_col > (columns.size() - 1)) {
+					EXIT_BREAK;
+				}
+				if (k->get_alt()) {
+					selected_item->set_collapsed(false);
+					TreeItem *next = selected_item->get_children();
+					while (next && next != selected_item->next) {
+						next->set_collapsed(false);
+						next = next->get_next_visible();
+					}
+				} else if (selected_col == (columns.size() - 1)) {
+					if (selected_item->get_children() != NULL && selected_item->is_collapsed()) {
+						selected_item->set_collapsed(false);
+					} else {
+						selected_col = 0;
+						dobreak = false; // fall through to key_down
+					}
+				} else {
+					if (select_mode == SELECT_MULTI) {
+						selected_col++;
+						emit_signal("cell_selected");
+					} else {
 
+						selected_item->select(selected_col + 1);
+					}
+				}
 				update();
 				ensure_cursor_is_visible();
 				accept_event();
-
-			} break;
-			case KEY_LEFT: {
-
-				//TreeItem *next = NULL;
-				if (!selected_item)
+				if (dobreak) {
 					break;
-				if (select_mode == SELECT_ROW)
-					EXIT_BREAK;
-				if (selected_col <= 0)
-					EXIT_BREAK;
-				if (select_mode == SELECT_MULTI) {
-					selected_col--;
-					emit_signal("cell_selected");
-				} else {
-
-					selected_item->select(selected_col - 1);
 				}
-
-				update();
-				accept_event();
-
-			} break;
+			}
 			case KEY_DOWN: {
 
 				TreeItem *next = NULL;
@@ -2093,6 +2112,48 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 				accept_event();
 
 			} break;
+			case KEY_LEFT: {
+				bool dobreak = true;
+
+				//TreeItem *next = NULL;
+				if (!selected_item)
+					break;
+				if (select_mode == SELECT_ROW) {
+					EXIT_BREAK;
+				}
+				if (selected_col < 0) {
+					EXIT_BREAK;
+				}
+				if (k->get_alt()) {
+					selected_item->set_collapsed(true);
+					TreeItem *next = selected_item->get_children();
+					while (next && next != selected_item->next) {
+						next->set_collapsed(true);
+						next = next->get_next_visible();
+					}
+				} else if (selected_col == 0) {
+					if (selected_item->get_children() != NULL && !selected_item->is_collapsed()) {
+						selected_item->set_collapsed(true);
+					} else {
+						selected_col = columns.size() - 1;
+						dobreak = false; // fall through to key_up
+					}
+				} else {
+					if (select_mode == SELECT_MULTI) {
+						selected_col--;
+						emit_signal("cell_selected");
+					} else {
+
+						selected_item->select(selected_col - 1);
+					}
+				}
+				update();
+				accept_event();
+
+				if (dobreak) {
+					break;
+				}
+			}
 			case KEY_UP: {
 
 				TreeItem *prev = NULL;
@@ -3593,6 +3654,7 @@ void Tree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_item_area_rect", "item", "column"), &Tree::_get_item_rect, DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("get_item_at_pos", "pos"), &Tree::get_item_at_pos);
 	ClassDB::bind_method(D_METHOD("get_column_at_pos", "pos"), &Tree::get_column_at_pos);
+	ClassDB::bind_method(D_METHOD("get_drop_section_at_pos", "pos"), &Tree::get_drop_section_at_pos);
 
 	ClassDB::bind_method(D_METHOD("ensure_cursor_is_visible"), &Tree::ensure_cursor_is_visible);
 

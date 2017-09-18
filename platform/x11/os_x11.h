@@ -31,17 +31,16 @@
 #define OS_X11_H
 
 #include "context_gl_x11.h"
+#include "crash_handler_x11.h"
 #include "drivers/unix/os_unix.h"
 #include "os/input.h"
 #include "servers/visual_server.h"
 //#include "servers/visual/visual_server_wrap_mt.h"
 #include "drivers/alsa/audio_driver_alsa.h"
 #include "drivers/pulseaudio/audio_driver_pulseaudio.h"
-#include "drivers/rtaudio/audio_driver_rtaudio.h"
 #include "joypad_linux.h"
 #include "main/input_default.h"
 #include "power_x11.h"
-#include "servers/audio/audio_driver_dummy.h"
 #include "servers/audio_server.h"
 #include "servers/physics_2d/physics_2d_server_sw.h"
 #include "servers/physics_2d/physics_2d_server_wrap_mt.h"
@@ -153,10 +152,6 @@ class OS_X11 : public OS_Unix {
 	JoypadLinux *joypad;
 #endif
 
-#ifdef RTAUDIO_ENABLED
-	AudioDriverRtAudio driver_rtaudio;
-#endif
-
 #ifdef ALSA_ENABLED
 	AudioDriverALSA driver_alsa;
 #endif
@@ -164,11 +159,12 @@ class OS_X11 : public OS_Unix {
 #ifdef PULSEAUDIO_ENABLED
 	AudioDriverPulseAudio driver_pulseaudio;
 #endif
-	AudioDriverDummy driver_dummy;
 
 	Atom net_wm_icon;
 
 	PowerX11 *power_manager;
+
+	CrashHandler crash_handler;
 
 	int audio_driver_index;
 	unsigned int capture_idle;
@@ -191,6 +187,7 @@ protected:
 	virtual int get_audio_driver_count() const;
 	virtual const char *get_audio_driver_name(int p_driver) const;
 
+	virtual void initialize_core();
 	virtual void initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
 	virtual void finalize();
 
@@ -265,13 +262,16 @@ public:
 	virtual void set_use_vsync(bool p_enable);
 	virtual bool is_vsync_enabled() const;
 
-	virtual PowerState get_power_state();
+	virtual OS::PowerState get_power_state();
 	virtual int get_power_seconds_left();
 	virtual int get_power_percent_left();
 
 	virtual bool _check_internal_feature_support(const String &p_feature);
 
 	void run();
+
+	void disable_crash_handler();
+	bool is_disable_crash_handler() const;
 
 	OS_X11();
 };

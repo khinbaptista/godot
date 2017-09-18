@@ -43,7 +43,6 @@
 #include "math_2d.h"
 #include "matrix3.h"
 #include "node_path.h"
-#include "os/power.h"
 #include "plane.h"
 #include "quat.h"
 #include "rect3.h"
@@ -71,6 +70,7 @@ typedef PoolVector<Color> PoolColorArray;
 
 class Variant {
 public:
+	// If this changes the table in variant_op must be updated
 	enum Type {
 
 		NIL,
@@ -289,6 +289,7 @@ public:
 
 	Variant(const IP_Address &p_address);
 
+	// If this changes the table in variant_op must be updated
 	enum Operator {
 
 		//comparation
@@ -300,7 +301,7 @@ public:
 		OP_GREATER_EQUAL,
 		//mathematic
 		OP_ADD,
-		OP_SUBSTRACT,
+		OP_SUBTRACT,
 		OP_MULTIPLY,
 		OP_DIVIDE,
 		OP_NEGATE,

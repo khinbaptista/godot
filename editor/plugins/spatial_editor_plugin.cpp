@@ -76,18 +76,29 @@ void SpatialEditorViewport::_update_camera(float p_interp_delta) {
 	} else
 		camera->set_perspective(get_fov(), get_znear(), get_zfar());
 
-	float inertia = EDITOR_DEF("editors/3d/orbit_inertia", 0.5);
-	inertia = MAX(0, inertia);
+	//when not being manipulated, move softly
+	float free_orbit_inertia = EDITOR_DEF("editors/3d/free_orbit_inertia", 0.15);
+	float free_translation_inertia = EDITOR_DEF("editors/3d/free_translation_inertia", 0.15);
+	//when being manipulated, move more quickly
+	float manip_orbit_inertia = EDITOR_DEF("editors/3d/manipulation_orbit_inertia", 0.075);
+	float manip_translation_inertia = EDITOR_DEF("editors/3d/manipulation_translation_inertia", 0.075);
+
+	//determine if being manipulated
+	bool manipulated = (Input::get_singleton()->get_mouse_button_mask() & (2 | 4)) || Input::get_singleton()->is_key_pressed(KEY_SHIFT) || Input::get_singleton()->is_key_pressed(KEY_ALT) || Input::get_singleton()->is_key_pressed(KEY_CONTROL);
+
+	float orbit_inertia = MAX(0.00001, manipulated ? manip_orbit_inertia : free_orbit_inertia);
+	float translation_inertia = MAX(0.0001, manipulated ? manip_translation_inertia : free_translation_inertia);
 
 	Cursor old_camera_cursor = camera_cursor;
 	camera_cursor = cursor;
 
-	camera_cursor.x_rot = Math::lerp(old_camera_cursor.x_rot, cursor.x_rot, p_interp_delta * (1 / inertia));
-	camera_cursor.y_rot = Math::lerp(old_camera_cursor.y_rot, cursor.y_rot, p_interp_delta * (1 / inertia));
+	camera_cursor.x_rot = Math::lerp(old_camera_cursor.x_rot, cursor.x_rot, MIN(1.f, p_interp_delta * (1 / orbit_inertia)));
+	camera_cursor.y_rot = Math::lerp(old_camera_cursor.y_rot, cursor.y_rot, MIN(1.f, p_interp_delta * (1 / orbit_inertia)));
 
-	bool disable_interp = (Input::get_singleton()->get_mouse_button_mask() & (2 | 4)) || Input::get_singleton()->is_key_pressed(KEY_SHIFT) || Input::get_singleton()->is_key_pressed(KEY_ALT) || Input::get_singleton()->is_key_pressed(KEY_CONTROL);
+	camera_cursor.pos = old_camera_cursor.pos.linear_interpolate(cursor.pos, MIN(1.f, p_interp_delta * (1 / translation_inertia)));
+	camera_cursor.distance = Math::lerp(old_camera_cursor.distance, cursor.distance, MIN(1.f, p_interp_delta * (1 / translation_inertia)));
 
-	if (p_interp_delta == 0 || disable_interp || is_freelook_active()) {
+	if (p_interp_delta == 0 || is_freelook_active()) {
 		camera_cursor = cursor;
 	}
 
@@ -2843,8 +2854,8 @@ SpatialEditorViewport::SpatialEditorViewport(SpatialEditor *p_spatial_editor, Ed
 	ED_SHORTCUT("spatial_editor/freelook_right", TTR("Freelook Right"), KEY_D);
 	ED_SHORTCUT("spatial_editor/freelook_forward", TTR("Freelook Forward"), KEY_W);
 	ED_SHORTCUT("spatial_editor/freelook_backwards", TTR("Freelook Backwards"), KEY_S);
-	ED_SHORTCUT("spatial_editor/freelook_up", TTR("Freelook Up"), KEY_Q);
-	ED_SHORTCUT("spatial_editor/freelook_down", TTR("Freelook Down"), KEY_E);
+	ED_SHORTCUT("spatial_editor/freelook_up", TTR("Freelook Up"), KEY_E);
+	ED_SHORTCUT("spatial_editor/freelook_down", TTR("Freelook Down"), KEY_Q);
 	ED_SHORTCUT("spatial_editor/freelook_speed_modifier", TTR("Freelook Speed Modifier"), KEY_SHIFT);
 
 	preview_camera = memnew(Button);
@@ -3696,18 +3707,50 @@ void SpatialEditor::_init_indicators() {
 			origin_colors.push_back(Color(axis.x, axis.y, axis.z));
 			origin_points.push_back(axis * 4096);
 			origin_points.push_back(axis * -4096);
-#define ORIGIN_GRID_SIZE 25
+#define ORIGIN_GRID_SIZE 100
 
 			for (int j = -ORIGIN_GRID_SIZE; j <= ORIGIN_GRID_SIZE; j++) {
 
-				grid_colors[i].push_back(grid_color);
-				grid_colors[i].push_back(grid_color);
-				grid_colors[i].push_back(grid_color);
-				grid_colors[i].push_back(grid_color);
-				grid_points[i].push_back(axis_n1 * ORIGIN_GRID_SIZE + axis_n2 * j);
-				grid_points[i].push_back(-axis_n1 * ORIGIN_GRID_SIZE + axis_n2 * j);
-				grid_points[i].push_back(axis_n2 * ORIGIN_GRID_SIZE + axis_n1 * j);
-				grid_points[i].push_back(-axis_n2 * ORIGIN_GRID_SIZE + axis_n1 * j);
+				for (int k = -ORIGIN_GRID_SIZE; k <= ORIGIN_GRID_SIZE; k++) {
+
+					Vector3 p = axis_n1 * j + axis_n2 * k;
+					float trans = Math::pow(MAX(0, 1.0 - (Vector2(j, k).length() / ORIGIN_GRID_SIZE)), 2);
+
+					Vector3 pj = axis_n1 * (j + 1) + axis_n2 * k;
+					float transj = Math::pow(MAX(0, 1.0 - (Vector2(j + 1, k).length() / ORIGIN_GRID_SIZE)), 2);
+
+					Vector3 pk = axis_n1 * j + axis_n2 * (k + 1);
+					float transk = Math::pow(MAX(0, 1.0 - (Vector2(j, k + 1).length() / ORIGIN_GRID_SIZE)), 2);
+
+					Color trans_color = grid_color;
+					trans_color.a *= trans;
+
+					Color transk_color = grid_color;
+					transk_color.a *= transk;
+
+					Color transj_color = grid_color;
+					transj_color.a *= transj;
+
+					if (j % 10 == 0 || k % 10 == 0) {
+						trans_color.a *= 2;
+					}
+					if ((k + 1) % 10 == 0) {
+						transk_color.a *= 2;
+					}
+					if ((j + 1) % 10 == 0) {
+						transj_color.a *= 2;
+					}
+
+					grid_points[i].push_back(p);
+					grid_points[i].push_back(pk);
+					grid_colors[i].push_back(trans_color);
+					grid_colors[i].push_back(transk_color);
+
+					grid_points[i].push_back(p);
+					grid_points[i].push_back(pj);
+					grid_colors[i].push_back(trans_color);
+					grid_colors[i].push_back(transj_color);
+				}
 			}
 
 			grid[i] = VisualServer::get_singleton()->mesh_create();

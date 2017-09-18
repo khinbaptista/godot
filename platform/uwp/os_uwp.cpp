@@ -268,12 +268,7 @@ void OSUWP::initialize(const VideoMode &p_desired, int p_video_driver, int p_aud
 	joypad = ref new JoypadUWP(input);
 	joypad->register_events();
 
-	AudioDriverManager::get_driver(p_audio_driver)->set_singleton();
-
-	if (AudioDriverManager::get_driver(p_audio_driver)->init() != OK) {
-
-		ERR_PRINT("Initializing audio failed.");
-	}
+	AudioDriverManager::initialize(p_audio_driver);
 
 	power_manager = memnew(PowerUWP);
 
@@ -855,7 +850,7 @@ bool OSUWP::_check_internal_feature_support(const String &p_feature) {
 	return p_feature == "pc" || p_feature == "s3tc";
 }
 
-PowerState OSUWP::get_power_state() {
+OS::PowerState OSUWP::get_power_state() {
 	return power_manager->get_power_state();
 }
 

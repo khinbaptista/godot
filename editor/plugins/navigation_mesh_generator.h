@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  power.h                                                              */
+/*  navigation_mesh_generator.h                                          */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -27,16 +27,39 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+#ifndef NAVIGATION_MESH_GENERATOR_H
+#define NAVIGATION_MESH_GENERATOR_H
 
-#ifndef CORE_OS_POWER_H_
-#define CORE_OS_POWER_H_
+#ifdef RECAST_ENABLED
 
-typedef enum {
-	POWERSTATE_UNKNOWN, /**< cannot determine power status */
-	POWERSTATE_ON_BATTERY, /**< Not plugged in, running on the battery */
-	POWERSTATE_NO_BATTERY, /**< Plugged in, no battery available */
-	POWERSTATE_CHARGING, /**< Plugged in, charging battery */
-	POWERSTATE_CHARGED /**< Plugged in, battery charged */
-} PowerState;
+#include "editor/editor_node.h"
+#include "editor/editor_settings.h"
 
-#endif /* CORE_OS_POWER_H_ */
+#include "scene/3d/mesh_instance.h"
+
+#include "scene/3d/navigation_mesh.h"
+
+#include "os/thread.h"
+#include "scene/resources/shape.h"
+
+#include <Recast.h>
+
+class NavigationMeshGenerator {
+protected:
+	static void _add_vertex(const Vector3 &p_vec3, Vector<float> &p_verticies);
+	static void _add_mesh(const Ref<Mesh> &p_mesh, const Transform &p_xform, Vector<float> &p_verticies, Vector<int> &p_indices);
+	static void _parse_geometry(const Transform &p_base_inverse, Node *p_node, Vector<float> &p_verticies, Vector<int> &p_indices);
+
+	static void _convert_detail_mesh_to_native_navigation_mesh(const rcPolyMeshDetail *p_detail_mesh, Ref<NavigationMesh> p_nav_mesh);
+	static void _build_recast_navigation_mesh(Ref<NavigationMesh> p_nav_mesh, EditorProgress *ep,
+			rcHeightfield *hf, rcCompactHeightfield *chf, rcContourSet *cset, rcPolyMesh *poly_mesh,
+			rcPolyMeshDetail *detail_mesh, Vector<float> &verticies, Vector<int> &indices);
+
+public:
+	static void bake(Ref<NavigationMesh> p_nav_mesh, Node *p_node);
+	static void clear(Ref<NavigationMesh> p_nav_mesh);
+};
+
+#endif // RECAST_ENABLED
+
+#endif // NAVIGATION_MESH_GENERATOR_H

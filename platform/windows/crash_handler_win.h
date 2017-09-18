@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  event_queue.h                                                        */
+/*  crash_handler_win.h                                                  */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -27,38 +27,30 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
-#ifndef EVENT_QUEUE_H
-#define EVENT_QUEUE_H
+#ifndef CRASH_HANDLER_WIN_H
+#define CRASH_HANDLER_WIN_H
 
-#include "object.h"
-/**
-	@author Juan Linietsky <reduzio@gmail.com>
-*/
-class EventQueue {
+#include <windows.h>
 
-	enum {
+// Crash handler exception only enabled with MSVC
+#if defined(DEBUG_ENABLED) && defined(MSVC)
+#define CRASH_HANDLER_EXCEPTION 1
 
-		DEFAULT_EVENT_QUEUE_SIZE_KB = 256
-	};
+extern DWORD CrashHandlerException(EXCEPTION_POINTERS *ep);
+#endif
 
-	struct Event {
+class CrashHandler {
 
-		uint32_t instance_ID;
-		StringName method;
-		int args;
-	};
-
-	uint8_t *event_buffer;
-	uint32_t buffer_end;
-	uint32_t buffer_max_used;
-	uint32_t buffer_size;
+	bool disabled;
 
 public:
-	Error push_call(uint32_t p_instance_ID, const StringName &p_method, VARIANT_ARG_LIST);
-	void flush_events();
+	void initialize();
 
-	EventQueue(uint32_t p_buffer_size = DEFAULT_EVENT_QUEUE_SIZE_KB * 1024);
-	~EventQueue();
+	void disable();
+	bool is_disabled() const { return disabled; };
+
+	CrashHandler();
+	~CrashHandler();
 };
 
 #endif
