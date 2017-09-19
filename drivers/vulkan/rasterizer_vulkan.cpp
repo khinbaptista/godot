@@ -2,105 +2,10 @@
 
 #include "os/os.h"
 #include "project_settings.h"
-#include "vk_instance.h"
-#include <algorithm>
-#include <vulkan/vulkan.hpp>
 
 void RasterizerVK::initialize() {
 	if (OS::get_singleton()->is_stdout_verbose()) {
 		print_line("Using Vulkan video driver");
-	}
-
-	SwapchainSupportDetails swapchain_support(VkInstance::get_singleton()->get_physical_device());
-
-	vk::SurfaceFormatKHR surface_format;
-	{ // choose swapchain surface format
-		vector<vk::SurfaceFormatKHR> available_formats = swapchain_support.formats;
-
-		if (available_formats.size() == 1 && available_formats[0] == vk::Format::eUndefined) {
-			surface_format = { vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
-		} else {
-			for (const auto &available_format : available_formats) {
-				if (available_format.format == vk::Format::eB8G8R8A8Unorm &&
-						available_format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
-					surface_format = available_format;
-					break;
-				}
-			}
-
-			if (surface_format.format == vk::Format::eUndefined) {
-				surface_format = available_formats[0];
-			}
-		}
-	}
-
-	vk::PresentModeKHR present_mode = vk::PresentModeKHR::eFifo;
-	{ // choose swapchain present mode
-		vector<vk::PresentModeKHR> available_modes = swapchain_support.present_modes;
-
-		for (const auto &available_mode : available_modes) {
-			if (available_mode == vk::PresentModeKHR::eMailbox) {
-				present_mode = available_mode;
-				break;
-			} else if (available_mode == vk::PresentModeKHR::eImmediate) {
-				present_mode = available_mode;
-				break;
-			}
-		}
-	}
-
-	vk::Extent2D extent = swapchain_support.capabilities.currentExtent;
-	{ // choose swapchain extent
-		vk::SurfaceCapabilitiesKHR capabilities = swapchain_support.capabilities;
-		if (capabilities.currentExtent.width == std::numeric_limits<uint32_t>::max()) {
-			extent = {
-				VkInstance::get_singleton()->get_window_width(),
-				VkInstance::get_singleton()->get_window_height()
-			};
-
-			extent.width = std::max(capabilities.minImageExtent.width,
-					std::min(capabilities.maxImageExtent.width, extent.width));
-			extent.height = std::max(capabilities.minImageExtent.height,
-					std::min(capabilities.maxImageExtent.height, extent.height));
-		}
-	}
-
-	uint32_t image_count = swapchain_support.capabilities.minImageCount + 1;
-	{ // get max image count
-		vk::SurfaceCapabilitiesKHR capabilities = swapchain_support.capabilities;
-		if (capabilities.maxImageCount > 0 && image_count > capabilities.maxImageCount) {
-			image_count = capabilities.maxImageCount;
-		}
-	}
-
-	{
-		VkQueueFamilyIndices indices(VkInstance::get_singleton()->get_physical_device());
-		uint32_t queue_indices[] = { (uint32_t)indices.graphics, (uint32_t)indices.present };
-
-		vk::SwapchainCreateInfoKHR swapchain_info = {};
-		swapchain_info.surface = VkInstance::get_singleton()->get_surface();
-		swapchain_info.minImageCount = image_count;
-		swapchain_info.imageFormat = surface_format.format;
-		swapchain_info.imageColorSpace = surface_format.colorSpace;
-		swapchain_info.imageExtent = extent;
-		swapchain_info.imageArrayLayers = 1;
-		swapchain_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
-
-		if (indices.graphics != indices.present) {
-			swapchain_info.imageSharingMode = vk::SharingMode::eConcurrent;
-			swapchain_info.queueFamilyIndexCount = 2;
-			swapchain_info.pQueueFamilyIndices = queue_indices;
-		} else {
-			swapchain_info.imageSharingMode = vk::SharingMode::eExclusive;
-			swapchain_info.queueFamilyIndexCount = 0; // optional
-			swapchain_info.pQueueFamilyIndices = nullptr; // optional
-		}
-
-		swapchain_info.preTransform = swapchain_support.capabilities.currentTransform;
-		swapchain_info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque; // can blend with other windows in the window system
-		swapchain_info.presentMode = present_mode;
-		swapchain_info.clipped = VK_TRUE; // don't care about pixels obscured by other windows
-		swapchain_info.oldSwapchain = nullptr; // swapchain must be recreated if the window is resized
 	}
 
 	storage->initialize();
@@ -214,6 +119,4 @@ RasterizerVK::~RasterizerVK() {
 	memdelete(storage);
 	memdelete(canvas);
 	// again (before in finalize()), no scene in GLES3 renderer, must be managed elsewhere
-
-	VkInstance::get_singleton()->get_device().destroySwapchainKHR(swapchain);
 }

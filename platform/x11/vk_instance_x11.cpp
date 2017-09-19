@@ -27,44 +27,21 @@ static void set_class_hint(Display *p_display, Window p_window) {
 }
 
 Error VkInstance_X11::initialize() {
-	{ // create instance
-		instance_extensions.push_back("VK_KHR_xlib_surface");
 
-		vk::ApplicationInfo app_info = {};
-		app_info.pApplicationName = application_name;
-		app_info.applicationVersion = application_version;
-		app_info.pEngineName = engine_name;
-		app_info.engineVersion = engine_version;
-		app_info.apiVersion = vulkan_api_version;
+	instance_extensions.push_back("VK_KHR_xlib_surface");
 
-		vk::InstanceCreateInfo instance_info = {};
-		instance_info.pApplicationInfo = &app_info;
-		instance_info.enabledLayerCount = 0;
-		instance_info.ppEnabledLayerNames = nullptr;
-		instance_info.enabledExtensionCount = instance_extensions.count();
-		instance_info.ppEnabledExtensionNames = instance_extensions.data();
-
-		if (enable_validation_layers)
-			if (!check_validation_layer_support()) {
-				ERR_PRINTS("Vulkan validation layers enabled but not supported");
-			} else {
-				instance_info.enabledLayerCount = validation_layers.count();
-				instance_info.ppEnabledLayerNames = validation_layers.data();
-			}
-
-		instance = vk::createInstance(&instance_info);
-		ERR_EXPLAIN("Could not create vulkan instance");
-		ERR_FAIL_COND_V(!instance, ERR_UNCONFIGURED);
-
-		setup_debug_callback();
-	}
+	create_instance();
+	ERR_EXPLAIN("Could not create vulkan instance");
+	ERR_FAIL_COND_V(!instance, ERR_UNCONFIGURED);
 
 	{ // create window
+
 		// https://github.com/LunarG/VulkanSamples/blob/master/demos/vulkaninfo.c#L982
 		int visual_count;
 
 		XVisualInfo vinfo_template = {};
 		vi_template.screen = DefaultScreen(display);
+
 		XVisualInfo *vi = XGetVisualInfo(display, VisualScreenMask, &vi_template, &visual_count);
 		ERR_FAIL_COND(vinfo == NULL);
 
@@ -90,6 +67,7 @@ Error VkInstance_X11::initialize() {
 	}
 
 	{ // create surface
+
 		// https://github.com/LunarG/VulkanSamples/blob/master/demos/vulkaninfo.c#L982
 		vk::XlibSurfaceCreateInfoKHR surface_info = {};
 		surface_info.dpy = x11_display;
@@ -101,10 +79,16 @@ Error VkInstance_X11::initialize() {
 	}
 
 	pick_physical_device();
+	ERR_EXPLAIN("Couldn't find a suitable physical device");
 	ERR_FAIL_COND_V(!physical_device, ERR_UNCONFIGURED);
 
 	create_logical_device();
+	ERR_EXPLAIN("Failed to create logical device");
 	ERR_FAIL_COND_V(!device, ERR_UNCONFIGURED);
+
+	create_swapchain();
+	ERR_EXPLAIN("Failed to create swapchain");
+	ERR_FAIL_COND_V(!swapchain, ERR_UNCONFIGURED);
 
 	return OK;
 }

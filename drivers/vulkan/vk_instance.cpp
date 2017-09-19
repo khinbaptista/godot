@@ -1,6 +1,7 @@
+#include "vk_instance.h"
+
 //#if defined(VULKAN_ENABLED)
 
-#include "vk_instance.h"
 #include <string.h>
 #include <cstring>
 #include <set>
@@ -82,7 +83,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL _vk_debug_print(
 	ERR_PRINTS(output);
 }
 
-void VkInstance::setup_debug_callback() { // called from initialize()
+void VkInstance::setup_debug_callback() {
 	if (!enable_validation_layers) return;
 
 	vk::DebugReportCallbackCreateInfoEXT debug_info = {};
@@ -93,9 +94,39 @@ void VkInstance::setup_debug_callback() { // called from initialize()
 
 	auto vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
 
+	ERR_EXPLAIN("Failed to find procedure \"vkCreateDebugReportCallbackEXT\"");
 	ERR_FAIL_COND(vkCreateDebugReportCallbackEXT == nullptr);
 
 	vkCreateDebugReportCallbackEXT(instance, &debug_info, nullptr, vk_debug_callback);
+}
+
+void VkInstance::create_instance() {
+	vk::ApplicationInfo app_info = {};
+	app_info.pApplicationName = application_name;
+	app_info.applicationVersion = application_version;
+	app_info.pEngineName = engine_name;
+	app_info.engineVersion = engine_version;
+	app_info.apiVersion = vulkan_api_version;
+
+	vk::InstanceCreateInfo instance_info = {};
+	instance_info.pApplicationInfo = &app_info;
+	instance_info.enabledLayerCount = 0;
+	instance_info.ppEnabledLayerNames = nullptr;
+	instance_info.enabledExtensionCount = instance_extensions.count();
+	instance_info.ppEnabledExtensionNames = instance_extensions.data();
+
+	if (enable_validation_layers)
+		if (!check_validation_layer_support()) {
+			ERR_PRINTS("Vulkan validation layers enabled but not supported");
+		} else {
+			instance_info.enabledLayerCount = validation_layers.count();
+			instance_info.ppEnabledLayerNames = validation_layers.data();
+		}
+
+	instance = vk::createInstance(instance_info);
+	if (!instance) return;
+
+	setup_debug_callback();
 }
 
 bool VkInstance::check_device_extensions(vk::PhysicalDevice device) {
@@ -139,10 +170,6 @@ void VkInstance::pick_physical_device() {
 			break; // select the first suitable device
 		}
 	}
-
-	if (!physical_device) {
-		ERR_EXPLAIN("Couldn't find a suitable physical device");
-	}
 }
 
 void VkInstance::create_logical_device() {
@@ -171,40 +198,129 @@ void VkInstance::create_logical_device() {
 
 	device = physical_device.createDevice(device_info);
 
-	if (!device) {
-		ERR_EXPLAIN("Failed to create logical device");
-		return;
-	}
+	if (!device) return;
 
 	graphics_queue = device.getQueue(indices.graphics);
 	present_queue = device.getQueue(indices.present);
+}
+
+void VkInstance::create_swapchain() {
+	SwapchainSupportDetails swapchain_support(physical_device);
+	vk::SurfaceCapabilitiesKHR capabilities = swapchain_support.capabilities;
+
+	vk::SurfaceFormatKHR surface_format;
+	{ // choose swapchain surface format
+
+		vector<vk::SurfaceFormatKHR> available_formats = swapchain_support.formats;
+
+		if (available_formats.size() == 1 && available_formats[0] == vk::Format::eUndefined) {
+			surface_format = { vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
+		} else {
+			for (const auto &available_format : available_formats) {
+				if (available_format.format == vk::Format::eB8G8R8A8Unorm &&
+						available_format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+					surface_format = available_format;
+					break;
+				}
+			}
+
+			if (surface_format.format == vk::Format::eUndefined) {
+				surface_format = available_formats[0];
+			}
+		}
+
+		swapchain_image_format = surface_format.format;
+	}
+
+	vk::PresentModeKHR present_mode = vk::PresentModeKHR::eFifo;
+	{ // choose swapchain present mode
+
+		for (const auto &available_mode : swapchain_support.present_modes) {
+			if (available_mode == preferred_present_mode) {
+				present_mode = available_mode;
+				break;
+			}
+		}
+	}
+
+	swapchain_extent = capabilities.currentExtent;
+	{ // choose swapchain extent
+
+		if (capabilities.currentExtent.width == std::numeric_limits<uint32_t>::max()) {
+			swapchain_extent = { get_window_width(), get_window_height() };
+
+			swapchain_extent.width = std::max(capabilities.minImageExtent.width,
+					std::min(capabilities.maxImageExtent.width, swapchain_extent.width));
+			swapchain_extent.height = std::max(capabilities.minImageExtent.height,
+					std::min(capabilities.maxImageExtent.height, swapchain_extent.height));
+		}
+	}
+
+	uint32_t image_count = swapchain_support.capabilities.minImageCount + 1; // if allowed, +1 for triple buffering
+	{ // get image count
+
+		if (capabilities.maxImageCount > 0 && image_count > capabilities.maxImageCount) {
+			image_count = capabilities.maxImageCount;
+		}
+	}
+
+	VkQueueFamilyIndices indices(physical_device);
+	uint32_t queue_indices[] = { (uint32_t)indices.graphics, (uint32_t)indices.present };
+
+	vk::SwapchainCreateInfoKHR swapchain_info = {};
+	swapchain_info.surface = surface;
+	swapchain_info.minImageCount = image_count;
+	swapchain_info.imageFormat = surface_format.format;
+	swapchain_info.imageColorSpace = surface_format.colorSpace;
+	swapchain_info.imageExtent = swapchain_extent;
+	swapchain_info.imageArrayLayers = 1;
+	swapchain_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+	if (indices.graphics != indices.present) {
+		swapchain_info.imageSharingMode = vk::SharingMode::eConcurrent;
+		swapchain_info.queueFamilyIndexCount = 2;
+		swapchain_info.pQueueFamilyIndices = queue_indices;
+	} else {
+		swapchain_info.imageSharingMode = vk::SharingMode::eExclusive;
+		swapchain_info.queueFamilyIndexCount = 0; // optional
+		swapchain_info.pQueueFamilyIndices = nullptr; // optional
+	}
+	swapchain_info.preTransform = swapchain_support.capabilities.currentTransform;
+	swapchain_info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque; // can blend with other windows in the window system
+	swapchain_info.presentMode = present_mode;
+	swapchain_info.clipped = VK_TRUE; // don't care about pixels obscured by other windows
+	swapchain_info.oldSwapchain = nullptr; // swapchain must be recreated if the window is resized
+
+	swapchain = device.createSwapchainKHR(swapchain_info);
+	if (!swapchain) return;
+
+	swapchain_images = device.getSwapchainImagesKHR(swapchain);
 }
 
 VkInstance *VkInstance::get_singleton() {
 	return singleton;
 }
 
-vk::Instance &VkInstance::vk() {
+vk::Instance VkInstance::vk() {
 	return instance;
 }
 
-vk::SurfaceKHR &VkInstance::get_surface() {
+vk::SurfaceKHR VkInstance::get_surface() {
 	return surface;
 }
 
-vk::PhysicalDevice &VkInstance::get_physical_device() {
+vk::PhysicalDevice VkInstance::get_physical_device() {
 	return physical_device;
 }
 
-vk::Device &VkInstance::get_device() {
+vk::Device VkInstance::get_device() {
 	return device;
 }
 
-vk::Queue &VkInstance::get_queue_graphics() {
+vk::Queue VkInstance::get_queue_graphics() {
 	return graphics_queue;
 }
 
-vk::Queue &VkInstance::get_queue_present() {
+vk::Queue VkInstance::get_queue_present() {
 	return present_queue;
 }
 
@@ -218,6 +334,8 @@ VkInstance::VkInstance() {
 }
 
 VkInstance::~VkInstance() {
+	device.destroySwapchainKHR(swapchain);
+
 	device.destroy();
 	physical_device.destroy();
 
