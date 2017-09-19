@@ -49,4 +49,42 @@ public:
 	} config;
 
 	// SHADERS!!!!
+
+	// APIs
+
+	//
+
+	struct Frame {
+
+		RenderTarget *current_rt;
+
+		bool clear_request;
+		Color clear_request_color;
+		int canvas_draw_commands;
+		float time[4];
+		float delta;
+		uint64_t prev_tick;
+		uint64_t count;
+
+	} frame;
+
+	void initialize();
+	void finalize();
+
+	virtual VS::InstanceType get_base_type(RID p_rid) const;
+	virtual bool free(RID p_rid);
+
+	virtual bool has_os_feature(const String &p_feature) const;
+
+	virtual void update_dirty_resources();
+
+	virtual void set_debug_generate_wireframes(bool p_generate);
+
+	virtual void render_info_begin_capture();
+	virtual void render_info_end_capture();
+	virtual int get_captured_render_info(VS::RenderInfo p_info);
+
+	virtual int get_render_info(VS::RenderInfo p_info);
+
+	RasterizerStorageVK();
 };

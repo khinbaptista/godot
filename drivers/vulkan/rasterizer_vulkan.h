@@ -4,9 +4,11 @@
 #include "rasterizer_scene_vulkan.h"
 #include "rasterizer_storage_vulkan.h"
 #include "servers/visual/rasterizer.h"
+#include <vector>
+#include <vulkan/vulkan.hpp>
 
 class RasterizerVK : public Rasterizer {
-
+private:
 	static Rasterizer *_create_current();
 
 	RasterizerStorageVK *storage;
@@ -16,8 +18,11 @@ class RasterizerVK : public Rasterizer {
 	uint64_t prev_ticks;
 	double time_total;
 
+	vk::SwapchainKHR swapchain;
+
 public:
-	virtual RasterizerStorage *get_storage();
+	virtual RasterizerStorage *
+	get_storage();
 	virtual RasterizerCanvas *get_canvas();
 	virtual RasterizerScene *get_scene();
 

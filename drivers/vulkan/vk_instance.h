@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(VULKAN_ENABLED)
+//#if defined(VULKAN_ENABLED)
 
 #include "typedefs.h"
 #include <vector>
@@ -10,10 +10,22 @@ struct VkQueueFamilyIndices {
 	int graphics = -1;
 	int present = -1;
 
+	VkQueueFamilyIndices();
+	VkQueueFamilyIndices(vk::PhysicalDevice);
+
 	_FORCE_INLINE_ bool is_complete() {
 		return graphics >= 0 && present >= 0;
 	};
 }
+
+struct SwapchainSupportDetails {
+	vk::SurfaceCapabilitiesKHR capabilities;
+	std::vector<vk::SurfaceFormatKHR> formats;
+	std::vector<vk::PresentModeKHR> present_modes;
+
+	SwapchainSupportDetails();
+	SwapchainSupportDetails(vk::PhysicalDevice);
+};
 
 class VkInstance {
 
@@ -35,14 +47,14 @@ protected:
 	const bool enable_validation_layers = false;
 #endif
 
-	const vk::PhysicalDeviceType physical_device_type = vk::PhysicalDeviceType::eDiscreteGpu;
-	const vk::PhysicalDeviceFeatures physical_device_features = {};
+	//const vk::PhysicalDeviceType physical_device_type = vk::PhysicalDeviceType::eDiscreteGpu;
+	//const vk::PhysicalDeviceFeatures physical_device_features = {};
 	bool is_device_suitable(vk::PhysicalDevice);
-	VkQueueFamilyIndices find_queue_families(vk::PhysicalDevice);
+	bool check_device_extensions(vk::PhysicalDevice);
 
 	vk::Instance instance;
 	vk::DebugReportCallbackEXT debug_callback;
-	vk::Surface surface;
+	vk::SurfaceKHR surface;
 
 	vk::PhysicalDevice physical_device;
 	vk::Device device;
@@ -68,7 +80,7 @@ protected:
 public:
 	static VkInstance *get_singleton();
 	vk::Instance &vk(); // get vulkan instance object
-	vk::Surface &get_surface();
+	vk::SurfaceKHR &get_surface();
 	vk::PhysicalDevice &get_physical_device();
 	vk::Device &get_device();
 	vk::Queue &get_queue_graphics();
@@ -85,4 +97,4 @@ public:
 	~VkInstance();
 };
 
-#endif
+//#endif
