@@ -1,6 +1,6 @@
 #include "vk_instance.h"
 
-//#if defined(VULKAN_ENABLED)
+#if defined(VULKAN_ENABLED)
 
 #include <string.h>
 #include <cstring>
@@ -345,4 +345,4 @@ VkInstance::~VkInstance() {
 	if (singleton == this) singleton = nullptr;
 }
 
-//#endif
+#endif

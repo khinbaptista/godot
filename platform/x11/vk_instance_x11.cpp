@@ -1,8 +1,6 @@
 #include "vk_instance_x11.h"
 
-#ifdef X11_ENABLED
-
-#if defined(VULKAN_ENABLED)
+#if defined(X11_ENABLED) && defined(VULKAN_ENABLED)
 
 #include <Xlib/Xutil.h> // VisualScreenMask
 #include <vulkan/vulkan.hpp>
@@ -114,5 +112,4 @@ VkInstance_X11::VkInstance_X11(::Display *display, ::Window &window)
 
 VkInstance_X11::~VkInstance_X11() {}
 
-#endif // defined(VULKAN_ENABLED)
-#endif // X11_ENABLED
+#endif // defined(X11_ENABLED) && defined(VULKAN_ENABLED)

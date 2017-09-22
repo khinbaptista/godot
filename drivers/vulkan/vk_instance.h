@@ -1,8 +1,9 @@
 #pragma once
 
-//#if defined(VULKAN_ENABLED)
+#if defined(VULKAN_ENABLED)
 
 #include "typedefs.h"
+#include "version.h"
 #include <algorithm>
 #include <vector>
 #include <vulkan/vulkan.hpp>
@@ -36,11 +37,17 @@ private:
 protected:
 	const uint32_t vulkan_api_version = VK_MAKE_VERSION(1, 0, 30);
 
+	// TODO: get from project config
 	const char *application_name = "Godot Engine Editor";
 	const uint32_t application_version = VK_MAKE_VERSION(3, 0, 0);
 
-	const char *engine_name = "Godot Engine";
-	const uint32_t engine_version = VK_MAKE_VERSION(3, 0, 0);
+	const char *engine_name = VERSION_NAME;
+	const uint32_t engine_version =
+#ifdef VERSION_PATCH
+			VK_MAKE_VERSION(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
+#else
+			VK_MAKE_VERSION(VERSION_MAJOR, VERSION_MINOR, 0);
+#endif
 
 	/*
 		eImmediate:		single buffer
@@ -111,4 +118,4 @@ public:
 	~VkInstance();
 };
 
-//#endif
+#endif
