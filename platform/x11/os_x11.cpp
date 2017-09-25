@@ -27,8 +27,10 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "os_x11.h"
 #include "drivers/gles3/rasterizer_gles3.h"
+#include "drivers/vulkan/rasterizer_vulkan.h"
 #include "errno.h"
 #include "key_mapping_x11.h"
 #include "print_string.h"
@@ -132,8 +134,8 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 		// Try to support IME if detectable auto-repeat is supported
 		if (xkb_dar == True) {
 
-// Xutf8LookupString will be used later instead of XmbLookupString before
-// the multibyte sequences can be converted to unicode string.
+			// Xutf8LookupString will be used later instead of XmbLookupString before
+			// the multibyte sequences can be converted to unicode string.
 
 #ifdef X_HAVE_UTF8_STRING
 			modifiers = XSetLocaleModifiers("");
@@ -243,7 +245,16 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 
 	RasterizerGLES3::make_current();
 
+#elif defined(VULKAN_ENABLED)
+
+	vk_instance = memnew(InstanceVK_X11(x11_display, x11_window));
+	vk_instance->initialize();
+
+	RasterizerVK::register_config();
+	RasterizerVK::make_current();
+
 #endif
+
 	visual_server = memnew(VisualServerRaster);
 
 	if (get_render_thread_mode() != RENDER_THREAD_UNSAFE) {
@@ -503,7 +514,7 @@ void OS_X11::finalize() {
 		memdelete(main_loop);
 	main_loop = NULL;
 
-/*
+	/*
 	if (debugger_connection_console) {
 		memdelete(debugger_connection_console);
 	}
@@ -534,6 +545,8 @@ void OS_X11::finalize() {
 
 #if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED)
 	memdelete(context_gl);
+#elif defined(VULKAN_ENABLED)
+	memdelete(vk_instance);
 #endif
 	for (int i = 0; i < CURSOR_MAX; i++) {
 		if (cursors[i] != None)
@@ -2020,18 +2033,21 @@ void OS_X11::set_cursor_shape(CursorShape p_shape) {
 }
 
 void OS_X11::release_rendering_thread() {
-
+#if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED)
 	context_gl->release_current();
+#endif
 }
 
 void OS_X11::make_rendering_thread() {
-
+#if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED)
 	context_gl->make_current();
+#endif
 }
 
 void OS_X11::swap_buffers() {
-
+#if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED)
 	context_gl->swap_buffers();
+#endif
 }
 
 void OS_X11::alert(const String &p_alert, const String &p_title) {
@@ -2118,15 +2134,17 @@ String OS_X11::get_joy_guid(int p_device) const {
 }
 
 void OS_X11::set_use_vsync(bool p_enable) {
+#if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED)
 	if (context_gl)
 		return context_gl->set_use_vsync(p_enable);
+#endif
 }
 
 bool OS_X11::is_vsync_enabled() const {
-
+#if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED)
 	if (context_gl)
 		return context_gl->is_using_vsync();
-
+#endif
 	return true;
 }
 

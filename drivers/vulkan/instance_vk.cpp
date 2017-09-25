@@ -1,8 +1,8 @@
-#include "vk_instance.h"
+#include "instance_vk.h"
 
 #if defined(VULKAN_ENABLED)
 
-#include <string.h>
+#include "ustring.h"
 #include <cstring>
 #include <set>
 #include <string>
@@ -13,7 +13,7 @@ using std::set;
 using std::string;
 using std::vector;
 
-VkInstance *VkInstance::singleton = nullptr;
+InstanceVK *InstanceVK::singleton = nullptr;
 
 VkQueueFamilyIndices::VkQueueFamilyIndices() {}
 
@@ -26,6 +26,7 @@ VkQueueFamilyIndices::VkQueueFamilyIndices(vk::PhysicalDevice device) {
 			graphics = i;
 		}
 
+		vk::SurfaceKHR surface = InstanceVK::get_singleton()->get_surface();
 		VkBool32 present_support = device.getSurfaceSupportKHR(i, surface);
 		if (family.queueCount > 0 && present_support) {
 			present = i;
@@ -40,14 +41,14 @@ VkQueueFamilyIndices::VkQueueFamilyIndices(vk::PhysicalDevice device) {
 SwapchainSupportDetails::SwapchainSupportDetails(){};
 
 SwapchainSupportDetails::SwapchainSupportDetails(vk::PhysicalDevice device) {
-	vk::SurfaceKHR surface = VkInstance::get_singleton()->get_surface();
+	vk::SurfaceKHR surface = InstanceVK::get_singleton()->get_surface();
 
 	capabilities = device.getSurfaceCapabilitiesKHR(surface);
 	formats = device.getSurfaceFormatsKHR(surface);
 	present_modes = device.getSurfacePresentModesKHR(surface);
 }
 
-bool VkInstance::check_validation_layer_support() {
+bool InstanceVK::check_validation_layer_support() {
 	vector<vk::LayerProperties> available_layers;
 	available_layers = vk::enumerateInstanceLayerProperties();
 
@@ -75,15 +76,19 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL _vk_debug_print(
 		const char *layerPrefix, const char *msg, void *userData) {
 
 	String output = String() +
-					"VULKAN ERROR: Flags: " + vk::to_string(flags) +
-					"\tObject type: " + vk::to_string(objType) +
+					"VULKAN ERROR: Flags: " +
+					vk::to_string(vk::DebugReportFlagBitsEXT(flags)).c_str() +
+
+					"\tObject type: " +
+					vk::to_string(vk::DebugReportObjectTypeEXT(objType)).c_str() +
+
 					"\tCode: " + itos(code) +
 					"\tMessage: \"" + msg + "\"";
 
 	ERR_PRINTS(output);
 }
 
-void VkInstance::setup_debug_callback() {
+void InstanceVK::setup_debug_callback() {
 	if (!enable_validation_layers) return;
 
 	vk::DebugReportCallbackCreateInfoEXT debug_info = {};
@@ -92,15 +97,18 @@ void VkInstance::setup_debug_callback() {
 					   vk::DebugReportFlagBitsEXT::ePerformanceWarning;
 	debug_info.pfnCallback = _vk_debug_print;
 
-	auto vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+	auto vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)
+			vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
 
 	ERR_EXPLAIN("Failed to find procedure \"vkCreateDebugReportCallbackEXT\"");
 	ERR_FAIL_COND(vkCreateDebugReportCallbackEXT == nullptr);
 
-	vkCreateDebugReportCallbackEXT(instance, &debug_info, nullptr, vk_debug_callback);
+	vkCreateDebugReportCallbackEXT(
+			instance, (VkDebugReportCallbackCreateInfoEXT *)&debug_info,
+			nullptr, (VkDebugReportCallbackEXT *)&debug_callback);
 }
 
-void VkInstance::create_instance() {
+void InstanceVK::create_instance() {
 	vk::ApplicationInfo app_info = {};
 	app_info.pApplicationName = application_name;
 	app_info.applicationVersion = application_version;
@@ -112,14 +120,14 @@ void VkInstance::create_instance() {
 	instance_info.pApplicationInfo = &app_info;
 	instance_info.enabledLayerCount = 0;
 	instance_info.ppEnabledLayerNames = nullptr;
-	instance_info.enabledExtensionCount = instance_extensions.count();
+	instance_info.enabledExtensionCount = instance_extensions.size();
 	instance_info.ppEnabledExtensionNames = instance_extensions.data();
 
 	if (enable_validation_layers)
 		if (!check_validation_layer_support()) {
 			ERR_PRINTS("Vulkan validation layers enabled but not supported");
 		} else {
-			instance_info.enabledLayerCount = validation_layers.count();
+			instance_info.enabledLayerCount = validation_layers.size();
 			instance_info.ppEnabledLayerNames = validation_layers.data();
 		}
 
@@ -129,7 +137,7 @@ void VkInstance::create_instance() {
 	setup_debug_callback();
 }
 
-bool VkInstance::check_device_extensions(vk::PhysicalDevice device) {
+bool InstanceVK::check_device_extensions(vk::PhysicalDevice device) {
 	vector<vk::ExtensionProperties> available_extensions;
 	available_extensions = device.enumerateDeviceExtensionProperties();
 
@@ -142,7 +150,7 @@ bool VkInstance::check_device_extensions(vk::PhysicalDevice device) {
 	return required_extensions.empty();
 }
 
-bool VkInstance::is_device_suitable(vk::PhysicalDevice device) {
+bool InstanceVK::is_device_suitable(vk::PhysicalDevice device) {
 	//vk::PhysicalDeviceProperties properties = device.getProperties();
 	//vk::PhysicalDeviceFeatures features = device.getFeatures();
 
@@ -161,7 +169,7 @@ bool VkInstance::is_device_suitable(vk::PhysicalDevice device) {
 		   swapchain_adequate;
 }
 
-void VkInstance::pick_physical_device() {
+void InstanceVK::pick_physical_device() {
 	vector<vk::PhysicalDevice> devices = instance.enumeratePhysicalDevices();
 
 	for (const auto &device : devices) {
@@ -172,8 +180,8 @@ void VkInstance::pick_physical_device() {
 	}
 }
 
-void VkInstance::create_logical_device() {
-	auto indices = find_queue_families(physical_device);
+void InstanceVK::create_logical_device() {
+	VkQueueFamilyIndices indices(physical_device);
 
 	vector<vk::DeviceQueueCreateInfo> queue_infos;
 	std::set<int> family_indices = { indices.graphics, indices.present };
@@ -190,7 +198,7 @@ void VkInstance::create_logical_device() {
 	vk::DeviceCreateInfo device_info = {};
 	device_info.queueCreateInfoCount = static_cast<uint32_t>(queue_infos.size());
 	device_info.pQueueCreateInfos = queue_infos.data();
-	device_info.pEnabledFeatures = &physical_device_features;
+	device_info.pEnabledFeatures = nullptr;
 	device_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
 	device_info.ppEnabledExtensionNames = device_extensions.data();
 	device_info.enabledLayerCount = enable_validation_layers ? static_cast<uint32_t>(validation_layers.size()) : 0;
@@ -200,11 +208,11 @@ void VkInstance::create_logical_device() {
 
 	if (!device) return;
 
-	graphics_queue = device.getQueue(indices.graphics);
-	present_queue = device.getQueue(indices.present);
+	graphics_queue = device.getQueue(indices.graphics, 0);
+	present_queue = device.getQueue(indices.present, 0);
 }
 
-void VkInstance::create_swapchain() {
+void InstanceVK::create_swapchain() {
 	SwapchainSupportDetails swapchain_support(physical_device);
 	vk::SurfaceCapabilitiesKHR capabilities = swapchain_support.capabilities;
 
@@ -213,7 +221,7 @@ void VkInstance::create_swapchain() {
 
 		vector<vk::SurfaceFormatKHR> available_formats = swapchain_support.formats;
 
-		if (available_formats.size() == 1 && available_formats[0] == vk::Format::eUndefined) {
+		if (available_formats.size() == 1 && available_formats[0].format == vk::Format::eUndefined) {
 			surface_format = { vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
 		} else {
 			for (const auto &available_format : available_formats) {
@@ -247,7 +255,7 @@ void VkInstance::create_swapchain() {
 	{ // choose swapchain extent
 
 		if (capabilities.currentExtent.width == std::numeric_limits<uint32_t>::max()) {
-			swapchain_extent = { get_window_width(), get_window_height() };
+			swapchain_extent = vk::Extent2D(get_window_width(), get_window_height());
 
 			swapchain_extent.width = std::max(capabilities.minImageExtent.width,
 					std::min(capabilities.maxImageExtent.width, swapchain_extent.width));
@@ -296,35 +304,35 @@ void VkInstance::create_swapchain() {
 	swapchain_images = device.getSwapchainImagesKHR(swapchain);
 }
 
-VkInstance *VkInstance::get_singleton() {
+InstanceVK *InstanceVK::get_singleton() {
 	return singleton;
 }
 
-vk::Instance VkInstance::vk() {
+vk::Instance InstanceVK::vk() {
 	return instance;
 }
 
-vk::SurfaceKHR VkInstance::get_surface() {
+vk::SurfaceKHR InstanceVK::get_surface() {
 	return surface;
 }
 
-vk::PhysicalDevice VkInstance::get_physical_device() {
+vk::PhysicalDevice InstanceVK::get_physical_device() {
 	return physical_device;
 }
 
-vk::Device VkInstance::get_device() {
+vk::Device InstanceVK::get_device() {
 	return device;
 }
 
-vk::Queue VkInstance::get_queue_graphics() {
+vk::Queue InstanceVK::get_queue_graphics() {
 	return graphics_queue;
 }
 
-vk::Queue VkInstance::get_queue_present() {
+vk::Queue InstanceVK::get_queue_present() {
 	return present_queue;
 }
 
-VkInstance::VkInstance() {
+InstanceVK::InstanceVK() {
 	if (enable_validation_layers) {
 		instance_extensions.push_back("VK_EXT_debug_report");
 	}
@@ -333,11 +341,10 @@ VkInstance::VkInstance() {
 	singleton = this;
 }
 
-VkInstance::~VkInstance() {
+InstanceVK::~InstanceVK() {
 	device.destroySwapchainKHR(swapchain);
 
 	device.destroy();
-	physical_device.destroy();
 
 	instance.destroyDebugReportCallbackEXT(debug_callback);
 	instance.destroy();

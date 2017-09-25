@@ -201,7 +201,7 @@ def build_glsl_header(filename):
     out_file_base = out_file
     out_file_base = out_file_base[out_file_base.rfind("/") + 1:]
     out_file_base = out_file_base[out_file_base.rfind("\\") + 1:]
-#	print("out file "+out_file+" base " +out_file_base)
+	#	print("out file "+out_file+" base " +out_file_base)
     out_file_ifdef = out_file_base.replace(".", "_").upper()
     fd.write("#ifndef " + out_file_ifdef + "\n")
     fd.write("#define " + out_file_ifdef + "\n")
@@ -496,7 +496,7 @@ def build_hlsl_dx9_header(filename):
     out_file_base = out_file
     out_file_base = out_file_base[out_file_base.rfind("/") + 1:]
     out_file_base = out_file_base[out_file_base.rfind("\\") + 1:]
-#	print("out file "+out_file+" base " +out_file_base)
+	#	print("out file "+out_file+" base " +out_file_base)
     out_file_ifdef = out_file_base.replace(".", "_").upper()
     fd.write("#ifndef " + out_file_ifdef + "\n")
     fd.write("#define " + out_file_ifdef + "\n")
@@ -724,7 +724,7 @@ def include_file_in_legacygl_header(filename, header_data, depth):
                 enumbase = ifdefline[:ifdefline.find("_EN_")]
                 ifdefline = ifdefline.replace("_EN_", "_")
                 line = line.replace("_EN_", "_")
-#				print(enumbase+":"+ifdefline);
+				#				print(enumbase+":"+ifdefline);
                 if (enumbase not in header_data.enums):
                     header_data.enums[enumbase] = []
                 if (ifdefline not in header_data.enums[enumbase]):
@@ -855,7 +855,7 @@ def build_legacygl_header(filename, include, class_suffix, output_attribs):
     out_file_base = out_file
     out_file_base = out_file_base[out_file_base.rfind("/") + 1:]
     out_file_base = out_file_base[out_file_base.rfind("\\") + 1:]
-#	print("out file "+out_file+" base " +out_file_base)
+	#	print("out file "+out_file+" base " +out_file_base)
     out_file_ifdef = out_file_base.replace(".", "_").upper()
     fd.write("#ifndef " + out_file_ifdef + class_suffix + "_120\n")
     fd.write("#define " + out_file_ifdef + class_suffix + "_120\n")
@@ -998,10 +998,10 @@ def build_legacygl_header(filename, include, class_suffix, output_attribs):
             x = header_data.enums[xv]
             bits = 1
             amt = len(x)
-#			print(x)
+			#			print(x)
             while(2**bits < amt):
                 bits += 1
-#			print("amount: "+str(amt)+" bits "+str(bits));
+				#			print("amount: "+str(amt)+" bits "+str(bits));
             strs = "{"
             for i in range(amt):
                 strs += "\"#define " + x[i] + "\\n\","

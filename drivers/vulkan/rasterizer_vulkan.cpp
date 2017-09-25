@@ -22,8 +22,7 @@ void RasterizerVK::begin_frame() {
 	time_total += delta;
 
 	if (delta == 0) {
-		//to avoid hiccups
-		delta = 0.001;
+		delta = 0.001; // to avoid hiccups
 	}
 
 	prev_ticks = tick;
@@ -64,7 +63,7 @@ void RasterizerVK::clear_render_target(const Color &p_color) {
 	storage->frame.clear_request_color = p_color;
 }
 
-void RasterizerVK::set_boot_image(Ref<Image> &p_image, const Color &p_color, bool p_scale) {
+void RasterizerVK::set_boot_image(const Ref<Image> &p_image, const Color &p_color, bool p_scale) {
 	// TODO after storage and canvas are created
 }
 
@@ -73,16 +72,15 @@ void RasterizerVK::blit_render_target_to_screen(RID p_render_target, const Rect2
 }
 
 void RasterizerVK::end_frame() {
-	OS::get_singleton()->swap_buffers(); // necessary?
+	//OS::get_singleton()->swap_buffers(); // necessary? -> no
 }
 
 void RasterizerVK::finalize() {
 	storage->finalize();
 	canvas->finalize();
-	// why not scene->finalize()? (from rasterizer_gles3.cpp:399)
 }
 
-Rasterizer RasterizerVK::_create_current() {
+Rasterizer *RasterizerVK::_create_current() {
 	return memnew(RasterizerVK);
 }
 
@@ -97,7 +95,7 @@ void RasterizerVK::register_config() {
 	GLOBAL_DEF("rendering/limits/time/time_rollover_secs", 3600);
 }
 
-RasterizerStorage *RaterizerVK::get_storage() {
+RasterizerStorage *RasterizerVK::get_storage() {
 	return storage;
 }
 
@@ -118,5 +116,4 @@ RasterizerVK::RasterizerVK() {
 RasterizerVK::~RasterizerVK() {
 	memdelete(storage);
 	memdelete(canvas);
-	// again (before in finalize()), no scene in GLES3 renderer, must be managed elsewhere
 }

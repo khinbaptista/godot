@@ -1,8 +1,9 @@
-#include "vk_instance_x11.h"
+#include "instance_vk_x11.h"
 
-#if defined(X11_ENABLED) && defined(VULKAN_ENABLED)
+#ifdef X11_ENABLED
 
-#include <Xlib/Xutil.h> // VisualScreenMask
+#if defined(VULKAN_ENABLED)
+
 #include <vulkan/vulkan.hpp>
 
 static bool ctxErrorOccurred = false;
@@ -24,7 +25,7 @@ static void set_class_hint(Display *p_display, Window p_window) {
 	XFree(classHint);
 }
 
-Error VkInstance_X11::initialize() {
+Error InstanceVK_X11::initialize() {
 
 	instance_extensions.push_back("VK_KHR_xlib_surface");
 
@@ -37,11 +38,11 @@ Error VkInstance_X11::initialize() {
 		// https://github.com/LunarG/VulkanSamples/blob/master/demos/vulkaninfo.c#L982
 		int visual_count;
 
-		XVisualInfo vinfo_template = {};
-		vi_template.screen = DefaultScreen(display);
+		XVisualInfo vi_template = {};
+		vi_template.screen = DefaultScreen(x11_display);
 
-		XVisualInfo *vi = XGetVisualInfo(display, VisualScreenMask, &vi_template, &visual_count);
-		ERR_FAIL_COND(vinfo == NULL);
+		XVisualInfo *vi = XGetVisualInfo(x11_display, VisualScreenMask, &vi_template, &visual_count);
+		ERR_FAIL_COND_V(vi == NULL, ERR_UNCONFIGURED);
 
 		XSetWindowAttributes swa = {};
 		swa.colormap = XCreateColormap(x11_display, RootWindow(x11_display, vi->screen), vi->visual, AllocNone);
@@ -51,7 +52,7 @@ Error VkInstance_X11::initialize() {
 		x11_window = XCreateWindow(
 				x11_display, RootWindow(x11_display, vi->screen), 0, 0,
 				OS::get_singleton()->get_video_mode().width, OS::get_singleton()->get_video_mode().height,
-				vi->depth, InputOutput, vi->visual, CWBorderPixel | CWColormap | CWEventMask, &swa);
+				0, vi->depth, InputOutput, vi->visual, CWBorderPixel | CWColormap | CWEventMask, &swa);
 		ERR_FAIL_COND_V(!x11_window, ERR_UNCONFIGURED);
 
 		set_class_hint(x11_display, x11_window);
@@ -69,7 +70,7 @@ Error VkInstance_X11::initialize() {
 		// https://github.com/LunarG/VulkanSamples/blob/master/demos/vulkaninfo.c#L982
 		vk::XlibSurfaceCreateInfoKHR surface_info = {};
 		surface_info.dpy = x11_display;
-		surface_info.window = &x11_window;
+		surface_info.window = x11_window;
 
 		surface = instance.createXlibSurfaceKHR(surface_info);
 		ERR_EXPLAIN("Could not create vulkan surface");
@@ -91,25 +92,26 @@ Error VkInstance_X11::initialize() {
 	return OK;
 }
 
-int VkInstance_X11::get_window_width() {
+int InstanceVK_X11::get_window_width() {
 	XWindowAttributes xwa;
 	XGetWindowAttributes(x11_display, x11_window, &xwa);
 
 	return xwa.height;
 }
 
-inf VkInstance_X11::get_window_height() {
+int InstanceVK_X11::get_window_height() {
 	XWindowAttributes xwa;
 	XGetWindowAttributes(x11_display, x11_window, &xwa);
 
 	return xwa.height;
 }
 
-VkInstance_X11::VkInstance_X11(::Display *display, ::Window &window)
+InstanceVK_X11::InstanceVK_X11(::Display *display, ::Window &window)
 	: x11_window(window) {
 	x11_display = display;
 }
 
-VkInstance_X11::~VkInstance_X11() {}
+InstanceVK_X11::~InstanceVK_X11() {}
 
-#endif // defined(X11_ENABLED) && defined(VULKAN_ENABLED)
+#endif // defined(VULKAN_ENABLED)
+#endif // X11_ENABLED

@@ -66,6 +66,7 @@ def get_flags():
         ('builtin_libpng', 'no'),
         ('builtin_openssl', 'no'),
         ('builtin_zlib', 'no'),
+        ('vulkan', 'no'),
     ]
 
 
@@ -229,8 +230,13 @@ def configure(env):
         env.ParseConfig('pkg-config zlib --cflags --libs')
 
     env.Append(CPPPATH=['#platform/x11'])
-    env.Append(CPPFLAGS=['-DX11_ENABLED', '-DUNIX_ENABLED', '-DOPENGL_ENABLED', '-DGLES2_ENABLED', '-DGLES_OVER_GL'])
-    env.Append(LIBS=['GL', 'pthread'])
+
+    if (env['vulkan'] == 'yes'):
+        env.Append(CPPFLAGS=['-DX11_ENABLED', '-DUNIX_ENABLED', '-DVULKAN_ENABLED', '-DVK_USE_PLATFORM_XLIB_KHR'])
+        env.Append(LIBS=['vulkan', 'pthread'])
+    else:
+        env.Append(CPPFLAGS=['-DX11_ENABLED', '-DUNIX_ENABLED', '-DOPENGL_ENABLED', '-DGLES2_ENABLED', '-DGLES_OVER_GL'])
+        env.Append(LIBS=['GL', 'pthread'])
 
     if (platform.system() == "Linux"):
         env.Append(LIBS=['dl'])

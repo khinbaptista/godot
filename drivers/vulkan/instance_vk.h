@@ -17,8 +17,8 @@ struct VkQueueFamilyIndices {
 
 	_FORCE_INLINE_ bool is_complete() {
 		return graphics >= 0 && present >= 0;
-	};
-}
+	}
+};
 
 struct SwapchainSupportDetails {
 	vk::SurfaceCapabilitiesKHR capabilities;
@@ -29,10 +29,10 @@ struct SwapchainSupportDetails {
 	SwapchainSupportDetails(vk::PhysicalDevice);
 };
 
-class VkInstance {
+class InstanceVK {
 
 private:
-	static VkInstance *singleton;
+	static InstanceVK *singleton;
 
 protected:
 	const uint32_t vulkan_api_version = VK_MAKE_VERSION(1, 0, 30);
@@ -41,7 +41,7 @@ protected:
 	const char *application_name = "Godot Engine Editor";
 	const uint32_t application_version = VK_MAKE_VERSION(3, 0, 0);
 
-	const char *engine_name = VERSION_NAME;
+	const char *engine_name = _MKSTR(VERSION_NAME);
 	const uint32_t engine_version =
 #ifdef VERSION_PATCH
 			VK_MAKE_VERSION(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
@@ -98,7 +98,7 @@ protected:
 	void create_swapchain();
 
 public:
-	static VkInstance *get_singleton();
+	static InstanceVK *get_singleton();
 	vk::Instance vk(); // get vulkan instance object
 	vk::SurfaceKHR get_surface();
 	vk::PhysicalDevice get_physical_device();
@@ -114,8 +114,8 @@ public:
 	virtual void setup_debug_callback();
 	bool check_validation_layer_support();
 
-	VkInstance();
-	~VkInstance();
+	InstanceVK();
+	~InstanceVK();
 };
 
 #endif

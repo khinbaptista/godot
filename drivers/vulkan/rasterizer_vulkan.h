@@ -17,8 +17,7 @@ private:
 	double time_total;
 
 public:
-	virtual RasterizerStorage *
-	get_storage();
+	virtual RasterizerStorage *get_storage();
 	virtual RasterizerCanvas *get_canvas();
 	virtual RasterizerScene *get_scene();
 

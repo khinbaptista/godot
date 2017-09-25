@@ -23,6 +23,7 @@ if (env["xaudio2"] == "yes"):
 # Graphics drivers
 SConscript('gles3/SCsub')
 SConscript('gl_context/SCsub')
+SConscript('vulkan/SCsub')
 
 # Core dependencies
 SConscript("png/SCsub")
