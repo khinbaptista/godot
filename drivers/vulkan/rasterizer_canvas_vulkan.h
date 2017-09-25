@@ -34,8 +34,8 @@ public:
 		CanvasItemUBO canvas_item_ubo_data;
 		//GLuint canvas_item_ubo;
 		bool canvas_texscreen_used;
-		CanvasShaderGLES3 canvas_shader;
-		CanvasShadowShaderGLES3 canvas_shadow_shader;
+		//CanvasShaderGLES3 canvas_shader;
+		//CanvasShadowShaderGLES3 canvas_shadow_shader;
 
 		bool using_texture_rect;
 		bool using_ninepatch;

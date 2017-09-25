@@ -1,10 +1,15 @@
 #pragma once
 
 #ifdef X11_ENABLED
+#ifdef VULKAN_ENABLED
 
-#if defined(VULKAN_ENABLED)
+/**
+	@author Khin Baptista <khin.baptista@gmail.com>
+*/
 
 #include "drivers/vulkan/instance_vk.h"
+#undef CursorShape // vulkan includes xlib which requires this blegh
+
 #include "os/os.h"
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -24,6 +29,5 @@ public:
 	~InstanceVK_X11();
 };
 
-#endif // defined(VULKAN_ENABLED)
-
+#endif // VULKAN_ENABLED
 #endif // X11_ENABLED

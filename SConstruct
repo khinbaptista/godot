@@ -179,6 +179,8 @@ opts.Add("CCFLAGS", "Custom flags for the C and C++ compilers")
 opts.Add("CFLAGS", "Custom flags for the C compiler")
 opts.Add("LINKFLAGS", "Custom flags for the linker")
 
+opts.Add("vulkan", "Build using vulkan instead of GLES (yes/no)", 'yes')
+
 
 # add platform specific options
 
@@ -235,7 +237,7 @@ if selected_platform in platform_list:
         env = detect.create(env_base)
     else:
         env = env_base.Clone()
-    
+
     if (env["dev"] == "yes"):
         env["warnings"] = "all"
         env["verbose"] = "yes"

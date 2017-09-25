@@ -1,8 +1,7 @@
 #include "instance_vk_x11.h"
 
 #ifdef X11_ENABLED
-
-#if defined(VULKAN_ENABLED)
+#ifdef VULKAN_ENABLED
 
 #include <vulkan/vulkan.hpp>
 
@@ -21,6 +20,7 @@ static void set_class_hint(Display *p_display, Window p_window) {
 		classHint->res_name = (char *)"Godot_Engine";
 		classHint->res_class = (char *)"Godot";
 	}
+
 	XSetClassHint(p_display, p_window, classHint);
 	XFree(classHint);
 }
@@ -113,5 +113,5 @@ InstanceVK_X11::InstanceVK_X11(::Display *display, ::Window &window)
 
 InstanceVK_X11::~InstanceVK_X11() {}
 
-#endif // defined(VULKAN_ENABLED)
+#endif // VULKAN_ENABLED
 #endif // X11_ENABLED

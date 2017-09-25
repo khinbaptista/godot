@@ -27,15 +27,16 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef OS_X11_H
 #define OS_X11_H
 
 #include "context_gl_x11.h"
 #include "crash_handler_x11.h"
 #include "drivers/unix/os_unix.h"
+#include "instance_vk_x11.h"
 #include "os/input.h"
 #include "servers/visual_server.h"
-#include "vk_instance_x11.h"
 //#include "servers/visual/visual_server_wrap_mt.h"
 #include "drivers/alsa/audio_driver_alsa.h"
 #include "drivers/pulseaudio/audio_driver_pulseaudio.h"
@@ -100,6 +101,7 @@ class OS_X11 : public OS_Unix {
 #elif defined(VULKAN_ENABLED)
 	InstanceVK_X11 *vk_instance;
 #endif
+
 	//Rasterizer *rasterizer;
 	VisualServer *visual_server;
 	VideoMode current_videomode;
