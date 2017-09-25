@@ -87,4 +87,4 @@ void RasterizerCanvasVK::initialize() {}
 
 void RasterizerCanvasVK::finalize() {}
 
-void RasterizerCanvasVK::RasterizerCanvasVK() {}
+RasterizerCanvasVK::RasterizerCanvasVK() {}

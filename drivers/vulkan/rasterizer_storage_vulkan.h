@@ -760,6 +760,10 @@ public:
 		}
 	};
 
+	mutable RID_Owner<Skeleton> skeleton_owner;
+
+	SelfList<Skeleton>::List skeleton_update_list;
+
 	virtual RID skeleton_create();
 	virtual void skeleton_allocate(RID p_skeleton, int p_bones, bool p_2d_skeleton = false);
 	virtual int skeleton_get_bone_count(RID p_skeleton) const;
@@ -882,6 +886,8 @@ public:
 
 		PoolVector<int> dynamic_data;
 	};
+
+	mutable RID_Owner<GIProbe> gi_probe_owner;
 
 	virtual RID gi_probe_create();
 

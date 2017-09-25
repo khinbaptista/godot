@@ -112,6 +112,7 @@ public:
 	virtual Error initialize() = 0;
 
 	virtual void setup_debug_callback();
+	virtual void destroy_debug_callback();
 	bool check_validation_layer_support();
 
 	InstanceVK();

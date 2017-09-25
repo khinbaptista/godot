@@ -108,6 +108,16 @@ void InstanceVK::setup_debug_callback() {
 			nullptr, (VkDebugReportCallbackEXT *)&debug_callback);
 }
 
+void InstanceVK::destroy_debug_callback() {
+	auto vkDestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT)
+			vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
+
+	ERR_EXPLAIN("Failed to find procedure \"vkDestroyDebugReportCallbackEXT\"");
+	ERR_FAIL_COND(vkDestroyDebugReportCallbackEXT == nullptr);
+
+	vkDestroyDebugReportCallbackEXT(instance, (VkDebugReportCallbackEXT)debug_callback, nullptr);
+}
+
 void InstanceVK::create_instance() {
 	vk::ApplicationInfo app_info = {};
 	app_info.pApplicationName = application_name;
@@ -343,10 +353,9 @@ InstanceVK::InstanceVK() {
 
 InstanceVK::~InstanceVK() {
 	device.destroySwapchainKHR(swapchain);
-
 	device.destroy();
 
-	instance.destroyDebugReportCallbackEXT(debug_callback);
+	destroy_debug_callback();
 	instance.destroy();
 
 	if (singleton == this) singleton = nullptr;

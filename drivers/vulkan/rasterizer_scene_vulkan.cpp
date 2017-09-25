@@ -2,7 +2,7 @@
 
 #include "os/os.h"
 #include "project_settings.h"
-#include "rasterizer_canvas_gles3.h"
+#include "rasterizer_canvas_vulkan.h"
 #include "servers/visual/visual_server_raster.h"
 
 static _FORCE_INLINE_ void store_transform2d(const Transform2D &p_mtx, float *p_array) {
@@ -104,7 +104,7 @@ void RasterizerSceneVK::environment_set_bg_energy(RID p_env, float p_energy) {}
 void RasterizerSceneVK::environment_set_canvas_max_layer(RID p_env, int p_max_layer) {}
 
 void RasterizerSceneVK::environment_set_ambient_light(
-		RID p_env, const Color &p_color, float p_energy = 1.0, float p_sky_contribution = 0.0) {
+		RID p_env, const Color &p_color, float p_energy, float p_sky_contribution) {
 }
 
 void RasterizerSceneVK::environment_set_dof_blur_near(
@@ -195,7 +195,7 @@ void RasterizerSceneVK::light_instance_set_transform(RID p_light_instance, const
 
 void RasterizerSceneVK::light_instance_set_shadow_transform(
 		RID p_light_instance, const CameraMatrix &p_projection, const Transform &p_transform,
-		float p_far, float p_split, int p_pass, float p_bias_scale = 1.0) {
+		float p_far, float p_split, int p_pass, float p_bias_scale) {
 }
 
 void RasterizerSceneVK::light_instance_mark_visible(RID p_light_instance) {}
@@ -203,11 +203,11 @@ void RasterizerSceneVK::light_instance_mark_visible(RID p_light_instance) {}
 RID RasterizerSceneVK::reflection_atlas_create() {
 	ReflectionAtlas *reflection_atlas = memnew(ReflectionAtlas);
 	reflection_atlas->subdiv = 0;
-	reflection_atlas->color = 0;
+	//reflection_atlas->color = 0;
 	reflection_atlas->size = 0;
-	for (int i = 0; i < 6; i++) {
+	/*for (int i = 0; i < 6; i++) {
 		reflection_atlas->fbo[i] = 0;
-	}
+	}*/
 
 	return reflection_atlas_owner.make_rid(reflection_atlas);
 }
