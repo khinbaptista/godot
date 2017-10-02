@@ -197,10 +197,11 @@ void InstanceVK::create_logical_device() {
 	std::set<int> family_indices = { indices.graphics, indices.present };
 
 	for (int family : family_indices) {
+		float priority = 1.0f;
 		vk::DeviceQueueCreateInfo queue_info = {};
 		queue_info.queueFamilyIndex = family;
 		queue_info.queueCount = 1;
-		queue_info.pQueuePriorities = nullptr;
+		queue_info.pQueuePriorities = &priority;
 
 		queue_infos.push_back(queue_info);
 	}
