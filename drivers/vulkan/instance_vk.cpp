@@ -1,6 +1,6 @@
-#include "instance_vk.h"
+#ifdef VULKAN_ENABLED
 
-#if defined(VULKAN_ENABLED)
+#include "instance_vk.h"
 
 #include "ustring.h"
 #include <cstring>
@@ -262,7 +262,7 @@ void InstanceVK::create_swapchain() {
 		}
 	}
 
-	swapchain_extent = capabilities.currentExtent;
+	vk::Extent2D swapchain_extent = capabilities.currentExtent;
 	{ // choose swapchain extent
 
 		if (capabilities.currentExtent.width == std::numeric_limits<uint32_t>::max()) {
@@ -287,32 +287,59 @@ void InstanceVK::create_swapchain() {
 	uint32_t queue_indices[] = { (uint32_t)indices.graphics, (uint32_t)indices.present };
 
 	vk::SwapchainCreateInfoKHR swapchain_info = {};
-	swapchain_info.surface = surface;
-	swapchain_info.minImageCount = image_count;
-	swapchain_info.imageFormat = surface_format.format;
-	swapchain_info.imageColorSpace = surface_format.colorSpace;
-	swapchain_info.imageExtent = swapchain_extent;
-	swapchain_info.imageArrayLayers = 1;
-	swapchain_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
-	if (indices.graphics != indices.present) {
-		swapchain_info.imageSharingMode = vk::SharingMode::eConcurrent;
-		swapchain_info.queueFamilyIndexCount = 2;
-		swapchain_info.pQueueFamilyIndices = queue_indices;
-	} else {
-		swapchain_info.imageSharingMode = vk::SharingMode::eExclusive;
-		swapchain_info.queueFamilyIndexCount = 0; // optional
-		swapchain_info.pQueueFamilyIndices = nullptr; // optional
+	{ // initialize swapchain_info object
+		swapchain_info.surface = surface;
+		swapchain_info.minImageCount = image_count;
+		swapchain_info.imageFormat = surface_format.format;
+		swapchain_info.imageColorSpace = surface_format.colorSpace;
+		swapchain_info.imageExtent = swapchain_extent;
+		swapchain_info.imageArrayLayers = 1;
+		swapchain_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+		if (indices.graphics != indices.present) {
+			swapchain_info.imageSharingMode = vk::SharingMode::eConcurrent;
+			swapchain_info.queueFamilyIndexCount = 2;
+			swapchain_info.pQueueFamilyIndices = queue_indices;
+		} else {
+			swapchain_info.imageSharingMode = vk::SharingMode::eExclusive;
+			swapchain_info.queueFamilyIndexCount = 0; // optional
+			swapchain_info.pQueueFamilyIndices = nullptr; // optional
+		}
+		swapchain_info.preTransform = swapchain_support.capabilities.currentTransform;
+
+		// could blend with other windows in the window system (but doesn't)
+		swapchain_info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+		swapchain_info.presentMode = present_mode;
+
+		// don't care about pixels obscured by other windows
+		swapchain_info.clipped = VK_TRUE;
+
+		// swapchain must be recreated if the window is resized
+		swapchain_info.oldSwapchain = nullptr;
 	}
-	swapchain_info.preTransform = swapchain_support.capabilities.currentTransform;
-	swapchain_info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque; // can blend with other windows in the window system
-	swapchain_info.presentMode = present_mode;
-	swapchain_info.clipped = VK_TRUE; // don't care about pixels obscured by other windows
-	swapchain_info.oldSwapchain = nullptr; // swapchain must be recreated if the window is resized
 
 	swapchain = device.createSwapchainKHR(swapchain_info);
 	if (!swapchain) return;
 
 	swapchain_images = device.getSwapchainImagesKHR(swapchain);
+
+	swapchain_imageviews.resize(swapchain_images.size());
+	for (size_t i = 0; i < swapchain_images.size(); i++) {
+		vk::ImageViewCreateInfo view_info = {};
+		view_info.image = swapchain_images[i];
+		view_info.viewType = vk::ImageViewType::e2D;
+		view_info.format = surface_format.format;
+		view_info.components.r = vk::ComponentSwizzle::eIdentity;
+		view_info.components.g = vk::ComponentSwizzle::eIdentity;
+		view_info.components.b = vk::ComponentSwizzle::eIdentity;
+		view_info.components.a = vk::ComponentSwizzle::eIdentity;
+		view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+		view_info.subresourceRange.baseMipLevel = 0;
+		view_info.subresourceRange.levelCount = 1;
+		view_info.subresourceRange.baseArrayLayer = 0;
+		view_info.subresourceRange.layerCount = 1;
+
+		swapchain_imageviews[i] = device.createImageView(view_info);
+	}
 }
 
 InstanceVK *InstanceVK::get_singleton() {
@@ -353,6 +380,10 @@ InstanceVK::InstanceVK() {
 }
 
 InstanceVK::~InstanceVK() {
+	for (size_t i = 0; i < swapchain_imageviews.size(); i++) {
+		device.destroyImageView(swapchain_imageviews[i]);
+	}
+
 	device.destroySwapchainKHR(swapchain);
 	device.destroy();
 

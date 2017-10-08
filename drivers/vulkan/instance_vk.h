@@ -77,8 +77,9 @@ protected:
 
 	vk::SwapchainKHR swapchain;
 	std::vector<vk::Image> swapchain_images;
-	vk::Format swapchain_image_format;
-	vk::Extent2D swapchain_extent;
+	std::vector<vk::ImageView> swapchain_imageviews;
+	//vk::Format swapchain_image_format;
+	//vk::Extent2D swapchain_extent;
 
 	const std::vector<const char *> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"

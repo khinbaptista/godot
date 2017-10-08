@@ -5,7 +5,6 @@
 #include "servers/visual/visual_server_raster.h"
 
 static _FORCE_INLINE_ void store_transform2d(const Transform2D &p_mtx, float *p_array) {
-
 	p_array[0] = p_mtx.elements[0][0];
 	p_array[1] = p_mtx.elements[0][1];
 	p_array[2] = 0;

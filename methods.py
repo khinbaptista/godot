@@ -1148,6 +1148,12 @@ def build_gles3_headers(target, source, env):
     for x in source:
         build_legacygl_header(str(x), include="drivers/gles3/shader_gles3.h", class_suffix="GLES3", output_attribs=True)
 
+def build_vulkan_header(filename, include, class_suffix, output_attribs):
+	pass
+
+def build_vulkan_headers(target, source, env):
+	for x in source:
+		build_vulkan_header(str(x), include="drivers/vulkan/shader_vulkan.h", class_suffix="VK", output_attribs=True)
 
 def update_version():
 

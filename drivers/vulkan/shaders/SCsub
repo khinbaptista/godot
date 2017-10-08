@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+Import('env')
+
+if 'VULKAN_GLSL' in env['BUILDERS']:
+    env.VULKAN_GLSL('copy.glsl');
+    env.VULKAN_GLSL('resolve.glsl');
+    env.VULKAN_GLSL('canvas.glsl');
+    env.VULKAN_GLSL('canvas_shadow.glsl');
+    env.VULKAN_GLSL('scene.glsl');
+    env.VULKAN_GLSL('cubemap_filter.glsl');
+    env.VULKAN_GLSL('cube_to_dp.glsl');
+    env.VULKAN_GLSL('blend_shape.glsl');
+    env.VULKAN_GLSL('screen_space_reflection.glsl');
+    env.VULKAN_GLSL('effect_blur.glsl');
+    env.VULKAN_GLSL('subsurf_scattering.glsl');
+    env.VULKAN_GLSL('ssao.glsl');
+    env.VULKAN_GLSL('ssao_minify.glsl');
+    env.VULKAN_GLSL('ssao_blur.glsl');
+    env.VULKAN_GLSL('exposure.glsl');
+    env.VULKAN_GLSL('tonemap.glsl');
+    env.VULKAN_GLSL('particles.glsl');
