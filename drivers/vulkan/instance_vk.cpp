@@ -262,7 +262,7 @@ void InstanceVK::create_swapchain() {
 		}
 	}
 
-	vk::Extent2D swapchain_extent = capabilities.currentExtent;
+	swapchain_extent = capabilities.currentExtent;
 	{ // choose swapchain extent
 
 		if (capabilities.currentExtent.width == std::numeric_limits<uint32_t>::max()) {
@@ -368,6 +368,14 @@ vk::Queue InstanceVK::get_queue_graphics() {
 
 vk::Queue InstanceVK::get_queue_present() {
 	return present_queue;
+}
+
+vk::SwapchainKHR InstanceVK::get_swapchain() {
+	return swapchain;
+}
+
+vk::Extent2D InstanceVK::get_swapchain_extent() {
+	return swapchain_extent;
 }
 
 InstanceVK::InstanceVK() {

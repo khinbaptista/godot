@@ -78,8 +78,8 @@ protected:
 	vk::SwapchainKHR swapchain;
 	std::vector<vk::Image> swapchain_images;
 	std::vector<vk::ImageView> swapchain_imageviews;
+	vk::Extent2D swapchain_extent;
 	//vk::Format swapchain_image_format;
-	//vk::Extent2D swapchain_extent;
 
 	const std::vector<const char *> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -107,6 +107,7 @@ public:
 	vk::Queue get_queue_graphics();
 	vk::Queue get_queue_present();
 	vk::SwapchainKHR get_swapchain();
+	vk::Extent2D get_swapchain_extent();
 
 	virtual int get_window_width() = 0;
 	virtual int get_window_height() = 0;
