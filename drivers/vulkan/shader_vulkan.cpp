@@ -17,20 +17,47 @@ using std::vector;
 
 // ##################################################
 
+static void write_file(const string& filename, const char* data);
 static vector<char> read_file(const string &filename);
 static void delete_spirv();
 
 // ##################################################
 
 void ShaderVK::Setup() {
-	// compile glsl files (create spirv files)
-	// create pipeline layout (reads spirv files)
+	// change anything in shader code
+
+	Compile();
+
+	if (blend_attachment_opt.empty())
+		blend_attachment_opt.push_back(ColorBlendAttachmentOptions());
+
+	CreatePipelineLayout();
+
 	// create attachments, subpasses and renderpasses
 	// ...
-	// delete spirv files
+
+	delete_spirv();
 }
 
-void ShaderVK::CreatePipelineLayout() {
+void ShaderVK::Compile() {
+	string vertex_file = "_shader.vert";
+	string fragment_file = "_shader.frag";
+
+	write_file(vertex_file, vertex_code);
+	write_file(fragment_file, fragment_code);
+
+	CompileGLSL(vertex_file);
+	CompileGLSL(fragment_file);
+
+	remove(vertex_file);
+	remove(fragment_file);
+}
+
+// ##################################################
+
+
+
+void ShaderVK::CreatePipeline() {
 	vk::Device device = InstanceVK::get_singleton()->get_device();
 
 	// vertex stage
@@ -53,7 +80,7 @@ void ShaderVK::CreatePipelineLayout() {
 	frag_stage_info.pNmae = "main";
 
 	// shader stages
-	vk::PipelineShaderStageCreateInfo stages[] = {
+	vk::PipelineShaderStageCreateInfo shader_stages[] = {
 		vert_stage_info, frag_stage_info
 	};
 
@@ -119,21 +146,26 @@ void ShaderVK::CreatePipelineLayout() {
 		depth_info.back = depth_stencil_opt.back;
 
 	// color blending
-	vk::PipelineColorBlendAttachmentState blend_attachment = {};
-		blend_attachment.colorWriteMask = blend_attachment_opt.colorWriteMask;
-		blend_attachment.blendEnable = blend_attachment_opt.blendEnable;
-		blend_attachment.srcColorBlendFactor = blend_attachment_opt.srcColorBlendFactor;
-		blend_attachment.dstColorBlendFactor = blend_attachment_opt.dstColorBlendFactor;
-		blend_attachment.colorBlendOp = blend_attachment_opt.colorBlendOp;
-		blend_attachment.srcAlphaBlendFactor = blend_attachment_opt.srcAlphaBlendFactor;
-		blend_attachment.dstAlphaBlendFactor = blend_attachment_opt.dstAlphaBlendFactor;
-		blend_attachment.alphaBlendOp = blend_attachment_opt.alphaBlendOp;
+	vector<vk::PipelineColorBlendAttachmentState> blend_attachments;
+	for (ColorBlendAttachmentOptions opt : blend_attachment_opt) {
+		vk::PipelineColorBlendAttachmentState blend_attachment = {};
+		blend_attachment.colorWriteMask = opt.colorWriteMask;
+		blend_attachment.blendEnable = opt.blendEnable;
+		blend_attachment.srcColorBlendFactor = opt.srcColorBlendFactor;
+		blend_attachment.dstColorBlendFactor = opt.dstColorBlendFactor;
+		blend_attachment.colorBlendOp = opt.colorBlendOp;
+		blend_attachment.srcAlphaBlendFactor = opt.srcAlphaBlendFactor;
+		blend_attachment.dstAlphaBlendFactor = opt.dstAlphaBlendFactor;
+		blend_attachment.alphaBlendOp = opt.alphaBlendOp;
+
+		blend_attachments.push_back(bçend_attachment);
+	}
 
 	vk::PipelineColorBlendStateCreateInfo blend_info = {};
 		blend_info.logicOpEnable = blend_opt.logicOpEnable;
 		blend_info.logicOp = blend_opt.logicOp;
-		blend_info.attachmentCount = 1;
-		blend_info.pAttachments = &blend_attachment;
+		blend_info.attachmentCount = blend_attachments.size();
+		blend_info.pAttachments = blend_attachments.data();
 		blend_info.blendCostants[0] = blend_opt[0];
 		blend_info.blendCostants[1] = blend_opt[1];
 		blend_info.blendCostants[2] = blend_opt[2];
@@ -157,6 +189,28 @@ void ShaderVK::CreatePipelineLayout() {
 
 	pipeline_layout = device.createPipelineLayout(layout_info);
 
+	// pipeline
+	vk::GraphicsPipelineCreateInfo pipeline_info = {};
+		pipeline_info.stageCount = 2;
+		pipeline_info.pStages = &shader_stages;
+		pipeline_info.pVertexInputState = &vertex_input_info;
+		pipeline_info.pInputAssemblyState = &input_assembly_info;
+		pipeline_info.pViewportState = &viewport_info;
+		pipeline_info.pRasterizationState = &raster_info;
+		pipeline_info.pMultisampleState = &multisample_info;
+		pipeline_info.pDepthStencilState = &depth_info;
+		pipeline_info.pColorBlendState = &blend_info;
+		pipeline_info.pDynamicState = &dynamic_info;
+		pipeline_info.layout = layout_info;
+		pipeline_info.renderPass = InstanceVK::get_singleton()->get_render_pass();
+		pipeline_info.subpass = 0;
+		pipeline_info.basePipelineHandle = nullptr;
+		pipeline_info.basePipelineIndex = -1;
+
+	pipeline = device.createGraphicsPipeline(nullptr, pipeline_info);
+	ERR_EXPLAIN("Failed to create graphcis pipeline object");
+	ERR_FAIL_COND(!pipeline);
+
 	// cleanup
 	device.destroyShaderModule(vert_module);
 	device.destroyShaderModule(frag_module);
@@ -177,10 +231,30 @@ vk::ShaderModule ShaderVK::CreateModule(const vector<char>& code) {
 	return module;
 }
 
+// ##################################################
+
+ShaderVK::~ShaderVK() {
+	vk::Device device = InstanceVK::get_singleton()->get_device();
+	device.destroyPipeline(pipeline);
+	device.destroyPipelineLayout(pipeline_layout);
+}
+
+// ##################################################
+
 void ShaderVK::CompileGLSL(const string& filename) {
 	// Rely on std::system because glslang API is poorly documented (aka crap)
 	string command = string(GLSLANGVALIDATOR) + " -V " + filename;
 	std::system(command.c_str());
+}
+
+static void write_file(const string& filename, const char* data) {
+	ofstream file;
+	file.open(filename, std::ios::out);
+
+	ERR_FAIL_COND(!file.is_open());
+
+	file << data;
+	file.close();
 }
 
 static vector<char> read_file(const string &filename) {

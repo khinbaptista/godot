@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(VULKAN_ENABLED)
+//#if defined(VULKAN_ENABLED)
 
 #include "typedefs.h"
 #include "version.h"
@@ -79,7 +79,13 @@ protected:
 	std::vector<vk::Image> swapchain_images;
 	std::vector<vk::ImageView> swapchain_imageviews;
 	vk::Extent2D swapchain_extent;
-	//vk::Format swapchain_image_format;
+	vk::Format swapchain_image_format;
+
+	vk::Image depth_image;
+	vk::ImageView depth_imageview;
+	vk::DeviceMemory depth_memory;
+
+	vk::RenderPass render_pass;
 
 	const std::vector<const char *> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -97,6 +103,8 @@ protected:
 	void pick_physical_device();
 	void create_logical_device();
 	void create_swapchain();
+	void create_depth_resources();
+	void create_render_pass();
 
 public:
 	static InstanceVK *get_singleton();
@@ -108,6 +116,7 @@ public:
 	vk::Queue get_queue_present();
 	vk::SwapchainKHR get_swapchain();
 	vk::Extent2D get_swapchain_extent();
+	vk::RenderPass get_render_pass();
 
 	virtual int get_window_width() = 0;
 	virtual int get_window_height() = 0;
@@ -121,4 +130,4 @@ public:
 	~InstanceVK();
 };
 
-#endif
+//#endif

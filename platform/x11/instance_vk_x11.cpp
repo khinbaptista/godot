@@ -89,6 +89,14 @@ Error InstanceVK_X11::initialize() {
 	ERR_EXPLAIN("Failed to create swapchain");
 	ERR_FAIL_COND_V(!swapchain, ERR_UNCONFIGURED);
 
+	create_depth_resources();
+	ERR_EXPLAIN("Failed to create depth resources");
+	ERR_FAIL_COND_V(!depth_imageview, ERR_UNCONFIGURED);
+
+	create_render_pass();
+	ERR_EXPLAIN("Failed to create render pass");
+	ERR_FAIL_COND_V(!render_pass, ERR_UNCONFIGURED);
+
 	return OK;
 }
 

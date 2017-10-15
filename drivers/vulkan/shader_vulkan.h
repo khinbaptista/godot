@@ -21,6 +21,9 @@ class ShaderVK {
 private:
 	virtual String get_shader_name() const = 0;
 
+	const char* vertex_code;
+	const char* fragment_code;
+
 protected:
 	struct RasterizerOptions {
 		vk::PolygonMode polygonMode;
@@ -95,7 +98,7 @@ protected:
 			alphaBlendOp = vk::BlendOp::eAdd;
 		}
 	};
-	ColorBlendAttachmentOptions blend_attachment_opt;
+	std::vector<ColorBlendAttachmentOptions> blend_attachment_opt;
 
 	struct ColorBlendOptions {
 		bool logicOpEnable;
@@ -114,14 +117,16 @@ protected:
 	ColorBlendOptions blend_opt;
 
 	vk::PipelineLayout pipeline_layout;
+	vk::Pipeline pipeline; // graphics pipeline
 
 	static void CompileGLSL(const std::string& filename);
 	static vk::ShaderModule CreateModule(const std::vector<char>& code);
 
-	void CreatePipelineLayout();
+	void CreatePipeline();
 
 public:
 	ShaderVK();
+	~ShaderVK();
 
 	void Setup();
 	void Compile();

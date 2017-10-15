@@ -1,8 +1,10 @@
-#ifdef VULKAN_ENABLED
+//#ifdef VULKAN_ENABLED
 
 #include "instance_vk.h"
 
 #include "ustring.h"
+#include "vk_helper.h"
+#include <array>
 #include <cstring>
 #include <set>
 #include <string>
@@ -324,22 +326,94 @@ void InstanceVK::create_swapchain() {
 
 	swapchain_imageviews.resize(swapchain_images.size());
 	for (size_t i = 0; i < swapchain_images.size(); i++) {
-		vk::ImageViewCreateInfo view_info = {};
-		view_info.image = swapchain_images[i];
-		view_info.viewType = vk::ImageViewType::e2D;
-		view_info.format = surface_format.format;
-		view_info.components.r = vk::ComponentSwizzle::eIdentity;
-		view_info.components.g = vk::ComponentSwizzle::eIdentity;
-		view_info.components.b = vk::ComponentSwizzle::eIdentity;
-		view_info.components.a = vk::ComponentSwizzle::eIdentity;
-		view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-		view_info.subresourceRange.baseMipLevel = 0;
-		view_info.subresourceRange.levelCount = 1;
-		view_info.subresourceRange.baseArrayLayer = 0;
-		view_info.subresourceRange.layerCount = 1;
-
-		swapchain_imageviews[i] = device.createImageView(view_info);
+		swapchain_imageviews[i] = vk_CreateImageView(
+				swapchain_images[i],
+				swapchain_image_format,
+				vk::ImageAspectFlagBits::eColor)
 	}
+}
+
+static vk::Format FindDepthFormat() {
+	return FindSupportedFormat(
+		{
+			vk::Format::eD32Sfloat,
+			vk::Format::eD32SfloatS8Uint,
+			vk::Format::eD24UnormS8Uint
+		},
+		vk::ImageTiling::eOptimal,
+		vk::FormatFeatureFlagBits::eDepthStencilAttachment
+	);
+}
+
+/*inline bool has_stencil_component(vk::Format format) {
+	return	format == vk::Format::eD32SfloatS8Uint ||
+		format == vk::Format::eD24UnormS8Uint;
+}*/
+
+void InstanceVK::create_depth_resources() {
+	vk::Format depth_format = FindDepthFormat();
+
+	depth_image = vk_CreateImage(
+			swapchain_extent.width,
+			swapchain_extent.height,
+			depth_format,
+			vk::ImageTiling::eOptimal,
+			vk::ImageUsageFlagBits::eDepthStencilAttachment,
+			vk::MemoryPropertyFlagBits::eDeviceLocal,
+			depth_memory)
+
+			depth_imageview = vk_CreateImageView(
+					depth_image, depth_format, vk::ImageAspectFlagBits::eDepth);
+}
+
+void InstanceVK::create_render_pass() {
+	vk::AttachmentDescription color_attachment = {};
+	color_attachment.format = swapchain_image_format;
+	color_attachment.samples = vk::SampleCountFlagBits::e1; // not using multisampling
+	color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+	color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
+	color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare; // not using stencil
+	color_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+	color_attachment.initialLayout = vk::ImageLayout::eUndefined;
+	color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+
+	vk::AttachmentDescription depth_attachment = {};
+	depth_attachment.format = FindDepthFormat();
+	depth_attachment.samples = vk::SampleCountFlagBits::e1; // not using multisampling
+	depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+	depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+	depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare; // not using stencil
+	depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+	depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
+	depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+	vk::AttachmentReference color_ref = {};
+	color_ref.attachment = 0;
+	color_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+	vk::AttachmentReference depth_ref = {};
+	depth_ref.attachment = 1;
+	depth_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+	vk::SubpassDescription subpass = {};
+	subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &color_ref;
+	subpass.pDepthStencilAttachment = &depth_ref;
+
+	std::array<vk::AttachmentDescription, 2> attachments = {
+		color_attachment, depth_attachment
+	};
+
+	vk::RenderPassCreateInfo renderpass_info = {};
+	renderpass_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+	renderpass_info.pAttachments = attachments.data();
+	renderpass_info.subpassCount = 1;
+	renderpass_info.pSubpasses = &subpass;
+	//renderpass_info.dependencyCount = 1;
+	//renderpass_info.pDependencies = &dependency;
+
+	render_pass = device.createRenderPass(renderpass_info);
 }
 
 InstanceVK *InstanceVK::get_singleton() {
@@ -378,6 +452,10 @@ vk::Extent2D InstanceVK::get_swapchain_extent() {
 	return swapchain_extent;
 }
 
+vk::RenderPass InstanceVK::get_render_pass() {
+	return render_pass;
+}
+
 InstanceVK::InstanceVK() {
 	if (enable_validation_layers) {
 		instance_extensions.push_back("VK_EXT_debug_report");
@@ -388,6 +466,9 @@ InstanceVK::InstanceVK() {
 }
 
 InstanceVK::~InstanceVK() {
+	device.destroyPipelineLayout(pipeline_layout);
+	device.destroyRenderPass(render_pass);
+
 	for (size_t i = 0; i < swapchain_imageviews.size(); i++) {
 		device.destroyImageView(swapchain_imageviews[i]);
 	}
@@ -401,4 +482,4 @@ InstanceVK::~InstanceVK() {
 	if (singleton == this) singleton = nullptr;
 }
 
-#endif
+//#endif
