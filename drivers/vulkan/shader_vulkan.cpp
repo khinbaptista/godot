@@ -22,6 +22,14 @@ static void delete_spirv();
 
 // ##################################################
 
+void ShaderVK::Setup() {
+	// compile glsl files (create spirv files)
+	// create pipeline layout (reads spirv files)
+	// create attachments, subpasses and renderpasses
+	// ...
+	// delete spirv files
+}
+
 void ShaderVK::CreatePipelineLayout() {
 	vk::Device device = InstanceVK::get_singleton()->get_device();
 
