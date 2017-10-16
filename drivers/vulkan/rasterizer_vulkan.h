@@ -28,6 +28,7 @@ public:
 
 	virtual void initialize();
 	virtual void begin_frame();
+
 	virtual void set_current_render_target(RID p_render_target);
 	virtual void restore_render_target();
 	virtual void clear_render_target(const Color &p_color);
@@ -35,6 +36,7 @@ public:
 			RID p_render_target,
 			const Rect2 &p_screen_rect,
 			int p_screen = 0);
+
 	virtual void end_frame();
 	virtual void finalize();
 

@@ -8,6 +8,8 @@ vk::Format vk_FindSupportedFormat(
 		vk::FormatFeatureFlags features
 );
 
+vk::Format vk_FindDepthFormat();
+
 uint32_t vk_FindMemoryType(
 	uint32_t type_bits,
 	vk::MemoryPropertyFlags properties

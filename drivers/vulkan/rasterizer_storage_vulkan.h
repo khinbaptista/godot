@@ -1160,7 +1160,10 @@ public:
 
 		uint64_t last_exposure_tick;
 
-		int width, height;
+		uint32_t offset_x, offset_y;
+		uint32_t width, height;
+
+		vk::RenderPass render_pass;
 
 		bool flags[RENDER_TARGET_FLAG_MAX];
 
@@ -1171,12 +1174,11 @@ public:
 
 		RenderTarget() {
 			msaa = VS::VIEWPORT_MSAA_DISABLED;
+			offset_x = 0;
+			offset_y = 0;
 			width = 0;
 			height = 0;
-			//depth = 0;
-			//fbo = 0;
-			//exposure.fbo = 0;
-			//buffers.fbo = 0;
+
 			used_in_frame = false;
 
 			for (int i = 0; i < RENDER_TARGET_FLAG_MAX; i++) {

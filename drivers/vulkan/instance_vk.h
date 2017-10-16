@@ -1,7 +1,5 @@
 #pragma once
 
-//#if defined(VULKAN_ENABLED)
-
 #include "typedefs.h"
 #include "version.h"
 #include <algorithm>
@@ -50,10 +48,10 @@ protected:
 #endif
 
 	/*
-		eImmediate:		single buffer
-		eFifo:			double buffer; only mode guaranteed to be available
-		eFifoRelaxed:	double buffer, but new images replace current one (tearing)
-		eMailbox:		triple buffer, new images replace the last image in queue (no tearing)
+	eImmediate:	single buffer
+	eFifo:		double buffer; only mode guaranteed to be available
+	eFifoRelaxed:	double buffer, but new images replace current one (tearing)
+	eMailbox:	triple buffer, new images replace the last image in queue (no tearing)
 	*/
 	vk::PresentModeKHR preferred_present_mode = vk::PresentModeKHR::eMailbox;
 
@@ -69,6 +67,8 @@ protected:
 	vk::Instance instance;
 	vk::DebugReportCallbackEXT debug_callback;
 	vk::SurfaceKHR surface;
+	// @TODO: look into fullscreen surface (display surface)
+	// It's platform-independent, interface directly to the display (no OS)
 
 	vk::PhysicalDevice physical_device;
 	vk::Device device;
@@ -85,11 +85,11 @@ protected:
 	vk::ImageView depth_imageview;
 	vk::DeviceMemory depth_memory;
 
-	vk::RenderPass render_pass;
+	//vk::RenderPass render_pass;
 	std::vector<vk::Framebuffer> framebuffers;
 
 	vk::CommandPool command_pool;
-	std::vector<vk::CommandBuffer> command_buffers;
+	//std::vector<vk::CommandBuffer> command_buffers;
 
 	const std::vector<const char *> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -123,7 +123,9 @@ public:
 	vk::Queue get_queue_present();
 	vk::SwapchainKHR get_swapchain();
 	vk::Extent2D get_swapchain_extent();
+	vk::Format get_swapchain_format();
 	vk::RenderPass get_render_pass();
+	vk::Framebuffer get_framebuffer();
 
 	virtual int get_window_width() = 0;
 	virtual int get_window_height() = 0;
@@ -137,5 +139,3 @@ public:
 	InstanceVK();
 	~InstanceVK();
 };
-
-//#endif

@@ -14,7 +14,7 @@
 #endif
 
 /*
-	This class is more a graphics pipeline than a shader
+	This class is more a graphics pipeline / material than a shader
 */
 
 class ShaderVK {
@@ -116,6 +116,7 @@ protected:
 	};
 	ColorBlendOptions blend_opt;
 
+	vk::RenderPass render_pass;
 	vk::PipelineLayout pipeline_layout;
 	vk::Pipeline pipeline; // graphics pipeline
 
@@ -123,6 +124,7 @@ protected:
 	static vk::ShaderModule CreateModule(const std::vector<char>& code);
 
 	void CreatePipeline();
+	void CreateRenderPass();
 
 public:
 	ShaderVK();

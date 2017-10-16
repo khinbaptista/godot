@@ -1,23 +1,21 @@
 #include "vk_helper.h"
 
 vk::Format vk_FindSupportedFormat(
-		const vector<vk::Format>& candidates,
+		const vector<vk::Format> &candidates,
 		vk::ImageTiling tiling,
-		vk::FormatFeatureFlags features
-) {
+		vk::FormatFeatureFlags features) {
+
 	for (vk::Format format : candidates) {
 		vk::FormatProperties props;
 		props = physical_device.getFormatProperties(format);
 
 		if (
-			tiling == vk::ImageTiling::eLinear &&
-			props.optimalTilingFeatures == features
-		) {
+				tiling == vk::ImageTiling::eLinear &&
+				props.optimalTilingFeatures == features) {
 			return format;
 		} else if (
-			tiling == vk::ImageTiling::eOptimal &&
-			props.optimalTilingFeatures == features
-		) {
+				tiling == vk::ImageTiling::eOptimal &&
+				props.optimalTilingFeatures == features) {
 			return format;
 		}
 	}
@@ -26,10 +24,19 @@ vk::Format vk_FindSupportedFormat(
 	ERR_FAIL();
 }
 
+vk::Format vk_FindDepthFormat() {
+	return FindSupportedFormat(
+			{ vk::Format::eD32Sfloat,
+					vk::Format::eD32SfloatS8Uint,
+					vk::Format::eD24UnormS8Uint },
+			vk::ImageTiling::eOptimal,
+			vk::FormatFeatureFlagBits::eDepthStencilAttachment);
+}
+
 uint32_t vk_FindMemoryType(
-	uint32_t type_filter,
-	vk::MemoryPropertyFlags properties
-) {
+		uint32_t type_filter,
+		vk::MemoryPropertyFlags properties) {
+
 	vk::PhysicalDevice physical_device;
 	physical_device = InstanceVK::get_singleton()->get_physical_device();
 
@@ -38,9 +45,8 @@ uint32_t vk_FindMemoryType(
 
 	for (uint32_t i = 0; i < memprops.memoryTypeCount; i++) {
 		if (
-			(type_filter & (1 << i)) &&
-			memprops.memoryTypes[i].propertyFlags == properties
-		)
+				(type_filter & (1 << i)) &&
+				memprops.memoryTypes[i].propertyFlags == properties)
 			return i;
 	}
 
@@ -49,14 +55,13 @@ uint32_t vk_FindMemoryType(
 }
 
 vk::Image vk_CreateImage(
-	uint32_t width, uint32_t height,
-	vk::Format format,
-	vk::ImageTiling tiling,
-	vk::ImageUsageFlags usage,
-	vk::MemoryPropertyFlags properties,
+		uint32_t width, uint32_t height,
+		vk::Format format,
+		vk::ImageTiling tiling,
+		vk::ImageUsageFlags usage,
+		vk::MemoryPropertyFlags properties,
+		vk::DeviceMemory &memory) {
 
-	vk::DeviceMemory& memory
-) {
 	vk::Device device = InstanceVK::get_singleton()->get_device();
 
 	vk::ImageCreateInfo image_info = {};
@@ -89,10 +94,10 @@ vk::Image vk_CreateImage(
 }
 
 vk::ImageView vk_CreateImageView(
-	vk::Image image,
-	vk::Format format,
-	vk::ImageAspectFlags aspect_flags
-) {
+		vk::Image image,
+		vk::Format format,
+		vk::ImageAspectFlags aspect_flags) {
+
 	vk::Device device = InstanceVK::get_singleton()->get_device();
 
 	vk::ImageViewCreateInfo view_info = {};
