@@ -11,11 +11,55 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
+// ##################################################
+
 using std::set;
 using std::string;
 using std::vector;
 
+// ##################################################
+
 InstanceVK *InstanceVK::singleton = nullptr;
+
+// ##################################################
+
+Error InstanceVK::setup() {
+	pick_physical_device();
+	ERR_EXPLAIN("Couldn't find a suitable physical device");
+	ERR_FAIL_COND_V(!physical_device, ERR_UNCONFIGURED);
+
+	create_logical_device();
+	ERR_EXPLAIN("Failed to create logical device");
+	ERR_FAIL_COND_V(!device, ERR_UNCONFIGURED);
+
+	create_swapchain();
+	ERR_EXPLAIN("Failed to create swapchain");
+	ERR_FAIL_COND_V(!swapchain, ERR_UNCONFIGURED);
+
+	create_depth_resources();
+	ERR_EXPLAIN("Failed to create depth resources");
+	ERR_FAIL_COND_V(!depth_imageview, ERR_UNCONFIGURED);
+
+	create_render_pass();
+	ERR_EXPLAIN("Failed to create render pass");
+	ERR_FAIL_COND_V(!render_pass, ERR_UNCONFIGURED);
+
+	create_framebuffers();
+	ERR_EXPLAIN("Failed to create framebuffers");
+	ERR_FAIL_COND_V(framebuffers.empty(), ERR_UNCONFIGURED);
+
+	create_command_pool();
+	ERR_EXPLAIN("Failed to create command pool");
+	ERR_FAIL_COND_V(!command_pool, ERR_UNCONFIGURED);
+
+	create_command_buffers();
+	ERR_EXPLAIN("Failed to create command buffers");
+	ERR_FAIL_COND_V(command_buffers.empty(), ERR_UNCONFIGURED);
+
+	return OK;
+}
+
+// ##################################################
 
 VkQueueFamilyIndices::VkQueueFamilyIndices() {}
 
@@ -40,6 +84,8 @@ VkQueueFamilyIndices::VkQueueFamilyIndices(vk::PhysicalDevice device) {
 	}
 }
 
+// ##################################################
+
 SwapchainSupportDetails::SwapchainSupportDetails(){};
 
 SwapchainSupportDetails::SwapchainSupportDetails(vk::PhysicalDevice device) {
@@ -49,6 +95,8 @@ SwapchainSupportDetails::SwapchainSupportDetails(vk::PhysicalDevice device) {
 	formats = device.getSurfaceFormatsKHR(surface);
 	present_modes = device.getSurfacePresentModesKHR(surface);
 }
+
+// ##################################################
 
 bool InstanceVK::check_validation_layer_support() {
 	vector<vk::LayerProperties> available_layers;
@@ -119,6 +167,8 @@ void InstanceVK::destroy_debug_callback() {
 
 	vkDestroyDebugReportCallbackEXT(instance, (VkDebugReportCallbackEXT)debug_callback, nullptr);
 }
+
+// ##################################################
 
 void InstanceVK::create_instance() {
 	vk::ApplicationInfo app_info = {};
@@ -224,6 +274,8 @@ void InstanceVK::create_logical_device() {
 	graphics_queue = device.getQueue(indices.graphics, 0);
 	present_queue = device.getQueue(indices.present, 0);
 }
+
+// #########################
 
 void InstanceVK::create_swapchain() {
 	SwapchainSupportDetails swapchain_support(physical_device);
@@ -335,14 +387,11 @@ void InstanceVK::create_swapchain() {
 
 static vk::Format FindDepthFormat() {
 	return FindSupportedFormat(
-		{
-			vk::Format::eD32Sfloat,
-			vk::Format::eD32SfloatS8Uint,
-			vk::Format::eD24UnormS8Uint
-		},
-		vk::ImageTiling::eOptimal,
-		vk::FormatFeatureFlagBits::eDepthStencilAttachment
-	);
+			{ vk::Format::eD32Sfloat,
+					vk::Format::eD32SfloatS8Uint,
+					vk::Format::eD24UnormS8Uint },
+			vk::ImageTiling::eOptimal,
+			vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 }
 
 /*inline bool has_stencil_component(vk::Format format) {
@@ -363,7 +412,8 @@ void InstanceVK::create_depth_resources() {
 			depth_memory)
 
 			depth_imageview = vk_CreateImageView(
-					depth_image, depth_format, vk::ImageAspectFlagBits::eDepth);
+					depth_image, depth_format,
+					vk::ImageAspectFlagBits::eDepth);
 }
 
 void InstanceVK::create_render_pass() {
@@ -416,6 +466,84 @@ void InstanceVK::create_render_pass() {
 	render_pass = device.createRenderPass(renderpass_info);
 }
 
+void InstanceVK::create_framebuffers() {
+	framebuffers.resize(swapchain_imageviews.size());
+
+	for (size_t i = 0; i < swapchain_imageviews.size(); i++) {
+		std::array<vk::ImageView, 2> attachments = {
+			swapchain_imageviews[i], depth_imageview
+		};
+
+		vk::FramebufferCreateInfo framebuffer_info;
+		framebuffer_info.renderPass = render_pass;
+		framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+		framebuffer_info.pAttachments = attachments.data();
+		framebuffer_info.width = swapchain_extent.width;
+		framebuffer_info.height = swapchain_extent.height;
+		framebuffer_info.layers = 1;
+
+		framebuffers[i] = device.createFramebuffer(framebuffer_info);
+	}
+}
+
+// #########################
+
+void InstanceVK::create_command_pool() {
+	VkQueueFamilyIndices indices(physical_device);
+
+	vk::CommandPoolCreateInfo pool_info;
+	pool_info.queueFamilyIndex = indices.graphics;
+	pool_info.flags = 0;
+
+	command_pool = device.createCommandPool(pool_info);
+}
+
+void InstanceVK::create_command_buffers() {
+	command_buffers.resize(framebuffers.size());
+
+	vk::CommandBufferAllocateInfo alloc_info;
+	alloc_info.commandPool = command_pool;
+	alloc_info.level = vk::CommandBufferLevel::ePrimary;
+	alloc_info.commandBufferCount = static_cast<uint32_t>(command_buffers.size());
+
+	command_buffers = device.allocateCommandBuffers(alloc_info);
+	ERR_FAIL_COND(command_buffers.empty());
+
+	std::array<vk::ClearValue, 2> clear_values = {};
+	clear_values[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+	clear_values[1].depthStencil = { 1.0f, 0 };
+
+	for (size_t i = 0; i < command_buffers.size(); i++) {
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+		begin_info.pInheritanceInfo = nullptr;
+
+		command_buffers[i].begin(begin_info);
+
+		vk::RenderPassBeginInfo render_info;
+		render_info.renderPass = render_pass;
+		render_info.framebuffer = framebuffers[i];
+		render_info.renderArea.offset = { 0, 0 };
+		render_info.renderArea.extent = swapchain_extent;
+		render_info.clearValueCount = static_cast<uint32_t>(clear_values.count());
+		render_info.pClearValues = clear_values.data();
+
+		command_buffers[i].beginRenderPass(render_info, vk::SubpassContents::eInline);
+		command_buffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+		command_buffers[i].draw(
+				3, // vertex count
+				1, // intance count
+				0, // first vertex
+				0 // first instance
+		);
+		command_buffers[i].endRenderPass();
+
+		command_buffers[i].end();
+	}
+}
+
+// ##################################################
+
 InstanceVK *InstanceVK::get_singleton() {
 	return singleton;
 }
@@ -456,6 +584,8 @@ vk::RenderPass InstanceVK::get_render_pass() {
 	return render_pass;
 }
 
+// ##################################################
+
 InstanceVK::InstanceVK() {
 	if (enable_validation_layers) {
 		instance_extensions.push_back("VK_EXT_debug_report");
@@ -466,6 +596,12 @@ InstanceVK::InstanceVK() {
 }
 
 InstanceVK::~InstanceVK() {
+	device.destroyCommandPool(command_pool);
+
+	for (size_t i = 0; i < framebuffers.size(); i++) {
+		device.destroyFramebuffer(framebuffers[i]);
+	}
+
 	device.destroyPipelineLayout(pipeline_layout);
 	device.destroyRenderPass(render_pass);
 

@@ -77,27 +77,7 @@ Error InstanceVK_X11::initialize() {
 		ERR_FAIL_COND_V(!surface, ERR_UNCONFIGURED);
 	}
 
-	pick_physical_device();
-	ERR_EXPLAIN("Couldn't find a suitable physical device");
-	ERR_FAIL_COND_V(!physical_device, ERR_UNCONFIGURED);
-
-	create_logical_device();
-	ERR_EXPLAIN("Failed to create logical device");
-	ERR_FAIL_COND_V(!device, ERR_UNCONFIGURED);
-
-	create_swapchain();
-	ERR_EXPLAIN("Failed to create swapchain");
-	ERR_FAIL_COND_V(!swapchain, ERR_UNCONFIGURED);
-
-	create_depth_resources();
-	ERR_EXPLAIN("Failed to create depth resources");
-	ERR_FAIL_COND_V(!depth_imageview, ERR_UNCONFIGURED);
-
-	create_render_pass();
-	ERR_EXPLAIN("Failed to create render pass");
-	ERR_FAIL_COND_V(!render_pass, ERR_UNCONFIGURED);
-
-	return OK;
+	return setup();	// initialize OS-independent stuff
 }
 
 int InstanceVK_X11::get_window_width() {

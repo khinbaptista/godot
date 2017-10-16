@@ -86,6 +86,10 @@ protected:
 	vk::DeviceMemory depth_memory;
 
 	vk::RenderPass render_pass;
+	std::vector<vk::Framebuffer> framebuffers;
+
+	vk::CommandPool command_pool;
+	std::vector<vk::CommandBuffer> command_buffers;
 
 	const std::vector<const char *> validation_layers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -105,6 +109,9 @@ protected:
 	void create_swapchain();
 	void create_depth_resources();
 	void create_render_pass();
+	void create_framebuffers();
+	void create_command_pool();
+	void create_command_buffers();
 
 public:
 	static InstanceVK *get_singleton();
@@ -121,6 +128,7 @@ public:
 	virtual int get_window_width() = 0;
 	virtual int get_window_height() = 0;
 	virtual Error initialize() = 0;
+	Error setup();
 
 	virtual void setup_debug_callback();
 	virtual void destroy_debug_callback();

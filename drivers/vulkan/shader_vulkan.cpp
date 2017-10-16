@@ -64,20 +64,24 @@ void ShaderVK::CreatePipeline() {
 	vector<char> vert_code = read_file("vert.spv");
 	vk::ShaderModule vert_module = CreateModule(vert_code);
 
-	vk::PipelineShaderStageCreateInfo vert_stage_info = {};
-	vert_stage_info.stage = vk::ShaderStateFlagBits::eVertex;
-	vert_stage_info.module = vert_module;
-	vert_stage_info.pName = "main";
+	vk::PipelineShaderStageCreateInfo vert_stage_info;
+	{
+		vert_stage_info.stage = vk::ShaderStateFlagBits::eVertex;
+		vert_stage_info.module = vert_module;
+		vert_stage_info.pName = "main";
+	}
 
 	// fragment stage
 	vk::ShaderModule frag_module;
 	vector<char> frag_code = read_file("frag.spv");
 	frag_module = CreateModule(frag_code);
 
-	vk::PipelineShaderStageCreateInfo frag_stage_info = {};
-	frag_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
-	frag_stage_info.module = frag_module;
-	frag_stage_info.pNmae = "main";
+	vk::PipelineShaderStageCreateInfo frag_stage_info;
+	{
+		frag_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
+		frag_stage_info.module = frag_module;
+		frag_stage_info.pNmae = "main";
+	}
 
 	// shader stages
 	vk::PipelineShaderStageCreateInfo shader_stages[] = {
@@ -85,46 +89,58 @@ void ShaderVK::CreatePipeline() {
 	};
 
 	// vertex input
-	vk::PipelineVertexInputStateCreateInfo vertex_input_info = {};
-	vertex_input_info.vertexBindingDescriptionCount = 0;
+	vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+	{
+		vertex_input_info.vertexBindingDescriptionCount = 0;
+	}
 
 	// input assembly
-	vk::PipelineInputAssemblyStateCreateInfo input_assembly_info = {};
-	input_assembly_info.topology = vk::PrimitiveTopology::eTriangleList;
-	input_assembly_info.primitiveRestartEnable = false;
+	vk::PipelineInputAssemblyStateCreateInfo input_assembly_info;
+	{
+		input_assembly_info.topology = vk::PrimitiveTopology::eTriangleList;
+		input_assembly_info.primitiveRestartEnable = false;
+	}
 
 	// viewport D:
 	vk::Extent extent = InstanceVK::get_singleton()->get_swapchain_extent();
-
-	vk::Viewport viewport = {};
+	vk::Viewport viewport;
+	{
 		viewport.x = 0;
 		viewport.y = 0;
 		viewport.width = (float)extent.width;
 		viewport.height = (float)extent.height;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
+	}
 
-	vk::Rect2D scissor = {};
-	scissor.offset = {0, 0};
-	scissor.extent = extent;
+	vk::Rect2D scissor;
+	{
+		scissor.offset = {0, 0};
+		scissor.extent = extent;
+	}
 
-	vk::PipelineViewportStateCreateInfo viewport_info = {};
+	vk::PipelineViewportStateCreateInfo viewport_info;
+	{
 		viewport_info.viewportCount = 1;
 		viewport_info.pViewports = &viewport;
 		viewport_info.scissorCount = 1;
 		viewport_info.pScissors = &scissor;
+	}
 
 	// rasterizer
-	vk::PipelineRasterizationStateCreateInfo raster_info = {};
+	vk::PipelineRasterizationStateCreateInfo raster_info;
+	{
 		raster_info.depthClampEnable = raster_opt.depthClampEnable;
 		raster_info.rasterizerDiscardEnable = raster_opt.rasterizerDiscardEnable;
 		raster_info.polygonMode = raster_opt.polygonMode;
 		raster_info.lineWidth = raster_opt.lineWidth;
 		raster_info.cullMode = raster_opt.cullMode;
 		raster_info.frontFace = raster_opt.frontFace;
+	}
 
 	// multisampling
-	vk::PipelineMultisampleStateCreateInfo multisample_info = {};
+	vk::PipelineMultisampleStateCreateInfo multisample_info;
+	{
 		multisample_info.sampleShadingEnable = false;
 		multisample_info.rasterizationSamples = vk::SampleCountFlagBits::e1;
 		// commented lines are optional attributes since we won't use it (for now?)
@@ -132,9 +148,11 @@ void ShaderVK::CreatePipeline() {
 		multisample_info.pSampleMask = nullptr;
 		multisample_info.alphaToCoverageEnable = false;
 		multisample_info.alphaToOneEnable = false;*/
+	}
 
 	// depth and stencil testing
-	vk::PipelineDepthStencilStateCreateInfo depth_info = {};
+	vk::PipelineDepthStencilStateCreateInfo depth_info;
+	{
 		depth_info.depthTestEnable = depth_stencil_opt.depthTestEnable;
 		depth_info.depthWriteEnable = depth_stencil_opt.depthWriteEnable;
 		depth_info.depthCompareOp = depth_stencil_opt.depthCompareOp;
@@ -144,11 +162,12 @@ void ShaderVK::CreatePipeline() {
 		depth_info.stencilTestEnable = depth_stencil_opt.stencilTestEnable;
 		dpeth_info.front = depth_stencil_opt.front;
 		depth_info.back = depth_stencil_opt.back;
+	}
 
 	// color blending
 	vector<vk::PipelineColorBlendAttachmentState> blend_attachments;
 	for (ColorBlendAttachmentOptions opt : blend_attachment_opt) {
-		vk::PipelineColorBlendAttachmentState blend_attachment = {};
+		vk::PipelineColorBlendAttachmentState blend_attachment;
 		blend_attachment.colorWriteMask = opt.colorWriteMask;
 		blend_attachment.blendEnable = opt.blendEnable;
 		blend_attachment.srcColorBlendFactor = opt.srcColorBlendFactor;
@@ -161,7 +180,8 @@ void ShaderVK::CreatePipeline() {
 		blend_attachments.push_back(bçend_attachment);
 	}
 
-	vk::PipelineColorBlendStateCreateInfo blend_info = {};
+	vk::PipelineColorBlendStateCreateInfo blend_info;
+	{
 		blend_info.logicOpEnable = blend_opt.logicOpEnable;
 		blend_info.logicOp = blend_opt.logicOp;
 		blend_info.attachmentCount = blend_attachments.size();
@@ -170,27 +190,33 @@ void ShaderVK::CreatePipeline() {
 		blend_info.blendCostants[1] = blend_opt[1];
 		blend_info.blendCostants[2] = blend_opt[2];
 		blend_info.blendCostants[3] = blend_opt[3];
+	}
 
 	// dynamic state
 	vk::DynamicState dynamic_states[] = { // can we take more advantage of this?
 		vk::DynamicState::eViewport, vk::DynamicState::eLineWidth
 	};
 
-	vk::PipelineDynamicStateCreateInfo dynamic_info = {};
-	dynamic_info.dynamicStateCount = 2;
-	dynamic_info.pDynamicStates = dynamic_states;
+	vk::PipelineDynamicStateCreateInfo dynamic_info;
+	{
+		dynamic_info.dynamicStateCount = 2;
+		dynamic_info.pDynamicStates = dynamic_states;
+	}
 
 	// pipeline layout
-	vk::PipelineLayoutCreateInfo layout_info = {};
-	layout_info.setLayoutCount = 0;
-	layout_info.pSetLayouts = nullptr;
-	layout_info.pushConstantRangeCount = 0;
-	layout_info.pPushConstantRanges = nullptr;
+	vk::PipelineLayoutCreateInfo layout_info;
+	{
+		layout_info.setLayoutCount = 0;
+		layout_info.pSetLayouts = nullptr;
+		layout_info.pushConstantRangeCount = 0;
+		layout_info.pPushConstantRanges = nullptr;
+	}
 
 	pipeline_layout = device.createPipelineLayout(layout_info);
 
 	// pipeline
-	vk::GraphicsPipelineCreateInfo pipeline_info = {};
+	vk::GraphicsPipelineCreateInfo pipeline_info;
+	{
 		pipeline_info.stageCount = 2;
 		pipeline_info.pStages = &shader_stages;
 		pipeline_info.pVertexInputState = &vertex_input_info;
@@ -206,6 +232,7 @@ void ShaderVK::CreatePipeline() {
 		pipeline_info.subpass = 0;
 		pipeline_info.basePipelineHandle = nullptr;
 		pipeline_info.basePipelineIndex = -1;
+	}
 
 	pipeline = device.createGraphicsPipeline(nullptr, pipeline_info);
 	ERR_EXPLAIN("Failed to create graphcis pipeline object");
