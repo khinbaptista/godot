@@ -39,7 +39,7 @@ void ShaderVK::Setup() {
 	if (blend_attachment_opt.empty())
 		blend_attachment_opt.push_back(ColorBlendAttachmentOptions());
 
-	CreatePipeline();
+	CreatePipelineStages();
 
 	// create attachments, subpasses and renderpasses
 	// ...
@@ -76,35 +76,33 @@ vk::ShaderModule ShaderVK::CreateModule(const vector<char> &code) {
 	return module;
 }
 
-void ShaderVK::CreatePipeline() {
+void ShaderVK::CreatePipelineStages() {
 	vk::Device device = InstanceVK::get_singleton()->get_device();
 
 	// vertex stage
 	vector<char> vert_code = read_file("vert.spv");
-	vk::ShaderModule vert_module = CreateModule(vert_code);
-	ERR_FAIL_COND(!vert_module);
+	vertex_module = CreateModule(vert_code);
+	ERR_FAIL_COND(!vertex_module);
 
 	vk::PipelineShaderStageCreateInfo vert_stage_info;
 	vert_stage_info.stage = vk::ShaderStateFlagBits::eVertex;
-	vert_stage_info.module = vert_module;
-	vert_stage_info.pName = "main";
+	vert_stage_info.module = vertex_module;
+	vert_stage_info.pName = "main"; // entry point
 
 	// fragment stage
-	vk::ShaderModule frag_module;
 	vector<char> frag_code = read_file("frag.spv");
-	frag_module = CreateModule(frag_code);
-	ERR_FAIL_COND(!frag_module);
+	fragment_module = CreateModule(frag_code);
+	ERR_FAIL_COND(!fragment_module);
 
 	vk::PipelineShaderStageCreateInfo frag_stage_info;
 	frag_stage_info.stage = vk::ShaderStageFlagBits::eFragment;
-	frag_stage_info.module = frag_module;
-	frag_stage_info.pNmae = "main";
+	frag_stage_info.module = fragment_module;
+	frag_stage_info.pName = "main"; // entry point
 
 	// shader stages
-	vk::PipelineShaderStageCreateInfo shader_stages[] = {
-		vert_stage_info, frag_stage_info
-	};
+	pipeline_stages = { vert_stage_info, frag_stage_info };
 
+	/*
 	// vertex input
 	vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 	vertex_input_info.vertexBindingDescriptionCount = 0;
@@ -148,10 +146,10 @@ void ShaderVK::CreatePipeline() {
 	multisample_info.sampleShadingEnable = false;
 	multisample_info.rasterizationSamples = vk::SampleCountFlagBits::e1;
 	// commented lines are optional attributes since we won't use it (for now?)
-	/*multisample_info.minSampleShading = 1.0f;
-	multisample_info.pSampleMask = nullptr;
-	multisample_info.alphaToCoverageEnable = false;
-	multisample_info.alphaToOneEnable = false;*/
+	//multisample_info.minSampleShading = 1.0f;
+	//multisample_info.pSampleMask = nullptr;
+	//multisample_info.alphaToCoverageEnable = false;
+	//multisample_info.alphaToOneEnable = false;
 
 	// depth and stencil testing
 	vk::PipelineDepthStencilStateCreateInfo depth_info;
@@ -234,6 +232,7 @@ void ShaderVK::CreatePipeline() {
 	// cleanup
 	device.destroyShaderModule(vert_module);
 	device.destroyShaderModule(frag_module);
+	*/
 }
 
 void ShaderVK::CreateRenderPass() {

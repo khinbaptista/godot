@@ -293,7 +293,7 @@ public:
 		RID self;
 
 		VS::ShaderMode mode;
-		//ShaderGLES3 *shader;
+		ShaderVK *shader;
 		String code;
 		SelfList<Material>::List materials;
 
@@ -417,6 +417,8 @@ public:
 	/* COMMON MATERIAL API */
 
 	struct Material : public RID_Data {
+
+		vk::Pipeline graphics_pipeline;
 
 		Shader *shader;
 		//GLuint ubo_id;
@@ -1163,6 +1165,7 @@ public:
 		uint32_t offset_x, offset_y;
 		uint32_t width, height;
 
+		vk::Viewport viewport;
 		vk::RenderPass render_pass;
 
 		bool flags[RENDER_TARGET_FLAG_MAX];

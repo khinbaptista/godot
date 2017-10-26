@@ -1,8 +1,9 @@
 #pragma once
 
 #include "platform_config.h"
-#include <vulkan/vulkan.hpp>
+#include <array>
 #include <string>
+#include <vulkan/vulkan.hpp>
 
 #include "camera_matrix.h"
 #include "hash_map.h"
@@ -21,8 +22,8 @@ class ShaderVK {
 private:
 	virtual String get_shader_name() const = 0;
 
-	const char* vertex_code;
-	const char* fragment_code;
+	const char *vertex_code;
+	const char *fragment_code;
 
 protected:
 	struct RasterizerOptions {
@@ -86,10 +87,10 @@ protected:
 		ColorBlendAttachmentOptions() {
 			blendEnable = false;
 			colorWriteMask =
-				vk::ColorComponentFlagBits::eR |
-				vk::ColorComponentFlagBits::eG |
-				vk::ColorComponentFlagBits::eB |
-				vk::ColorComponentFlagBits::eA;
+					vk::ColorComponentFlagBits::eR |
+					vk::ColorComponentFlagBits::eG |
+					vk::ColorComponentFlagBits::eB |
+					vk::ColorComponentFlagBits::eA;
 			srcColorBlendFactor = vk::BlendFactor::eOne;
 			dstColorBlendFactor = vk::BlendFactor::eZero;
 			colorBlendOp = vk::BlendOp::eAdd;
@@ -116,15 +117,18 @@ protected:
 	};
 	ColorBlendOptions blend_opt;
 
-	vk::RenderPass render_pass;
-	vk::PipelineLayout pipeline_layout;
-	vk::Pipeline pipeline; // graphics pipeline
+	vk::ShaderModule vertex_module;
+	vk::ShaderModule fragment_module;
+	std::array<vk::PipelineShaderStageCreateInfo, 2> pipeline_stages;
 
-	static void CompileGLSL(const std::string& filename);
-	static vk::ShaderModule CreateModule(const std::vector<char>& code);
+	//vk::RenderPass render_pass;
+	//vk::PipelineLayout pipeline_layout; // pipelines are per material!
 
-	void CreatePipeline();
-	void CreateRenderPass();
+	static void CompileGLSL(const std::string &filename);
+	static vk::ShaderModule CreateModule(const std::vector<char> &code);
+
+	void CreatePipelineStages();
+	//void CreateRenderPass();
 
 public:
 	ShaderVK();
@@ -132,4 +136,6 @@ public:
 
 	void Setup();
 	void Compile();
+
+	std::array<vk::PipelineShaderStageCreateInfo, 2> get_stages();
 }
