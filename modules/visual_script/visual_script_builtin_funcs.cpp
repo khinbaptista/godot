@@ -65,6 +65,8 @@ const char *VisualScriptBuiltinFunc::func_name[VisualScriptBuiltinFunc::FUNC_MAX
 	"decimals",
 	"stepify",
 	"lerp",
+	"inverse_lerp",
+	"range_lerp",
 	"dectime",
 	"randomize",
 	"randi",
@@ -76,6 +78,8 @@ const char *VisualScriptBuiltinFunc::func_name[VisualScriptBuiltinFunc::FUNC_MAX
 	"rad2deg",
 	"linear2db",
 	"db2linear",
+	"wrapi",
+	"wrapf",
 	"max",
 	"min",
 	"clamp",
@@ -194,9 +198,14 @@ int VisualScriptBuiltinFunc::get_func_argument_count(BuiltinFunc p_func) {
 		case COLORN:
 			return 2;
 		case MATH_LERP:
+		case MATH_INVERSE_LERP:
 		case MATH_DECTIME:
+		case MATH_WRAP:
+		case MATH_WRAPF:
 		case LOGIC_CLAMP:
 			return 3;
+		case MATH_RANGE_LERP:
+			return 5;
 		case FUNC_MAX: {
 		}
 	}
@@ -297,7 +306,26 @@ PropertyInfo VisualScriptBuiltinFunc::get_input_value_port_info(int p_idx) const
 				return PropertyInfo(Variant::REAL, "to");
 			else
 				return PropertyInfo(Variant::REAL, "weight");
-
+		} break;
+		case MATH_INVERSE_LERP: {
+			if (p_idx == 0)
+				return PropertyInfo(Variant::REAL, "from");
+			else if (p_idx == 1)
+				return PropertyInfo(Variant::REAL, "to");
+			else
+				return PropertyInfo(Variant::REAL, "value");
+		} break;
+		case MATH_RANGE_LERP: {
+			if (p_idx == 0)
+				return PropertyInfo(Variant::REAL, "value");
+			else if (p_idx == 1)
+				return PropertyInfo(Variant::REAL, "istart");
+			else if (p_idx == 2)
+				return PropertyInfo(Variant::REAL, "istop");
+			else if (p_idx == 3)
+				return PropertyInfo(Variant::REAL, "ostart");
+			else
+				return PropertyInfo(Variant::REAL, "ostop");
 		} break;
 		case MATH_DECTIME: {
 			if (p_idx == 0)
@@ -339,6 +367,22 @@ PropertyInfo VisualScriptBuiltinFunc::get_input_value_port_info(int p_idx) const
 		} break;
 		case MATH_DB2LINEAR: {
 			return PropertyInfo(Variant::REAL, "db");
+		} break;
+		case MATH_WRAP: {
+			if (p_idx == 0)
+				return PropertyInfo(Variant::INT, "value");
+			else if (p_idx == 1)
+				return PropertyInfo(Variant::INT, "min");
+			else
+				return PropertyInfo(Variant::INT, "max");
+		} break;
+		case MATH_WRAPF: {
+			if (p_idx == 0)
+				return PropertyInfo(Variant::REAL, "value");
+			else if (p_idx == 1)
+				return PropertyInfo(Variant::REAL, "min");
+			else
+				return PropertyInfo(Variant::REAL, "max");
 		} break;
 		case LOGIC_MAX: {
 			if (p_idx == 0)
@@ -495,6 +539,8 @@ PropertyInfo VisualScriptBuiltinFunc::get_output_value_port_info(int p_idx) cons
 		} break;
 		case MATH_STEPIFY:
 		case MATH_LERP:
+		case MATH_INVERSE_LERP:
+		case MATH_RANGE_LERP:
 		case MATH_DECTIME: {
 			t = Variant::REAL;
 
@@ -523,8 +569,12 @@ PropertyInfo VisualScriptBuiltinFunc::get_output_value_port_info(int p_idx) cons
 		case MATH_DEG2RAD:
 		case MATH_RAD2DEG:
 		case MATH_LINEAR2DB:
+		case MATH_WRAPF:
 		case MATH_DB2LINEAR: {
 			t = Variant::REAL;
+		} break;
+		case MATH_WRAP: {
+			t = Variant::INT;
 		} break;
 		case LOGIC_MAX:
 		case LOGIC_MIN:
@@ -795,6 +845,22 @@ void VisualScriptBuiltinFunc::exec_func(BuiltinFunc p_func, const Variant **p_in
 			VALIDATE_ARG_NUM(2);
 			*r_return = Math::lerp((double)*p_inputs[0], (double)*p_inputs[1], (double)*p_inputs[2]);
 		} break;
+		case VisualScriptBuiltinFunc::MATH_INVERSE_LERP: {
+
+			VALIDATE_ARG_NUM(0);
+			VALIDATE_ARG_NUM(1);
+			VALIDATE_ARG_NUM(2);
+			*r_return = Math::inverse_lerp((double)*p_inputs[0], (double)*p_inputs[1], (double)*p_inputs[2]);
+		} break;
+		case VisualScriptBuiltinFunc::MATH_RANGE_LERP: {
+
+			VALIDATE_ARG_NUM(0);
+			VALIDATE_ARG_NUM(1);
+			VALIDATE_ARG_NUM(2);
+			VALIDATE_ARG_NUM(3);
+			VALIDATE_ARG_NUM(4);
+			*r_return = Math::range_lerp((double)*p_inputs[0], (double)*p_inputs[1], (double)*p_inputs[2], (double)*p_inputs[3], (double)*p_inputs[4]);
+		} break;
 		case VisualScriptBuiltinFunc::MATH_DECTIME: {
 
 			VALIDATE_ARG_NUM(0);
@@ -855,6 +921,18 @@ void VisualScriptBuiltinFunc::exec_func(BuiltinFunc p_func, const Variant **p_in
 
 			VALIDATE_ARG_NUM(0);
 			*r_return = Math::db2linear((double)*p_inputs[0]);
+		} break;
+		case VisualScriptBuiltinFunc::MATH_WRAP: {
+			VALIDATE_ARG_NUM(0);
+			VALIDATE_ARG_NUM(1);
+			VALIDATE_ARG_NUM(2);
+			*r_return = Math::wrapi((int64_t)*p_inputs[0], (int64_t)*p_inputs[1], (int64_t)*p_inputs[2]);
+		} break;
+		case VisualScriptBuiltinFunc::MATH_WRAPF: {
+			VALIDATE_ARG_NUM(0);
+			VALIDATE_ARG_NUM(1);
+			VALIDATE_ARG_NUM(2);
+			*r_return = Math::wrapf((double)*p_inputs[0], (double)*p_inputs[1], (double)*p_inputs[2]);
 		} break;
 		case VisualScriptBuiltinFunc::LOGIC_MAX: {
 
@@ -1203,6 +1281,8 @@ void VisualScriptBuiltinFunc::_bind_methods() {
 	BIND_ENUM_CONSTANT(MATH_DECIMALS);
 	BIND_ENUM_CONSTANT(MATH_STEPIFY);
 	BIND_ENUM_CONSTANT(MATH_LERP);
+	BIND_ENUM_CONSTANT(MATH_INVERSE_LERP);
+	BIND_ENUM_CONSTANT(MATH_RANGE_LERP);
 	BIND_ENUM_CONSTANT(MATH_DECTIME);
 	BIND_ENUM_CONSTANT(MATH_RANDOMIZE);
 	BIND_ENUM_CONSTANT(MATH_RAND);
@@ -1214,6 +1294,8 @@ void VisualScriptBuiltinFunc::_bind_methods() {
 	BIND_ENUM_CONSTANT(MATH_RAD2DEG);
 	BIND_ENUM_CONSTANT(MATH_LINEAR2DB);
 	BIND_ENUM_CONSTANT(MATH_DB2LINEAR);
+	BIND_ENUM_CONSTANT(MATH_WRAP);
+	BIND_ENUM_CONSTANT(MATH_WRAPF);
 	BIND_ENUM_CONSTANT(LOGIC_MAX);
 	BIND_ENUM_CONSTANT(LOGIC_MIN);
 	BIND_ENUM_CONSTANT(LOGIC_CLAMP);
@@ -1236,6 +1318,11 @@ void VisualScriptBuiltinFunc::_bind_methods() {
 	BIND_ENUM_CONSTANT(FUNC_MAX);
 }
 
+VisualScriptBuiltinFunc::VisualScriptBuiltinFunc(VisualScriptBuiltinFunc::BuiltinFunc func) {
+
+	this->func = func;
+}
+
 VisualScriptBuiltinFunc::VisualScriptBuiltinFunc() {
 
 	func = MATH_SIN;
@@ -1244,9 +1331,7 @@ VisualScriptBuiltinFunc::VisualScriptBuiltinFunc() {
 template <VisualScriptBuiltinFunc::BuiltinFunc func>
 static Ref<VisualScriptNode> create_builtin_func_node(const String &p_name) {
 
-	Ref<VisualScriptBuiltinFunc> node;
-	node.instance();
-	node->set_func(func);
+	Ref<VisualScriptBuiltinFunc> node = memnew(VisualScriptBuiltinFunc(func));
 	return node;
 }
 
@@ -1282,6 +1367,8 @@ void register_visual_script_builtin_func_node() {
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/decimals", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_DECIMALS>);
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/stepify", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_STEPIFY>);
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/lerp", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_LERP>);
+	VisualScriptLanguage::singleton->add_register_func("functions/built_in/inverse_lerp", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_INVERSE_LERP>);
+	VisualScriptLanguage::singleton->add_register_func("functions/built_in/range_lerp", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_RANGE_LERP>);
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/dectime", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_DECTIME>);
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/randomize", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_RANDOMIZE>);
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/rand", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_RAND>);
@@ -1294,6 +1381,8 @@ void register_visual_script_builtin_func_node() {
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/rad2deg", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_RAD2DEG>);
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/linear2db", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_LINEAR2DB>);
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/db2linear", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_DB2LINEAR>);
+	VisualScriptLanguage::singleton->add_register_func("functions/built_in/wrapi", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_WRAP>);
+	VisualScriptLanguage::singleton->add_register_func("functions/built_in/wrapf", create_builtin_func_node<VisualScriptBuiltinFunc::MATH_WRAPF>);
 
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/max", create_builtin_func_node<VisualScriptBuiltinFunc::LOGIC_MAX>);
 	VisualScriptLanguage::singleton->add_register_func("functions/built_in/min", create_builtin_func_node<VisualScriptBuiltinFunc::LOGIC_MIN>);

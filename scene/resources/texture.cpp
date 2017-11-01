@@ -70,7 +70,7 @@ void Texture::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("has_alpha"), &Texture::has_alpha);
 	ClassDB::bind_method(D_METHOD("set_flags", "flags"), &Texture::set_flags);
 	ClassDB::bind_method(D_METHOD("get_flags"), &Texture::get_flags);
-	ClassDB::bind_method(D_METHOD("draw", "canvas_item", "pos", "modulate", "transpose", "normal_map"), &Texture::draw, DEFVAL(Color(1, 1, 1)), DEFVAL(false), DEFVAL(Variant()));
+	ClassDB::bind_method(D_METHOD("draw", "canvas_item", "position", "modulate", "transpose", "normal_map"), &Texture::draw, DEFVAL(Color(1, 1, 1)), DEFVAL(false), DEFVAL(Variant()));
 	ClassDB::bind_method(D_METHOD("draw_rect", "canvas_item", "rect", "tile", "modulate", "transpose", "normal_map"), &Texture::draw_rect, DEFVAL(Color(1, 1, 1)), DEFVAL(false), DEFVAL(Variant()));
 	ClassDB::bind_method(D_METHOD("draw_rect_region", "canvas_item", "rect", "src_rect", "modulate", "transpose", "normal_map", "clip_uv"), &Texture::draw_rect_region, DEFVAL(Color(1, 1, 1)), DEFVAL(false), DEFVAL(Variant()), DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("get_data"), &Texture::get_data);
@@ -78,11 +78,11 @@ void Texture::_bind_methods() {
 	BIND_ENUM_CONSTANT(FLAG_MIPMAPS);
 	BIND_ENUM_CONSTANT(FLAG_REPEAT);
 	BIND_ENUM_CONSTANT(FLAG_FILTER);
-	BIND_ENUM_CONSTANT(FLAG_VIDEO_SURFACE);
 	BIND_ENUM_CONSTANT(FLAGS_DEFAULT);
 	BIND_ENUM_CONSTANT(FLAG_ANISOTROPIC_FILTER);
 	BIND_ENUM_CONSTANT(FLAG_CONVERT_TO_LINEAR);
 	BIND_ENUM_CONSTANT(FLAG_MIRRORED_REPEAT);
+	BIND_ENUM_CONSTANT(FLAG_VIDEO_SURFACE);
 }
 
 Texture::Texture() {
@@ -488,7 +488,7 @@ Error StreamTexture::_load_data(const String &p_path, int &tw, int &th, int &fla
 
 		while (mipmaps > 1 && p_size_limit > 0 && (sw > p_size_limit || sh > p_size_limit)) {
 
-			f->seek(f->get_pos() + size);
+			f->seek(f->get_position() + size);
 			mipmaps = f->get_32();
 			size = f->get_32();
 
@@ -610,7 +610,7 @@ Error StreamTexture::_load_data(const String &p_path, int &tw, int &th, int &fla
 				ERR_FAIL_V(ERR_FILE_CORRUPT);
 			}
 
-			f->seek(f->get_pos() + ofs);
+			f->seek(f->get_position() + ofs);
 
 			PoolVector<uint8_t> img_data;
 			img_data.resize(total_size - ofs);
@@ -1324,16 +1324,17 @@ void CubeMap::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_width"), &CubeMap::get_width);
 	ClassDB::bind_method(D_METHOD("get_height"), &CubeMap::get_height);
-	//ClassDB::bind_method(D_METHOD("get_rid"),&CubeMap::get_rid);
 	ClassDB::bind_method(D_METHOD("set_flags", "flags"), &CubeMap::set_flags);
 	ClassDB::bind_method(D_METHOD("get_flags"), &CubeMap::get_flags);
-
 	ClassDB::bind_method(D_METHOD("set_side", "side", "image"), &CubeMap::set_side);
 	ClassDB::bind_method(D_METHOD("get_side", "side"), &CubeMap::get_side);
 	ClassDB::bind_method(D_METHOD("set_storage", "mode"), &CubeMap::set_storage);
 	ClassDB::bind_method(D_METHOD("get_storage"), &CubeMap::get_storage);
 	ClassDB::bind_method(D_METHOD("set_lossy_storage_quality", "quality"), &CubeMap::set_lossy_storage_quality);
 	ClassDB::bind_method(D_METHOD("get_lossy_storage_quality"), &CubeMap::get_lossy_storage_quality);
+
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "storage_mode", PROPERTY_HINT_ENUM, "Raw,Lossy Compressed,Lossless Compressed"), "set_storage", "get_storage");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "lossy_storage_quality"), "set_lossy_storage_quality", "get_lossy_storage_quality");
 
 	BIND_ENUM_CONSTANT(STORAGE_RAW);
 	BIND_ENUM_CONSTANT(STORAGE_COMPRESS_LOSSY);

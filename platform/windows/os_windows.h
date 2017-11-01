@@ -152,6 +152,7 @@ protected:
 	virtual int get_audio_driver_count() const;
 	virtual const char *get_audio_driver_name(int p_driver) const;
 
+	virtual void initialize_logger();
 	virtual void initialize_core();
 	virtual void initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
 
@@ -180,16 +181,13 @@ protected:
 public:
 	LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-	void print_error(const char *p_function, const char *p_file, int p_line, const char *p_code, const char *p_rationale, ErrorType p_type);
-
-	virtual void vprint(const char *p_format, va_list p_list, bool p_stderr = false);
 	virtual void alert(const String &p_alert, const String &p_title = "ALERT!");
 	String get_stdin_string(bool p_block);
 
 	void set_mouse_mode(MouseMode p_mode);
 	MouseMode get_mouse_mode() const;
 
-	virtual void warp_mouse_pos(const Point2 &p_to);
+	virtual void warp_mouse_position(const Point2 &p_to);
 	virtual Point2 get_mouse_position() const;
 	virtual int get_mouse_button_state() const;
 	virtual void set_window_title(const String &p_title);
@@ -242,7 +240,7 @@ public:
 	virtual void delay_usec(uint32_t p_usec) const;
 	virtual uint64_t get_ticks_usec() const;
 
-	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL);
+	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL, bool read_stderr = false);
 	virtual Error kill(const ProcessID &p_pid);
 	virtual int get_process_id() const;
 
@@ -289,6 +287,8 @@ public:
 
 	void disable_crash_handler();
 	bool is_disable_crash_handler() const;
+
+	virtual Error move_to_trash(const String &p_path);
 
 	OS_Windows(HINSTANCE _hInstance);
 	~OS_Windows();

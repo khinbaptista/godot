@@ -61,7 +61,11 @@ Ref<Script> GDScriptLanguage::get_template(const String &p_class_name, const Str
 					   "func _ready():\n" +
 					   "%TS%# Called every time the node is added to the scene.\n" +
 					   "%TS%# Initialization here\n" +
-					   "%TS%pass\n";
+					   "%TS%pass\n\n" +
+					   "#func _process(delta):\n" +
+					   "#%TS%# Called every frame. Delta is time since last frame.\n" +
+					   "#%TS%# Update game logic here.\n" +
+					   "#%TS%pass\n";
 
 	_template = _template.replace("%BASE%", p_base_class_name);
 	_template = _template.replace("%TS%", _get_indentation());
@@ -125,6 +129,11 @@ bool GDScriptLanguage::validate(const String &p_script, int &r_line_error, int &
 bool GDScriptLanguage::has_named_classes() const {
 
 	return false;
+}
+
+bool GDScriptLanguage::supports_builtin_mode() const {
+
+	return true;
 }
 
 int GDScriptLanguage::find_function(const String &p_function, const String &p_code) const {
@@ -1952,7 +1961,6 @@ static void _find_call_arguments(GDCompletionContext &context, const GDParser::N
 		//make sure identifier exists...
 
 		const GDParser::IdentifierNode *id = static_cast<const GDParser::IdentifierNode *>(op->arguments[1]);
-
 		if (op->arguments[0]->type == GDParser::Node::TYPE_SELF) {
 			//self, look up
 
@@ -2021,7 +2029,7 @@ static void _find_call_arguments(GDCompletionContext &context, const GDParser::N
 						base = script->get_native();
 				} else if (nc.is_valid()) {
 
-					if (context.function && !context.function->_static) {
+					if (!(context.function && context.function->_static)) {
 
 						GDCompletionIdentifier ci;
 						ci.type = Variant::OBJECT;
@@ -2103,9 +2111,9 @@ Error GDScriptLanguage::complete_code(const String &p_code, const String &p_base
 				for (List<String>::Element *E = opts.front(); E; E = E->next()) {
 
 					String opt = E->get().strip_edges();
-					if (opt.begins_with("\"") && opt.ends_with("\"")) {
+					if (opt.is_quoted()) {
 						r_forced = true;
-						String idopt = opt.substr(1, opt.length() - 2);
+						String idopt = opt.unquote();
 						if (idopt.replace("/", "_").is_valid_identifier()) {
 							options.insert(idopt);
 						} else {

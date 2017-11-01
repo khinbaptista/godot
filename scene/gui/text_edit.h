@@ -238,6 +238,7 @@ class TextEdit : public Control {
 	bool setting_row;
 	bool wrap;
 	bool draw_tabs;
+	bool override_selected_font_color;
 	bool cursor_changed_dirty;
 	bool text_changed_dirty;
 	bool undo_enabled;
@@ -252,6 +253,7 @@ class TextEdit : public Control {
 	bool scroll_past_end_of_file_enabled;
 	bool auto_brace_completion_enabled;
 	bool brace_matching_enabled;
+	bool highlight_current_line;
 	bool auto_indent;
 	bool cut_copy_line;
 	bool insert_mode;
@@ -482,6 +484,8 @@ public:
 	void set_indent_size(const int p_size);
 	void set_draw_tabs(bool p_draw);
 	bool is_drawing_tabs() const;
+	void set_override_selected_font_color(bool p_override_selected_font_color);
+	bool is_overriding_selected_font_color() const;
 
 	void set_insert_mode(bool p_enabled);
 	bool is_insert_mode() const;
@@ -510,6 +514,9 @@ public:
 
 	void set_show_line_numbers(bool p_show);
 	bool is_show_line_numbers_enabled() const;
+
+	void set_highlight_current_line(bool p_enabled);
+	bool is_highlight_current_line_enabled() const;
 
 	void set_line_numbers_zero_padded(bool p_zero_padded);
 

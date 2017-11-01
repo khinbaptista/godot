@@ -3,6 +3,11 @@
 	<brief_description>
 	</brief_description>
 	<description>
+		[b]Input Ports:[/b]
+		- Data (variant): [code]A[/code]
+		- Data (variant): [code]B[/code]
+		[b]Output Ports:[/b]
+		- Data (variant): [code]result[/code]
 	</description>
 	<tutorials>
 	</tutorials>

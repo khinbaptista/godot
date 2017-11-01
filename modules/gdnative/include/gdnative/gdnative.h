@@ -34,29 +34,20 @@
 extern "C" {
 #endif
 
-#ifdef GDAPI_BUILT_IN
-#define GDAPI_EXPORT
-#endif
-
 #ifdef _WIN32
-#if defined(GDAPI_EXPORT)
 #define GDCALLINGCONV
-#define GDAPI __declspec(dllexport) GDCALLINGCONV
-#else
-#define GDCALLINGCONV
-#define GDAPI __declspec(dllimport) GDCALLINGCONV
-#endif
+#define GDAPI GDCALLINGCONV
 #elif defined(__APPLE__)
 #include "TargetConditionals.h"
 #if TARGET_OS_IPHONE
-#define GDCALLINGCONV
-#define GDAPI
+#define GDCALLINGCONV __attribute__((visibility("default")))
+#define GDAPI GDCALLINGCONV
 #elif TARGET_OS_MAC
 #define GDCALLINGCONV __attribute__((sysv_abi))
 #define GDAPI GDCALLINGCONV
 #endif
 #else
-#define GDCALLINGCONV __attribute__((sysv_abi, visibility("default")))
+#define GDCALLINGCONV __attribute__((sysv_abi))
 #define GDAPI GDCALLINGCONV
 #endif
 
@@ -103,7 +94,7 @@ typedef enum {
 	GODOT_ERR_CANT_CONNECT, // (25)
 	GODOT_ERR_CANT_RESOLVE,
 	GODOT_ERR_CONNECTION_ERROR,
-	GODOT_ERR_CANT_AQUIRE_RESOURCE,
+	GODOT_ERR_CANT_ACQUIRE_RESOURCE,
 	GODOT_ERR_CANT_FORK,
 	GODOT_ERR_INVALID_DATA, ///< Data passed is invalid	(30)
 	GODOT_ERR_INVALID_PARAMETER, ///< Parameter passed is invalid
@@ -149,6 +140,10 @@ typedef void godot_object;
 /////// String
 
 #include <gdnative/string.h>
+
+/////// String name
+
+#include <gdnative/string_name.h>
 
 ////// Vector2
 
@@ -237,12 +232,13 @@ godot_variant GDAPI godot_method_bind_call(godot_method_bind *p_method_bind, god
 struct godot_gdnative_api_struct; // Forward declaration
 
 typedef struct {
-	const struct godot_gdnative_api_struct *api_struct;
 	godot_bool in_editor;
 	uint64_t core_api_hash;
 	uint64_t editor_api_hash;
 	uint64_t no_api_hash;
 	godot_object *gd_native_library; // pointer to GDNativeLibrary that is being initialized
+	const struct godot_gdnative_api_struct *api_struct;
+	const godot_string *active_library_path;
 } godot_gdnative_init_options;
 
 typedef struct {
@@ -259,7 +255,7 @@ godot_dictionary GDAPI godot_get_global_constants();
 ////// GDNative procedure types
 typedef void (*godot_gdnative_init_fn)(godot_gdnative_init_options *);
 typedef void (*godot_gdnative_terminate_fn)(godot_gdnative_terminate_options *);
-typedef godot_variant (*godot_gdnative_procedure_fn)(void *, godot_array *);
+typedef godot_variant (*godot_gdnative_procedure_fn)(godot_array *);
 
 ////// System Functions
 

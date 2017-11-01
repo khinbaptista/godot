@@ -32,7 +32,6 @@
 
 #include "arvr/arvr_interface.h"
 #include "arvr/arvr_positional_tracker.h"
-#include "arvr/arvr_script_interface.h"
 #include "arvr_server.h"
 #include "audio/audio_effect.h"
 #include "audio/audio_stream.h"
@@ -74,10 +73,14 @@ static void _debugger_get_resource_usage(List<ScriptDebuggerRemote::ResourceUsag
 }
 
 ShaderTypes *shader_types = NULL;
-ARVRServer *arvr_server = NULL;
 
 void register_server_types() {
-	arvr_server = memnew(ARVRServer);
+
+	ClassDB::register_virtual_class<VisualServer>();
+	ClassDB::register_class<AudioServer>();
+	ClassDB::register_virtual_class<PhysicsServer>();
+	ClassDB::register_virtual_class<Physics2DServer>();
+	ClassDB::register_class<ARVRServer>();
 
 	ProjectSettings::get_singleton()->add_singleton(ProjectSettings::Singleton("VisualServer", VisualServer::get_singleton()));
 	ProjectSettings::get_singleton()->add_singleton(ProjectSettings::Singleton("AudioServer", AudioServer::get_singleton()));
@@ -89,12 +92,13 @@ void register_server_types() {
 
 	ClassDB::register_virtual_class<ARVRInterface>();
 	ClassDB::register_class<ARVRPositionalTracker>();
-	ClassDB::register_class<ARVRScriptInterface>();
 
 	ClassDB::register_virtual_class<AudioStream>();
 	ClassDB::register_virtual_class<AudioStreamPlayback>();
 	ClassDB::register_class<AudioStreamRandomPitch>();
 	ClassDB::register_virtual_class<AudioEffect>();
+	ClassDB::register_class<AudioEffectEQ>();
+	ClassDB::register_class<AudioEffectFilter>();
 	ClassDB::register_class<AudioBusLayout>();
 
 	{
@@ -144,9 +148,5 @@ void register_server_types() {
 
 void unregister_server_types() {
 
-	//@TODO move this into iPhone/Android implementation? just have this here for testing...
-	//	mobile_interface = NULL;
-
 	memdelete(shader_types);
-	memdelete(arvr_server);
 }

@@ -1366,6 +1366,10 @@ def win32_spawn(sh, escape, cmd, args, spawnenv):
 	return exit_code
 """
 
+def android_add_flat_dir(self, dir):
+    if (dir not in self.android_flat_dirs):
+        self.android_flat_dirs.append(dir)
+
 def android_add_maven_repository(self, url):
     if (url not in self.android_maven_repos):
         self.android_maven_repos.append(url)
@@ -1712,9 +1716,13 @@ def generate_vs_project(env, num_jobs):
         env.AddToVSProject(env.servers_sources)
         env.AddToVSProject(env.editor_sources)
 
-        env['MSVSBUILDCOM'] = build_commandline('scons platform=windows target=$(Configuration) tools=!tools! -j' + str(num_jobs))
-        env['MSVSREBUILDCOM'] = build_commandline('scons platform=windows target=$(Configuration) tools=!tools! vsproj=yes -j' + str(num_jobs))
-        env['MSVSCLEANCOM'] = build_commandline('scons --clean platform=windows target=$(Configuration) tools=!tools! -j' + str(num_jobs))
+        # windows allows us to have spaces in paths, so we need
+        # to double quote off the directory. However, the path ends
+        # in a backslash, so we need to remove this, lest it escape the
+        # last double quote off, confusing MSBuild
+        env['MSVSBUILDCOM'] = build_commandline('scons --directory="$(ProjectDir.TrimEnd(\'\\\'))" platform=windows target=$(Configuration) tools=!tools! -j' + str(num_jobs))
+        env['MSVSREBUILDCOM'] = build_commandline('scons --directory="$(ProjectDir.TrimEnd(\'\\\'))" platform=windows target=$(Configuration) tools=!tools! vsproj=yes -j' + str(num_jobs))
+        env['MSVSCLEANCOM'] = build_commandline('scons --directory="$(ProjectDir.TrimEnd(\'\\\'))" --clean platform=windows target=$(Configuration) tools=!tools! -j' + str(num_jobs))
 
         # This version information (Win32, x64, Debug, Release, Release_Debug seems to be
         # required for Visual Studio to understand that it needs to generate an NMAKE

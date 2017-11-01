@@ -273,12 +273,14 @@ void EditorExportPlatform::gen_debug_flags(Vector<String> &r_flags, int p_flags)
 }
 
 Error EditorExportPlatform::_save_pack_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total) {
+	if (p_path.ends_with(".so") || p_path.ends_with(".dylib") || p_path.ends_with(".dll"))
+		return OK;
 
 	PackData *pd = (PackData *)p_userdata;
 
 	SavedData sd;
 	sd.path_utf8 = p_path.utf8();
-	sd.ofs = pd->f->get_pos();
+	sd.ofs = pd->f->get_position();
 	sd.size = p_data.size();
 
 	pd->f->store_buffer(p_data.ptr(), p_data.size());
@@ -340,12 +342,10 @@ String EditorExportPlatform::find_export_template(String template_file_name, Str
 	bool has_system_path = (system_file != "");
 	system_file = system_file.plus_file(base_name);
 
-	print_line("test user file: " + user_file);
 	// Prefer user file
 	if (FileAccess::exists(user_file)) {
 		return user_file;
 	}
-	print_line("test system file: " + system_file);
 
 	// Now check system file
 	if (has_system_path) {
@@ -736,7 +736,7 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, c
 
 	f->store_32(pd.file_ofs.size()); //amount of files
 
-	size_t header_size = f->get_pos();
+	size_t header_size = f->get_position();
 
 	//precalculate header size
 
@@ -925,13 +925,10 @@ void EditorExport::_save() {
 	}
 
 	config->save("res://export_presets.cfg");
-
-	print_line("saved ok");
 }
 
 void EditorExport::save_presets() {
 
-	print_line("save presets");
 	if (block_save)
 		return;
 	save_timer->start();
@@ -1138,6 +1135,12 @@ void EditorExportPlatformPC::get_preset_features(const Ref<EditorExportPreset> &
 	}
 	if (p_preset->get("texture_format/etc2")) {
 		r_features->push_back("etc2");
+	}
+
+	if (p_preset->get("binary_format/64_bits")) {
+		r_features->push_back("64");
+	} else {
+		r_features->push_back("32");
 	}
 }
 

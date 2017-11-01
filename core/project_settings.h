@@ -119,7 +119,10 @@ protected:
 	static void _bind_methods();
 
 public:
-	bool has(String p_var) const;
+	void set_setting(const String &p_setting, const Variant &p_value);
+	Variant get_setting(const String &p_setting) const;
+
+	bool has_setting(String p_var) const;
 	String localize_path(const String &p_path) const;
 	String globalize_path(const String &p_path) const;
 
@@ -136,7 +139,7 @@ public:
 	void set_order(const String &p_name, int p_order);
 	void set_builtin_order(const String &p_name);
 
-	Error setup(const String &p_path, const String &p_main_pack);
+	Error setup(const String &p_path, const String &p_main_pack, bool p_upwards = false);
 
 	Error save_custom(const String &p_path = "", const CustomMap &p_custom = CustomMap(), const Vector<String> &p_custom_features = Vector<String>(), bool p_merge_with_current = true);
 	Error save();

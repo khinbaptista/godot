@@ -105,8 +105,8 @@ bool InputDefault::is_action_just_pressed(const StringName &p_action) const {
 	if (!E)
 		return false;
 
-	if (Engine::get_singleton()->is_in_fixed_frame()) {
-		return E->get().pressed && E->get().fixed_frame == Engine::get_singleton()->get_fixed_frames();
+	if (Engine::get_singleton()->is_in_physics_frame()) {
+		return E->get().pressed && E->get().physics_frame == Engine::get_singleton()->get_physics_frames();
 	} else {
 		return E->get().pressed && E->get().idle_frame == Engine::get_singleton()->get_idle_frames();
 	}
@@ -118,8 +118,8 @@ bool InputDefault::is_action_just_released(const StringName &p_action) const {
 	if (!E)
 		return false;
 
-	if (Engine::get_singleton()->is_in_fixed_frame()) {
-		return !E->get().pressed && E->get().fixed_frame == Engine::get_singleton()->get_fixed_frames();
+	if (Engine::get_singleton()->is_in_physics_frame()) {
+		return !E->get().pressed && E->get().physics_frame == Engine::get_singleton()->get_physics_frames();
 	} else {
 		return !E->get().pressed && E->get().idle_frame == Engine::get_singleton()->get_idle_frames();
 	}
@@ -324,7 +324,7 @@ void InputDefault::parse_input_event(const Ref<InputEvent> &p_event) {
 
 			if (InputMap::get_singleton()->event_is_action(p_event, E->key()) && is_action_pressed(E->key()) != p_event->is_pressed()) {
 				Action action;
-				action.fixed_frame = Engine::get_singleton()->get_fixed_frames();
+				action.physics_frame = Engine::get_singleton()->get_physics_frames();
 				action.idle_frame = Engine::get_singleton()->get_idle_frames();
 				action.pressed = p_event->is_pressed();
 				action_state[E->key()] = action;
@@ -422,9 +422,9 @@ int InputDefault::get_mouse_button_mask() const {
 	return mouse_button_mask; // do not trust OS implementaiton, should remove it - OS::get_singleton()->get_mouse_button_state();
 }
 
-void InputDefault::warp_mouse_pos(const Vector2 &p_to) {
+void InputDefault::warp_mouse_position(const Vector2 &p_to) {
 
-	OS::get_singleton()->warp_mouse_pos(p_to);
+	OS::get_singleton()->warp_mouse_position(p_to);
 }
 
 Point2i InputDefault::warp_mouse_motion(const Ref<InputEventMouseMotion> &p_motion, const Rect2 &p_rect) {
@@ -447,7 +447,7 @@ Point2i InputDefault::warp_mouse_motion(const Ref<InputEventMouseMotion> &p_moti
 	const Point2i pos_local = p_motion->get_global_position() - p_rect.position;
 	const Point2i pos_warped(Math::fposmod(pos_local.x, p_rect.size.x), Math::fposmod(pos_local.y, p_rect.size.y));
 	if (pos_warped != pos_local) {
-		OS::get_singleton()->warp_mouse_pos(pos_warped + p_rect.position);
+		OS::get_singleton()->warp_mouse_position(pos_warped + p_rect.position);
 	}
 
 	return rel_warped;
@@ -460,7 +460,7 @@ void InputDefault::action_press(const StringName &p_action) {
 
 	Action action;
 
-	action.fixed_frame = Engine::get_singleton()->get_fixed_frames();
+	action.physics_frame = Engine::get_singleton()->get_physics_frames();
 	action.idle_frame = Engine::get_singleton()->get_idle_frames();
 	action.pressed = true;
 
@@ -471,7 +471,7 @@ void InputDefault::action_release(const StringName &p_action) {
 
 	Action action;
 
-	action.fixed_frame = Engine::get_singleton()->get_fixed_frames();
+	action.physics_frame = Engine::get_singleton()->get_physics_frames();
 	action.idle_frame = Engine::get_singleton()->get_idle_frames();
 	action.pressed = false;
 

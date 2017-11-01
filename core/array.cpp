@@ -47,11 +47,11 @@ void Array::_ref(const Array &p_from) const {
 	ERR_FAIL_COND(!_fp); // should NOT happen.
 
 	if (_fp == _p)
-		return; //wathever it is, nothing to do here move along
+		return; // whatever it is, nothing to do here move along
 
 	bool success = _fp->refcount.ref();
 
-	ERR_FAIL_COND(!success); //should really not happen either
+	ERR_FAIL_COND(!success); // should really not happen either
 
 	_unref();
 
@@ -233,9 +233,10 @@ struct _ArrayVariantSort {
 	}
 };
 
-void Array::sort() {
+Array &Array::sort() {
 
 	_p->array.sort_custom<_ArrayVariantSort>();
+	return *this;
 }
 
 struct _ArrayVariantSortCustom {
@@ -253,19 +254,21 @@ struct _ArrayVariantSortCustom {
 		return res;
 	}
 };
-void Array::sort_custom(Object *p_obj, const StringName &p_function) {
+Array &Array::sort_custom(Object *p_obj, const StringName &p_function) {
 
-	ERR_FAIL_NULL(p_obj);
+	ERR_FAIL_NULL_V(p_obj, *this);
 
 	SortArray<Variant, _ArrayVariantSortCustom> avs;
 	avs.compare.obj = p_obj;
 	avs.compare.func = p_function;
 	avs.sort(_p->array.ptr(), _p->array.size());
+	return *this;
 }
 
-void Array::invert() {
+Array &Array::invert() {
 
 	_p->array.invert();
+	return *this;
 }
 
 void Array::push_front(const Variant &p_value) {

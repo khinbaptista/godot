@@ -30,14 +30,14 @@
 #ifndef NATIVE_SCRIPT_H
 #define NATIVE_SCRIPT_H
 
+#include "core/resource.h"
+#include "core/script_language.h"
+#include "core/self_list.h"
 #include "io/resource_loader.h"
 #include "io/resource_saver.h"
 #include "ordered_hash_map.h"
 #include "os/thread_safe.h"
-#include "resource.h"
 #include "scene/main/node.h"
-#include "script_language.h"
-#include "self_list.h"
 
 #include "modules/gdnative/gdnative.h"
 #include <nativescript/godot_nativescript.h>
@@ -141,8 +141,6 @@ public:
 	virtual MethodInfo get_method_info(const StringName &p_method) const;
 
 	virtual bool is_tool() const;
-
-	virtual String get_node_type() const;
 
 	virtual ScriptLanguage *get_language() const;
 
@@ -271,6 +269,7 @@ public:
 	virtual bool validate(const String &p_script, int &r_line_error, int &r_col_error, String &r_test_error, const String &p_path, List<String> *r_functions) const;
 	virtual Script *create_script() const;
 	virtual bool has_named_classes() const;
+	virtual bool supports_builtin_mode() const;
 	virtual int find_function(const String &p_function, const String &p_code) const;
 	virtual String make_function(const String &p_class, const String &p_name, const PoolStringArray &p_args) const;
 	virtual void auto_indent_code(String &p_code, int p_from_line, int p_to_line) const;

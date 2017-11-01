@@ -168,7 +168,7 @@ void FileAccessUnix::seek_end(int64_t p_position) {
 		check_errors();
 }
 
-size_t FileAccessUnix::get_pos() const {
+size_t FileAccessUnix::get_position() const {
 
 	ERR_FAIL_COND_V(!f, 0);
 
@@ -221,6 +221,12 @@ int FileAccessUnix::get_buffer(uint8_t *p_dst, int p_length) const {
 Error FileAccessUnix::get_error() const {
 
 	return last_error;
+}
+
+void FileAccessUnix::flush() {
+
+	ERR_FAIL_COND(!f);
+	fflush(f);
 }
 
 void FileAccessUnix::store_8(uint8_t p_dest) {

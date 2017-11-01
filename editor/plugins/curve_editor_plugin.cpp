@@ -53,12 +53,12 @@ CurveEditor::CurveEditor() {
 
 	_presets_menu = memnew(PopupMenu);
 	_presets_menu->set_name("_presets_menu");
-	_presets_menu->add_item("Flat0", PRESET_FLAT0);
-	_presets_menu->add_item("Flat1", PRESET_FLAT1);
-	_presets_menu->add_item("Linear", PRESET_LINEAR);
-	_presets_menu->add_item("Ease in", PRESET_EASE_IN);
-	_presets_menu->add_item("Ease out", PRESET_EASE_OUT);
-	_presets_menu->add_item("Smoothstep", PRESET_SMOOTHSTEP);
+	_presets_menu->add_item(TTR("Flat0"), PRESET_FLAT0);
+	_presets_menu->add_item(TTR("Flat1"), PRESET_FLAT1);
+	_presets_menu->add_item(TTR("Linear"), PRESET_LINEAR);
+	_presets_menu->add_item(TTR("Ease in"), PRESET_EASE_IN);
+	_presets_menu->add_item(TTR("Ease out"), PRESET_EASE_OUT);
+	_presets_menu->add_item(TTR("Smoothstep"), PRESET_SMOOTHSTEP);
 	_presets_menu->connect("id_pressed", this, "_on_preset_item_selected");
 	_context_menu->add_child(_presets_menu);
 }
@@ -188,7 +188,7 @@ void CurveEditor::on_gui_input(const Ref<InputEvent> &p_event) {
 				} else {
 					// Drag tangent
 
-					Vector2 point_pos = curve.get_point_pos(_selected_point);
+					Vector2 point_pos = curve.get_point_position(_selected_point);
 					Vector2 control_pos = get_world_pos(mpos);
 
 					Vector2 dir = (control_pos - point_pos).normalized();
@@ -344,19 +344,19 @@ void CurveEditor::open_context_menu(Vector2 pos) {
 										 _curve_ref->get_point_left_mode(_selected_point) == Curve::TANGENT_LINEAR :
 										 _curve_ref->get_point_right_mode(_selected_point) == Curve::TANGENT_LINEAR;
 
-				_context_menu->set_item_checked(CONTEXT_LINEAR, is_linear);
+				_context_menu->set_item_checked(_context_menu->get_item_index(CONTEXT_LINEAR), is_linear);
 
 			} else {
 				_context_menu->add_separator();
 
 				if (_selected_point > 0) {
 					_context_menu->add_check_item(TTR("Left linear"), CONTEXT_LEFT_LINEAR);
-					_context_menu->set_item_checked(CONTEXT_LEFT_LINEAR,
+					_context_menu->set_item_checked(_context_menu->get_item_index(CONTEXT_LEFT_LINEAR),
 							_curve_ref->get_point_left_mode(_selected_point) == Curve::TANGENT_LINEAR);
 				}
 				if (_selected_point + 1 < _curve_ref->get_point_count()) {
 					_context_menu->add_check_item(TTR("Right linear"), CONTEXT_RIGHT_LINEAR);
-					_context_menu->set_item_checked(CONTEXT_RIGHT_LINEAR,
+					_context_menu->set_item_checked(_context_menu->get_item_index(CONTEXT_RIGHT_LINEAR),
 							_curve_ref->get_point_right_mode(_selected_point) == Curve::TANGENT_LINEAR);
 				}
 			}
@@ -378,7 +378,7 @@ int CurveEditor::get_point_at(Vector2 pos) const {
 	const float r = _hover_radius * _hover_radius;
 
 	for (int i = 0; i < curve.get_point_count(); ++i) {
-		Vector2 p = get_view_pos(curve.get_point_pos(i));
+		Vector2 p = get_view_pos(curve.get_point_position(i));
 		if (p.distance_squared_to(pos) <= r) {
 			return i;
 		}
@@ -525,8 +525,8 @@ Vector2 CurveEditor::get_tangent_view_pos(int i, TangentIndex tangent) const {
 	else
 		dir = Vector2(1, _curve_ref->get_point_right_tangent(i));
 
-	Vector2 point_pos = get_view_pos(_curve_ref->get_point_pos(i));
-	Vector2 control_pos = get_view_pos(_curve_ref->get_point_pos(i) + dir);
+	Vector2 point_pos = get_view_pos(_curve_ref->get_point_position(i));
+	Vector2 control_pos = get_view_pos(_curve_ref->get_point_position(i) + dir);
 
 	return point_pos + _tangents_length * (control_pos - point_pos).normalized();
 }
@@ -549,8 +549,8 @@ static void plot_curve_accurate(const Curve &curve, float step, T plot_func) {
 		plot_func(Vector2(0, y), Vector2(1.f, y), true);
 
 	} else {
-		Vector2 first_point = curve.get_point_pos(0);
-		Vector2 last_point = curve.get_point_pos(curve.get_point_count() - 1);
+		Vector2 first_point = curve.get_point_position(0);
+		Vector2 last_point = curve.get_point_position(curve.get_point_count() - 1);
 
 		// Edge lines
 		plot_func(Vector2(0, first_point.y), first_point, false);
@@ -559,8 +559,8 @@ static void plot_curve_accurate(const Curve &curve, float step, T plot_func) {
 		// Draw section by section, so that we get maximum precision near points.
 		// It's an accurate representation, but slower than using the baked one.
 		for (int i = 1; i < curve.get_point_count(); ++i) {
-			Vector2 a = curve.get_point_pos(i - 1);
-			Vector2 b = curve.get_point_pos(i);
+			Vector2 a = curve.get_point_position(i - 1);
+			Vector2 b = curve.get_point_position(i);
 
 			Vector2 pos = a;
 			Vector2 prev_pos = a;
@@ -613,8 +613,8 @@ void CurveEditor::_draw() {
 	Vector2 min_edge = get_world_pos(Vector2(0, view_size.y));
 	Vector2 max_edge = get_world_pos(Vector2(view_size.x, 0));
 
-	const Color grid_color0(0, 0, 0, 0.5);
-	const Color grid_color1(0, 0, 0, 0.15);
+	const Color grid_color0 = get_color("grid_major_color", "Editor");
+	const Color grid_color1 = get_color("grid_minor_color", "Editor");
 	draw_line(Vector2(min_edge.x, curve.get_min_value()), Vector2(max_edge.x, curve.get_min_value()), grid_color0);
 	draw_line(Vector2(max_edge.x, curve.get_max_value()), Vector2(min_edge.x, curve.get_max_value()), grid_color0);
 	draw_line(Vector2(0, min_edge.y), Vector2(0, max_edge.y), grid_color0);
@@ -636,7 +636,7 @@ void CurveEditor::_draw() {
 
 	Ref<Font> font = get_font("font", "Label");
 	float font_height = font->get_height();
-	const Color text_color(1, 1, 1, 0.3);
+	const Color text_color = get_color("font_color", "Editor");
 
 	{
 		// X axis
@@ -664,10 +664,10 @@ void CurveEditor::_draw() {
 
 	if (_selected_point >= 0) {
 
-		const Color tangent_color(0.5, 0.5, 1, 1);
+		const Color tangent_color = get_color("accent_color", "Editor");
 
 		int i = _selected_point;
-		Vector2 pos = curve.get_point_pos(i);
+		Vector2 pos = curve.get_point_position(i);
 
 		if (i != 0) {
 			Vector2 control_pos = get_tangent_view_pos(i, TANGENT_LEFT);
@@ -686,8 +686,8 @@ void CurveEditor::_draw() {
 
 	draw_set_transform_matrix(_world_to_view);
 
-	const Color line_color(1, 1, 1, 0.85);
-	const Color edge_line_color(1, 1, 1, 0.4);
+	const Color line_color = get_color("highlight_color", "Editor");
+	const Color edge_line_color = get_color("font_color", "Editor");
 
 	CanvasItemPlotCurve plot_func(*this, line_color, edge_line_color);
 	plot_curve_accurate(curve, 4.f / view_size.x, plot_func);
@@ -714,11 +714,11 @@ void CurveEditor::_draw() {
 
 	draw_set_transform_matrix(Transform2D());
 
-	const Color point_color(1, 1, 1);
-	const Color selected_point_color(1, 0.5, 0.5);
+	const Color point_color = get_color("font_color", "Editor");
+	const Color selected_point_color = get_color("accent_color", "Editor");
 
 	for (int i = 0; i < curve.get_point_count(); ++i) {
-		Vector2 pos = curve.get_point_pos(i);
+		Vector2 pos = curve.get_point_position(i);
 		draw_rect(Rect2(get_view_pos(pos), Vector2(1, 1)).grow(3), i == _selected_point ? selected_point_color : point_color);
 		// TODO Circles are prettier. Needs a fix! Or a texture
 		//draw_circle(pos, 2, point_color);
@@ -728,7 +728,7 @@ void CurveEditor::_draw() {
 
 	if (_hover_point != -1) {
 		const Color hover_color = line_color;
-		Vector2 pos = curve.get_point_pos(_hover_point);
+		Vector2 pos = curve.get_point_position(_hover_point);
 		stroke_rect(Rect2(get_view_pos(pos), Vector2(1, 1)).grow(_hover_radius), hover_color);
 	}
 

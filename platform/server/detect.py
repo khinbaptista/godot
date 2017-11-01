@@ -12,6 +12,9 @@ def get_name():
 
 def can_build():
 
+    # Doesn't build against Godot 3.0 for now, disable to avoid confusing users
+    return False
+
     if (os.name != "posix" or sys.platform == "darwin"):
         return False
 
@@ -19,9 +22,9 @@ def can_build():
 
 
 def get_opts():
-
+    from SCons.Variables import BoolVariable
     return [
-        ('use_llvm', 'Use the LLVM compiler', 'no'),
+        BoolVariable('use_llvm', 'Use the LLVM compiler', False),
     ]
 
 
@@ -52,7 +55,7 @@ def configure(env):
 
     ## Compiler configuration
 
-    if (env["use_llvm"] == "yes"):
+    if env['use_llvm']:
         if ('clang++' not in env['CXX']):
             env["CC"] = "clang"
             env["CXX"] = "clang++"
@@ -64,66 +67,60 @@ def configure(env):
 
     # FIXME: Check for existence of the libs before parsing their flags with pkg-config
 
-    if (env['builtin_openssl'] == 'no'):
-        # Currently not compatible with OpenSSL 1.1.0+
-        # https://github.com/godotengine/godot/issues/8624
-        import subprocess
-        openssl_version = subprocess.check_output(['pkg-config', 'openssl', '--modversion']).strip('\n')
-        if (openssl_version >= "1.1.0"):
-            print("Error: Found system-installed OpenSSL %s, currently only supporting version 1.0.x." % openssl_version)
-            print("Aborting.. You can compile with 'builtin_openssl=yes' to use the bundled version.\n")
-            sys.exit(255)
-
+    if not env['builtin_openssl']:
         env.ParseConfig('pkg-config openssl --cflags --libs')
 
-    if (env['builtin_libwebp'] == 'no'):
+    if not env['builtin_libwebp']:
         env.ParseConfig('pkg-config libwebp --cflags --libs')
 
     # freetype depends on libpng and zlib, so bundling one of them while keeping others
     # as shared libraries leads to weird issues
-    if (env['builtin_freetype'] == 'yes' or env['builtin_libpng'] == 'yes' or env['builtin_zlib'] == 'yes'):
-        env['builtin_freetype'] = 'yes'
-        env['builtin_libpng'] = 'yes'
-        env['builtin_zlib'] = 'yes'
+    if env['builtin_freetype'] or env['builtin_libpng'] or env['builtin_zlib']:
+        env['builtin_freetype'] = True
+        env['builtin_libpng'] = True
+        env['builtin_zlib'] = True
 
-    if (env['builtin_freetype'] == 'no'):
+    if not env['builtin_freetype']:
         env.ParseConfig('pkg-config freetype2 --cflags --libs')
 
-    if (env['builtin_libpng'] == 'no'):
+    if not env['builtin_libpng']:
         env.ParseConfig('pkg-config libpng --cflags --libs')
 
-    if (env['builtin_enet'] == 'no'):
+    if not env['builtin_enet']:
         env.ParseConfig('pkg-config libenet --cflags --libs')
 
-    if (env['builtin_squish'] == 'no' and env["tools"] == "yes"):
+    if not env['builtin_squish'] and env['tools']:
         env.ParseConfig('pkg-config libsquish --cflags --libs')
+
+    if not env['builtin_zstd']:
+        env.ParseConfig('pkg-config libzstd --cflags --libs')
 
     # Sound and video libraries
     # Keep the order as it triggers chained dependencies (ogg needed by others, etc.)
 
-    if (env['builtin_libtheora'] == 'no'):
-        env['builtin_libogg'] = 'no'  # Needed to link against system libtheora
-        env['builtin_libvorbis'] = 'no'  # Needed to link against system libtheora
+    if not env['builtin_libtheora']:
+        env['builtin_libogg'] = False  # Needed to link against system libtheora
+        env['builtin_libvorbis'] = False  # Needed to link against system libtheora
         env.ParseConfig('pkg-config theora theoradec --cflags --libs')
 
-    if (env['builtin_libvpx'] == 'no'):
+    if not env['builtin_libvpx']:
         env.ParseConfig('pkg-config vpx --cflags --libs')
 
-    if (env['builtin_libvorbis'] == 'no'):
-        env['builtin_libogg'] = 'no'  # Needed to link against system libvorbis
+    if not env['builtin_libvorbis']:
+        env['builtin_libogg'] = False  # Needed to link against system libvorbis
         env.ParseConfig('pkg-config vorbis vorbisfile --cflags --libs')
 
-    if (env['builtin_opus'] == 'no'):
-        env['builtin_libogg'] = 'no'  # Needed to link against system opus
+    if not env['builtin_opus']:
+        env['builtin_libogg'] = False  # Needed to link against system opus
         env.ParseConfig('pkg-config opus opusfile --cflags --libs')
 
-    if (env['builtin_libogg'] == 'no'):
+    if not env['builtin_libogg']:
         env.ParseConfig('pkg-config ogg --cflags --libs')
 
     ## Flags
 
     # Linkflags below this line should typically stay the last ones
-    if (env['builtin_zlib'] == 'no'):
+    if not env['builtin_zlib']:
         env.ParseConfig('pkg-config zlib --cflags --libs')
 
     env.Append(CPPPATH=['#platform/server'])

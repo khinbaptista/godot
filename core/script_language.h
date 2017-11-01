@@ -107,8 +107,6 @@ public:
 
 	virtual bool is_tool() const = 0;
 
-	virtual String get_node_type() const = 0;
-
 	virtual ScriptLanguage *get_language() const = 0;
 
 	virtual bool has_script_signal(const StringName &p_signal) const = 0;
@@ -202,6 +200,7 @@ public:
 	virtual bool validate(const String &p_script, int &r_line_error, int &r_col_error, String &r_test_error, const String &p_path = "", List<String> *r_functions = NULL) const = 0;
 	virtual Script *create_script() const = 0;
 	virtual bool has_named_classes() const = 0;
+	virtual bool supports_builtin_mode() const = 0;
 	virtual bool can_inherit_from_file() { return false; }
 	virtual int find_function(const String &p_function, const String &p_code) const = 0;
 	virtual String make_function(const String &p_class, const String &p_name, const PoolStringArray &p_args) const = 0;
@@ -397,7 +396,7 @@ public:
 	virtual void add_profiling_frame_data(const StringName &p_name, const Array &p_data) = 0;
 	virtual void profiling_start() = 0;
 	virtual void profiling_end() = 0;
-	virtual void profiling_set_frame_times(float p_frame_time, float p_idle_time, float p_fixed_time, float p_fixed_frame_time) = 0;
+	virtual void profiling_set_frame_times(float p_frame_time, float p_idle_time, float p_physics_time, float p_physics_frame_time) = 0;
 
 	ScriptDebugger();
 	virtual ~ScriptDebugger() { singleton = NULL; }

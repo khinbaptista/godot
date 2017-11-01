@@ -26,6 +26,8 @@ Before being open sourced in February 2014, Godot had been developed by Juan
 Linietsky and Ariel Manzur (both still maintaining the project) for several
 years as an in-house engine, used to publish several work-for-hire titles.
 
+![Screenshot of a 3D scene in Godot Engine](http://download.tuxfamily.org/godotengine/media/screenshots/editor_3d_fracteed.jpg)
+
 ### Getting the engine
 
 #### Binary downloads
@@ -62,5 +64,6 @@ There are also a number of other learning resources provided by the community,
 such as text and video tutorials, demos, etc. Consult the [community channels](https://godotengine.org/community)
 for more info.
 
-[![Build Status](https://travis-ci.org/godotengine/godot.svg?branch=master)](https://travis-ci.org/godotengine/godot)
+[![Travis Build Status](https://travis-ci.org/godotengine/godot.svg?branch=master)](https://travis-ci.org/godotengine/godot)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/bfiihqq6byxsjxxh/branch/master?svg=true)](https://ci.appveyor.com/project/akien-mga/godot)
 [![Code Triagers Badge](https://www.codetriage.com/godotengine/godot/badges/users.svg)](https://www.codetriage.com/godotengine/godot)

@@ -95,7 +95,7 @@ public:
 	virtual void space_set_param(RID p_space, SpaceParameter p_param, real_t p_value);
 	virtual real_t space_get_param(RID p_space, SpaceParameter p_param) const;
 
-	// this function only works on fixed process, errors and returns null otherwise
+	// this function only works on physics process, errors and returns null otherwise
 	virtual PhysicsDirectSpaceState *space_get_direct_state(RID p_space);
 
 	virtual void space_set_debug_contacts(RID p_space, int p_max_contacts);
@@ -222,6 +222,9 @@ public:
 	virtual bool body_is_ray_pickable(RID p_body) const;
 
 	virtual bool body_test_motion(RID p_body, const Transform &p_from, const Vector3 &p_motion, float p_margin = 0.001, MotionResult *r_result = NULL);
+
+	// this function only works on physics process, errors and returns null otherwise
+	virtual PhysicsDirectBodyState *body_get_direct_state(RID p_body);
 
 	/* JOINT API */
 

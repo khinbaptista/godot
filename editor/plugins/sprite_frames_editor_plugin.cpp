@@ -39,14 +39,14 @@ void SpriteFramesEditor::_gui_input(Ref<InputEvent> p_event) {
 
 void SpriteFramesEditor::_notification(int p_what) {
 
-	if (p_what == NOTIFICATION_FIXED_PROCESS) {
+	if (p_what == NOTIFICATION_PHYSICS_PROCESS) {
 	}
 
 	if (p_what == NOTIFICATION_ENTER_TREE) {
-		load->set_icon(get_icon("Folder", "EditorIcons"));
-		_delete->set_icon(get_icon("Del", "EditorIcons"));
+		load->set_icon(get_icon("Load", "EditorIcons"));
+		_delete->set_icon(get_icon("Remove", "EditorIcons"));
 		new_anim->set_icon(get_icon("New", "EditorIcons"));
-		remove_anim->set_icon(get_icon("Del", "EditorIcons"));
+		remove_anim->set_icon(get_icon("Remove", "EditorIcons"));
 	}
 
 	if (p_what == NOTIFICATION_READY) {
@@ -140,6 +140,19 @@ void SpriteFramesEditor::_paste_pressed() {
 	undo_redo->add_do_method(this, "_update_library");
 	undo_redo->add_undo_method(this, "_update_library");
 	undo_redo->commit_action();
+}
+
+void SpriteFramesEditor::_copy_pressed() {
+	ERR_FAIL_COND(!frames->has_animation(edited_anim));
+
+	if (tree->get_current() < 0)
+		return;
+	Ref<Texture> r = frames->get_frame(edited_anim, tree->get_current());
+	if (!r.is_valid()) {
+		return;
+	}
+
+	EditorSettings::get_singleton()->set_resource_clipboard(r);
 }
 
 void SpriteFramesEditor::_empty_pressed() {
@@ -535,7 +548,7 @@ void SpriteFramesEditor::edit(SpriteFrames *p_frames) {
 	} else {
 
 		hide();
-		//set_fixed_process(false);
+		//set_physics_process(false);
 	}
 }
 
@@ -544,7 +557,7 @@ Variant SpriteFramesEditor::get_drag_data_fw(const Point2 &p_point, Control *p_f
 	if (!frames->has_animation(edited_anim))
 		return false;
 
-	int idx = tree->get_item_at_pos(p_point, true);
+	int idx = tree->get_item_at_position(p_point, true);
 
 	if (idx < 0 || idx >= frames->get_frame_count(edited_anim))
 		return Variant();
@@ -609,7 +622,7 @@ void SpriteFramesEditor::drop_data_fw(const Point2 &p_point, const Variant &p_da
 	if (!d.has("type"))
 		return;
 
-	int at_pos = tree->get_item_at_pos(p_point, true);
+	int at_pos = tree->get_item_at_position(p_point, true);
 
 	if (String(d["type"]) == "resource" && d.has("resource")) {
 		RES r = d["resource"];
@@ -642,8 +655,9 @@ void SpriteFramesEditor::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_empty_pressed"), &SpriteFramesEditor::_empty_pressed);
 	ClassDB::bind_method(D_METHOD("_empty2_pressed"), &SpriteFramesEditor::_empty2_pressed);
 	ClassDB::bind_method(D_METHOD("_delete_pressed"), &SpriteFramesEditor::_delete_pressed);
+	ClassDB::bind_method(D_METHOD("_copy_pressed"), &SpriteFramesEditor::_copy_pressed);
 	ClassDB::bind_method(D_METHOD("_paste_pressed"), &SpriteFramesEditor::_paste_pressed);
-	ClassDB::bind_method(D_METHOD("_file_load_request", "files", "atpos"), &SpriteFramesEditor::_file_load_request, DEFVAL(-1));
+	ClassDB::bind_method(D_METHOD("_file_load_request", "files", "at_position"), &SpriteFramesEditor::_file_load_request, DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("_update_library", "skipsel"), &SpriteFramesEditor::_update_library, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("_up_pressed"), &SpriteFramesEditor::_up_pressed);
 	ClassDB::bind_method(D_METHOD("_down_pressed"), &SpriteFramesEditor::_down_pressed);
@@ -667,7 +681,7 @@ SpriteFramesEditor::SpriteFramesEditor() {
 
 	VBoxContainer *vbc_animlist = memnew(VBoxContainer);
 	split->add_child(vbc_animlist);
-	vbc_animlist->set_custom_minimum_size(Size2(150, 0));
+	vbc_animlist->set_custom_minimum_size(Size2(150, 0) * EDSCALE);
 	//vbc_animlist->set_v_size_flags(SIZE_EXPAND_FILL);
 
 	VBoxContainer *sub_vb = memnew(VBoxContainer);
@@ -678,12 +692,13 @@ SpriteFramesEditor::SpriteFramesEditor() {
 	sub_vb->add_child(hbc_animlist);
 
 	new_anim = memnew(Button);
+	new_anim->set_flat(true);
 	hbc_animlist->add_child(new_anim);
+	new_anim->set_h_size_flags(SIZE_EXPAND_FILL);
 	new_anim->connect("pressed", this, "_animation_add");
 
-	hbc_animlist->add_spacer();
-
 	remove_anim = memnew(Button);
+	remove_anim->set_flat(true);
 	hbc_animlist->add_child(remove_anim);
 	remove_anim->connect("pressed", this, "_animation_remove");
 
@@ -720,8 +735,13 @@ SpriteFramesEditor::SpriteFramesEditor() {
 	//animations = memnew( ItemList );
 
 	load = memnew(Button);
+	load->set_flat(true);
 	load->set_tooltip(TTR("Load Resource"));
 	hbc->add_child(load);
+
+	copy = memnew(Button);
+	copy->set_text(TTR("Copy"));
+	hbc->add_child(copy);
 
 	paste = memnew(Button);
 	paste->set_text(TTR("Paste"));
@@ -736,14 +756,15 @@ SpriteFramesEditor::SpriteFramesEditor() {
 	hbc->add_child(empty2);
 
 	move_up = memnew(Button);
-	move_up->set_text(TTR("Up"));
+	move_up->set_text(TTR("Move (Before)"));
 	hbc->add_child(move_up);
 
 	move_down = memnew(Button);
-	move_down->set_text(TTR("Down"));
+	move_down->set_text(TTR("Move (After)"));
 	hbc->add_child(move_down);
 
 	_delete = memnew(Button);
+	_delete->set_flat(true);
 	hbc->add_child(_delete);
 
 	file = memnew(EditorFileDialog);
@@ -769,6 +790,7 @@ SpriteFramesEditor::SpriteFramesEditor() {
 
 	load->connect("pressed", this, "_load_pressed");
 	_delete->connect("pressed", this, "_delete_pressed");
+	copy->connect("pressed", this, "_copy_pressed");
 	paste->connect("pressed", this, "_paste_pressed");
 	empty->connect("pressed", this, "_empty_pressed");
 	empty2->connect("pressed", this, "_empty2_pressed");
@@ -818,7 +840,7 @@ SpriteFramesEditorPlugin::SpriteFramesEditorPlugin(EditorNode *p_node) {
 
 	editor = p_node;
 	frames_editor = memnew(SpriteFramesEditor);
-	frames_editor->set_custom_minimum_size(Size2(0, 300));
+	frames_editor->set_custom_minimum_size(Size2(0, 300) * EDSCALE);
 	button = editor->add_bottom_panel_item("SpriteFrames", frames_editor);
 	button->hide();
 }

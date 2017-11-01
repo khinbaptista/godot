@@ -74,7 +74,7 @@ public:
 
 	virtual void seek(size_t p_position); ///< seek to a given position
 	virtual void seek_end(int64_t p_position = 0); ///< seek from the end of file
-	virtual size_t get_pos() const; ///< get position in the file
+	virtual size_t get_position() const; ///< get position in the file
 	virtual size_t get_len() const; ///< get size of the file
 
 	virtual bool eof_reached() const; ///< reading passed EOF
@@ -84,6 +84,7 @@ public:
 
 	virtual Error get_error() const; ///< get last error
 
+	virtual void flush();
 	virtual void store_8(uint8_t p_dest); ///< store a byte
 
 	virtual bool file_exists(const String &p_name); ///< return true if a file exists

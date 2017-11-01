@@ -29,6 +29,7 @@
 /*************************************************************************/
 #include "error_macros.h"
 
+#include "io/logger.h"
 #include "os/os.h"
 
 bool _err_error_exists = false;
@@ -79,7 +80,7 @@ void remove_error_handler(ErrorHandlerList *p_handler) {
 
 void _err_print_error(const char *p_function, const char *p_file, int p_line, const char *p_error, ErrorHandlerType p_type) {
 
-	OS::get_singleton()->print_error(p_function, p_file, p_line, p_error, _err_error_exists ? OS::get_singleton()->get_last_error() : "", (OS::ErrorType)p_type);
+	OS::get_singleton()->print_error(p_function, p_file, p_line, p_error, _err_error_exists ? OS::get_singleton()->get_last_error() : "", (Logger::ErrorType)p_type);
 
 	_global_lock();
 	ErrorHandlerList *l = error_handler_list;
@@ -95,4 +96,11 @@ void _err_print_error(const char *p_function, const char *p_file, int p_line, co
 		OS::get_singleton()->clear_last_error();
 		_err_error_exists = false;
 	}
+}
+
+void _err_print_index_error(const char *p_function, const char *p_file, int p_line, int64_t p_index, int64_t p_size, const char *p_index_str, const char *p_size_str, bool fatal) {
+
+	String fstr(fatal ? "FATAL: " : "");
+	String err(fstr + "Index" + p_index_str + "=" + itos(p_index) + " out of size (" + p_size_str + "=" + itos(p_size) + ")");
+	_err_print_error(p_function, p_file, p_line, err.utf8().get_data());
 }

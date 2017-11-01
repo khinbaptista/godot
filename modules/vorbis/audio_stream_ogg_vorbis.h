@@ -96,14 +96,14 @@ public:
 
 	virtual int get_loop_count() const;
 
-	virtual float get_pos() const;
-	virtual void seek_pos(float p_time);
+	virtual float get_playback_position() const;
+	virtual void seek(float p_time);
 
 	virtual int get_channels() const { return stream_channels; }
 	virtual int get_mix_rate() const { return stream_srate; }
 
 	virtual int get_minimum_buffer_size() const { return 0; }
-	virtual int mix(int16_t *p_bufer, int p_frames);
+	virtual int mix(int16_t *p_buffer, int p_frames);
 
 	AudioStreamPlaybackOGGVorbis();
 	~AudioStreamPlaybackOGGVorbis();

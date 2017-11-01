@@ -156,7 +156,7 @@ void FileAccessWindows::seek_end(int64_t p_position) {
 	if (fseek(f, p_position, SEEK_END))
 		check_errors();
 }
-size_t FileAccessWindows::get_pos() const {
+size_t FileAccessWindows::get_position() const {
 
 	size_t aux_position = 0;
 	aux_position = ftell(f);
@@ -169,9 +169,9 @@ size_t FileAccessWindows::get_len() const {
 
 	ERR_FAIL_COND_V(!f, 0);
 
-	size_t pos = get_pos();
+	size_t pos = get_position();
 	fseek(f, 0, SEEK_END);
-	int size = get_pos();
+	int size = get_position();
 	fseek(f, pos, SEEK_SET);
 
 	return size;
@@ -205,6 +205,12 @@ int FileAccessWindows::get_buffer(uint8_t *p_dst, int p_length) const {
 Error FileAccessWindows::get_error() const {
 
 	return last_error;
+}
+
+void FileAccessWindows::flush() {
+
+	ERR_FAIL_COND(!f);
+	fflush(f);
 }
 
 void FileAccessWindows::store_8(uint8_t p_dest) {

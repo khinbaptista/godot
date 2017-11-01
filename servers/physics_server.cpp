@@ -89,8 +89,8 @@ void PhysicsDirectBodyState::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_transform", "transform"), &PhysicsDirectBodyState::set_transform);
 	ClassDB::bind_method(D_METHOD("get_transform"), &PhysicsDirectBodyState::get_transform);
 
-	ClassDB::bind_method(D_METHOD("add_force", "force", "pos"), &PhysicsDirectBodyState::add_force);
-	ClassDB::bind_method(D_METHOD("apply_impulse", "pos", "j"), &PhysicsDirectBodyState::apply_impulse);
+	ClassDB::bind_method(D_METHOD("add_force", "force", "position"), &PhysicsDirectBodyState::add_force);
+	ClassDB::bind_method(D_METHOD("apply_impulse", "position", "j"), &PhysicsDirectBodyState::apply_impulse);
 	ClassDB::bind_method(D_METHOD("apply_torqe_impulse", "j"), &PhysicsDirectBodyState::apply_torque_impulse);
 
 	ClassDB::bind_method(D_METHOD("set_sleep_state", "enabled"), &PhysicsDirectBodyState::set_sleep_state);
@@ -98,15 +98,15 @@ void PhysicsDirectBodyState::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_contact_count"), &PhysicsDirectBodyState::get_contact_count);
 
-	ClassDB::bind_method(D_METHOD("get_contact_local_pos", "contact_idx"), &PhysicsDirectBodyState::get_contact_local_pos);
+	ClassDB::bind_method(D_METHOD("get_contact_local_position", "contact_idx"), &PhysicsDirectBodyState::get_contact_local_position);
 	ClassDB::bind_method(D_METHOD("get_contact_local_normal", "contact_idx"), &PhysicsDirectBodyState::get_contact_local_normal);
 	ClassDB::bind_method(D_METHOD("get_contact_local_shape", "contact_idx"), &PhysicsDirectBodyState::get_contact_local_shape);
 	ClassDB::bind_method(D_METHOD("get_contact_collider", "contact_idx"), &PhysicsDirectBodyState::get_contact_collider);
-	ClassDB::bind_method(D_METHOD("get_contact_collider_pos", "contact_idx"), &PhysicsDirectBodyState::get_contact_collider_pos);
+	ClassDB::bind_method(D_METHOD("get_contact_collider_position", "contact_idx"), &PhysicsDirectBodyState::get_contact_collider_position);
 	ClassDB::bind_method(D_METHOD("get_contact_collider_id", "contact_idx"), &PhysicsDirectBodyState::get_contact_collider_id);
 	ClassDB::bind_method(D_METHOD("get_contact_collider_object", "contact_idx"), &PhysicsDirectBodyState::get_contact_collider_object);
 	ClassDB::bind_method(D_METHOD("get_contact_collider_shape", "contact_idx"), &PhysicsDirectBodyState::get_contact_collider_shape);
-	ClassDB::bind_method(D_METHOD("get_contact_collider_velocity_at_pos", "contact_idx"), &PhysicsDirectBodyState::get_contact_collider_velocity_at_pos);
+	ClassDB::bind_method(D_METHOD("get_contact_collider_velocity_at_position", "contact_idx"), &PhysicsDirectBodyState::get_contact_collider_velocity_at_position);
 	ClassDB::bind_method(D_METHOD("get_step"), &PhysicsDirectBodyState::get_step);
 	ClassDB::bind_method(D_METHOD("integrate_forces"), &PhysicsDirectBodyState::integrate_forces);
 	ClassDB::bind_method(D_METHOD("get_space_state"), &PhysicsDirectBodyState::get_space_state);
@@ -353,8 +353,8 @@ void PhysicsDirectSpaceState::_bind_methods() {
 	BIND_ENUM_CONSTANT(TYPE_MASK_KINEMATIC_BODY);
 	BIND_ENUM_CONSTANT(TYPE_MASK_RIGID_BODY);
 	BIND_ENUM_CONSTANT(TYPE_MASK_CHARACTER_BODY);
-	BIND_ENUM_CONSTANT(TYPE_MASK_AREA);
 	BIND_ENUM_CONSTANT(TYPE_MASK_COLLISION);
+	BIND_ENUM_CONSTANT(TYPE_MASK_AREA);
 }
 
 int PhysicsShapeQueryResult::get_result_count() const {
@@ -482,7 +482,7 @@ void PhysicsServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("body_set_state", "body", "state", "value"), &PhysicsServer::body_set_state);
 	ClassDB::bind_method(D_METHOD("body_get_state", "body", "state"), &PhysicsServer::body_get_state);
 
-	ClassDB::bind_method(D_METHOD("body_apply_impulse", "body", "pos", "impulse"), &PhysicsServer::body_apply_impulse);
+	ClassDB::bind_method(D_METHOD("body_apply_impulse", "body", "position", "impulse"), &PhysicsServer::body_apply_impulse);
 	ClassDB::bind_method(D_METHOD("body_apply_torque_impulse", "body", "impulse"), &PhysicsServer::body_apply_torque_impulse);
 	ClassDB::bind_method(D_METHOD("body_set_axis_velocity", "body", "axis_velocity"), &PhysicsServer::body_set_axis_velocity);
 
@@ -503,6 +503,8 @@ void PhysicsServer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("body_set_ray_pickable", "body", "enable"), &PhysicsServer::body_set_ray_pickable);
 	ClassDB::bind_method(D_METHOD("body_is_ray_pickable", "body"), &PhysicsServer::body_is_ray_pickable);
+
+	ClassDB::bind_method(D_METHOD("body_get_direct_state", "body"), &PhysicsServer::body_get_direct_state);
 
 	/* JOINT API */
 
@@ -677,8 +679,8 @@ void PhysicsServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(BODY_PARAM_FRICTION);
 	BIND_ENUM_CONSTANT(BODY_PARAM_MASS);
 	BIND_ENUM_CONSTANT(BODY_PARAM_GRAVITY_SCALE);
-	BIND_ENUM_CONSTANT(BODY_PARAM_ANGULAR_DAMP);
 	BIND_ENUM_CONSTANT(BODY_PARAM_LINEAR_DAMP);
+	BIND_ENUM_CONSTANT(BODY_PARAM_ANGULAR_DAMP);
 	BIND_ENUM_CONSTANT(BODY_PARAM_MAX);
 
 	BIND_ENUM_CONSTANT(BODY_STATE_TRANSFORM);

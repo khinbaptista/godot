@@ -56,7 +56,7 @@ int AudioStreamPlaybackOpus::_op_seek_func(void *_stream, opus_int64 _offset, in
 			fa->seek(_offset);
 		} break;
 		case SEEK_CUR: {
-			fa->seek(fa->get_pos() + _offset);
+			fa->seek(fa->get_position() + _offset);
 		} break;
 		case SEEK_END: {
 			fa->seek_end(_offset);
@@ -83,7 +83,7 @@ int AudioStreamPlaybackOpus::_op_close_func(void *_stream) {
 
 opus_int64 AudioStreamPlaybackOpus::_op_tell_func(void *_stream) {
 	FileAccess *_fa = (FileAccess *)_stream;
-	return (opus_int64)_fa->get_pos();
+	return (opus_int64)_fa->get_position();
 }
 
 void AudioStreamPlaybackOpus::_clear_stream() {
@@ -247,7 +247,7 @@ void AudioStreamPlaybackOpus::play(float p_from) {
 	frames_mixed = pre_skip;
 	playing = true;
 	if (p_from > 0) {
-		seek_pos(p_from);
+		seek(p_from);
 	}
 }
 
@@ -256,7 +256,7 @@ void AudioStreamPlaybackOpus::stop() {
 	playing = false;
 }
 
-void AudioStreamPlaybackOpus::seek_pos(float p_time) {
+void AudioStreamPlaybackOpus::seek(float p_time) {
 	if (!playing) return;
 	ogg_int64_t pcm_offset = (ogg_int64_t)(p_time * osrate);
 	bool ok = op_pcm_seek(opus_file, pcm_offset) == 0;
@@ -267,7 +267,7 @@ void AudioStreamPlaybackOpus::seek_pos(float p_time) {
 	frames_mixed = osrate * p_time;
 }
 
-int AudioStreamPlaybackOpus::mix(int16_t *p_bufer, int p_frames) {
+int AudioStreamPlaybackOpus::mix(int16_t *p_buffer, int p_frames) {
 	if (!playing)
 		return 0;
 
@@ -281,7 +281,7 @@ int AudioStreamPlaybackOpus::mix(int16_t *p_bufer, int p_frames) {
 			break;
 		}
 
-		int ret = op_read(opus_file, (opus_int16 *)p_bufer, todo * stream_channels, &current_section);
+		int ret = op_read(opus_file, (opus_int16 *)p_buffer, todo * stream_channels, &current_section);
 		if (ret < 0) {
 			playing = false;
 			ERR_EXPLAIN("Error reading Opus File: " + file);
@@ -325,7 +325,7 @@ int AudioStreamPlaybackOpus::mix(int16_t *p_bufer, int p_frames) {
 
 		frames_mixed += ret;
 
-		p_bufer += ret * stream_channels;
+		p_buffer += ret * stream_channels;
 		p_frames -= ret;
 	}
 
@@ -340,7 +340,7 @@ float AudioStreamPlaybackOpus::get_length() const {
 	return length;
 }
 
-float AudioStreamPlaybackOpus::get_pos() const {
+float AudioStreamPlaybackOpus::get_playback_position() const {
 
 	int32_t frames = int32_t(frames_mixed);
 	if (frames < 0)

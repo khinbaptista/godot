@@ -1,5 +1,5 @@
 BASEDIR = $(CURDIR)
-CLASSES = $(BASEDIR)/base/classes.xml
+CLASSES = $(BASEDIR)/classes/ $(BASEDIR)/../modules/
 OUTPUTDIR = $(BASEDIR)/_build
 TOOLSDIR = $(BASEDIR)/tools
 
@@ -24,5 +24,5 @@ rst:
 	rm -rf $(OUTPUTDIR)/rst
 	mkdir -p $(OUTPUTDIR)/rst
 	pushd $(OUTPUTDIR)/rst
-	python2 $(TOOLSDIR)/makerst.py $(CLASSES)
+	python $(TOOLSDIR)/makerst.py $(CLASSES)
 	popd

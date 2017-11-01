@@ -99,15 +99,15 @@ public:
 		_RID,
 		OBJECT,
 		DICTIONARY,
-		ARRAY, // 20
+		ARRAY,
 
 		// arrays
-		POOL_BYTE_ARRAY,
+		POOL_BYTE_ARRAY, // 20
 		POOL_INT_ARRAY,
 		POOL_REAL_ARRAY,
 		POOL_STRING_ARRAY,
-		POOL_VECTOR2_ARRAY, // 25
-		POOL_VECTOR3_ARRAY,
+		POOL_VECTOR2_ARRAY,
+		POOL_VECTOR3_ARRAY, // 25
 		POOL_COLOR_ARRAY,
 
 		VARIANT_MAX
@@ -368,6 +368,7 @@ public:
 	static Vector<Variant> get_method_default_arguments(Variant::Type p_type, const StringName &p_method);
 	static Variant::Type get_method_return_type(Variant::Type p_type, const StringName &p_method, bool *r_has_return = NULL);
 	static Vector<StringName> get_method_argument_names(Variant::Type p_type, const StringName &p_method);
+	static bool is_method_const(Variant::Type p_type, const StringName &p_method);
 
 	void set_named(const StringName &p_index, const Variant &p_value, bool *r_valid = NULL);
 	Variant get_named(const StringName &p_index, bool *r_valid = NULL) const;
@@ -390,7 +391,7 @@ public:
 	uint32_t hash() const;
 
 	bool hash_compare(const Variant &p_variant) const;
-	bool booleanize(bool &valid) const;
+	bool booleanize() const;
 
 	void static_assign(const Variant &p_variant);
 	static void get_constructor_list(Variant::Type p_type, List<MethodInfo> *p_list);

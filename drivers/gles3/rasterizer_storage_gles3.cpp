@@ -1564,6 +1564,7 @@ void RasterizerStorageGLES3::_update_shader(Shader *p_shader) const {
 			p_shader->canvas_item.blend_mode = Shader::CanvasItem::BLEND_MODE_MIX;
 			p_shader->canvas_item.uses_screen_texture = false;
 			p_shader->canvas_item.uses_screen_uv = false;
+			p_shader->canvas_item.uses_time = false;
 
 			shaders.actions_canvas.render_mode_values["blend_add"] = Pair<int *, int>(&p_shader->canvas_item.blend_mode, Shader::CanvasItem::BLEND_MODE_ADD);
 			shaders.actions_canvas.render_mode_values["blend_mix"] = Pair<int *, int>(&p_shader->canvas_item.blend_mode, Shader::CanvasItem::BLEND_MODE_MIX);
@@ -1595,6 +1596,7 @@ void RasterizerStorageGLES3::_update_shader(Shader *p_shader) const {
 			p_shader->spatial.unshaded = false;
 			p_shader->spatial.no_depth_test = false;
 			p_shader->spatial.uses_sss = false;
+			p_shader->spatial.uses_time = false;
 			p_shader->spatial.uses_vertex_lighting = false;
 			p_shader->spatial.uses_screen_texture = false;
 			p_shader->spatial.uses_vertex = false;
@@ -2428,7 +2430,8 @@ void RasterizerStorageGLES3::_update_material(Material *material) {
 
 		if (material->shader && material->shader->mode == VS::SHADER_SPATIAL) {
 
-			if (!material->shader->spatial.uses_alpha && material->shader->spatial.blend_mode == Shader::Spatial::BLEND_MODE_MIX) {
+			if (material->shader->spatial.blend_mode == Shader::Spatial::BLEND_MODE_MIX &&
+					(!material->shader->spatial.uses_alpha || (material->shader->spatial.uses_alpha && material->shader->spatial.depth_draw_mode == Shader::Spatial::DEPTH_DRAW_ALPHA_PREPASS))) {
 				can_cast_shadow = true;
 			}
 
@@ -2471,7 +2474,7 @@ void RasterizerStorageGLES3::_update_material(Material *material) {
 
 		glGenBuffers(1, &material->ubo_id);
 		glBindBuffer(GL_UNIFORM_BUFFER, material->ubo_id);
-		glBufferData(GL_UNIFORM_BUFFER, material->shader->ubo_size, NULL, GL_DYNAMIC_DRAW);
+		glBufferData(GL_UNIFORM_BUFFER, material->shader->ubo_size, NULL, GL_STATIC_DRAW);
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 		material->ubo_size = material->shader->ubo_size;
 	}
@@ -3766,7 +3769,7 @@ void RasterizerStorageGLES3::multimesh_allocate(RID p_multimesh, int p_instances
 
 		glGenBuffers(1, &multimesh->buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, multimesh->buffer);
-		glBufferData(GL_ARRAY_BUFFER, multimesh->data.size() * sizeof(float), NULL, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, multimesh->data.size() * sizeof(float), NULL, GL_STATIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
@@ -5213,7 +5216,7 @@ void RasterizerStorageGLES3::particles_set_amount(RID p_particles, int p_amount)
 		glBindVertexArray(particles->particle_vaos[i]);
 
 		glBindBuffer(GL_ARRAY_BUFFER, particles->particle_buffers[i]);
-		glBufferData(GL_ARRAY_BUFFER, floats * sizeof(float), data, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, floats * sizeof(float), data, GL_STATIC_DRAW);
 
 		for (int i = 0; i < 6; i++) {
 			glEnableVertexAttribArray(i);
@@ -6196,7 +6199,7 @@ void RasterizerStorageGLES3::_render_target_allocate(RenderTarget *rt) {
 		rt->buffers.effects_active = true;
 	}
 
-	if (!rt->flags[RENDER_TARGET_NO_SAMPLING]) {
+	if (!rt->flags[RENDER_TARGET_NO_SAMPLING] && rt->width >= 2 && rt->height >= 2) {
 
 		for (int i = 0; i < 2; i++) {
 
@@ -6509,7 +6512,7 @@ void RasterizerStorageGLES3::canvas_light_occluder_set_polylines(RID p_occluder,
 		if (!co->vertex_id) {
 			glGenBuffers(1, &co->vertex_id);
 			glBindBuffer(GL_ARRAY_BUFFER, co->vertex_id);
-			glBufferData(GL_ARRAY_BUFFER, lc * 6 * sizeof(real_t), vw.ptr(), GL_DYNAMIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, lc * 6 * sizeof(real_t), vw.ptr(), GL_STATIC_DRAW);
 		} else {
 
 			glBindBuffer(GL_ARRAY_BUFFER, co->vertex_id);

@@ -55,12 +55,12 @@ public:
 
 	virtual float get_length() const = 0;
 
-	virtual float get_pos() const = 0;
-	virtual void seek_pos(float p_time) = 0;
+	virtual float get_playback_position() const = 0;
+	virtual void seek(float p_time) = 0;
 
 	virtual void set_audio_track(int p_idx) = 0;
 
-	//virtual int mix(int16_t* p_bufer,int p_frames)=0;
+	//virtual int mix(int16_t* p_buffer,int p_frames)=0;
 
 	virtual Ref<Texture> get_texture() = 0;
 	virtual void update(float p_delta) = 0;

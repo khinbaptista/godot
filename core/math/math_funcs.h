@@ -104,8 +104,44 @@ public:
 	static _ALWAYS_INLINE_ double exp(double p_x) { return ::exp(p_x); }
 	static _ALWAYS_INLINE_ float exp(float p_x) { return ::expf(p_x); }
 
-	static _ALWAYS_INLINE_ bool is_nan(double p_val) { return (p_val != p_val); }
-	static _ALWAYS_INLINE_ bool is_nan(float p_val) { return (p_val != p_val); }
+	static _ALWAYS_INLINE_ bool is_nan(double p_val) {
+#ifdef _MSC_VER
+		return _isnan(p_val);
+#elif defined(__GNUC__) && __GNUC__ < 6
+		union {
+			uint64_t u;
+			double f;
+		} ieee754;
+		ieee754.f = p_val;
+		// (unsigned)(0x7ff0000000000001 >> 32) : 0x7ff00000
+		return ((((unsigned)(ieee754.u >> 32) & 0x7fffffff) + ((unsigned)ieee754.u != 0)) > 0x7ff00000);
+#else
+		return isnan(p_val);
+#endif
+	}
+
+	static _ALWAYS_INLINE_ bool is_nan(float p_val) {
+#ifdef _MSC_VER
+		return _isnan(p_val);
+#elif defined(__GNUC__) && __GNUC__ < 6
+		union {
+			uint32_t u;
+			float f;
+		} ieee754;
+		ieee754.f = p_val;
+		// -----------------------------------
+		// (single-precision floating-point)
+		// NaN : s111 1111 1xxx xxxx xxxx xxxx xxxx xxxx
+		//     : (> 0x7f800000)
+		// where,
+		//   s : sign
+		//   x : non-zero number
+		// -----------------------------------
+		return ((ieee754.u & 0x7fffffff) > 0x7f800000);
+#else
+		return isnan(p_val);
+#endif
+	}
 
 	static _ALWAYS_INLINE_ bool is_inf(double p_val) {
 #ifdef _MSC_VER
@@ -171,6 +207,9 @@ public:
 	static _ALWAYS_INLINE_ double round(double p_val) { return (p_val >= 0) ? Math::floor(p_val + 0.5) : -Math::floor(-p_val + 0.5); }
 	static _ALWAYS_INLINE_ float round(float p_val) { return (p_val >= 0) ? Math::floor(p_val + 0.5) : -Math::floor(-p_val + 0.5); }
 
+	static int wrapi(int value, int min, int max);
+	static float wrapf(float value, float min, float max);
+
 	// double only, as these functions are mainly used by the editor and not performance-critical,
 	static double ease(double p_x, double p_c);
 	static int step_decimals(double p_step);
@@ -232,7 +271,7 @@ public:
 
 #elif defined(_MSC_VER) && _MSC_VER < 1800
 		__asm fld a __asm fistp b
-/*#elif defined( __GNUC__ ) && ( defined( __i386__ ) || defined( __x86_64__ ) )
+		/*#elif defined( __GNUC__ ) && ( defined( __i386__ ) || defined( __x86_64__ ) )
 		// use AT&T inline assembly style, document that
 		// we use memory as output (=m) and input (m)
 		__asm__ __volatile__ (
@@ -350,6 +389,23 @@ public:
 		}
 
 		return hf;
+	}
+
+	static _ALWAYS_INLINE_ float snap_scalar(float p_offset, float p_step, float p_target) {
+		return p_step != 0 ? Math::stepify(p_target - p_offset, p_step) + p_offset : p_target;
+	}
+
+	static _ALWAYS_INLINE_ float snap_scalar_seperation(float p_offset, float p_step, float p_target, float p_separation) {
+		if (p_step != 0) {
+			float a = Math::stepify(p_target - p_offset, p_step + p_separation) + p_offset;
+			float b = a;
+			if (p_target >= 0)
+				b -= p_separation;
+			else
+				b += p_step;
+			return (Math::abs(p_target - a) < Math::abs(p_target - b)) ? a : b;
+		}
+		return p_target;
 	}
 };
 

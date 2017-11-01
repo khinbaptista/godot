@@ -26,7 +26,7 @@ public:
 	enum DopplerTracking {
 		DOPPLER_TRACKING_DISABLED,
 		DOPPLER_TRACKING_IDLE_STEP,
-		DOPPLER_TRACKING_FIXED_STEP
+		DOPPLER_TRACKING_PHYSICS_STEP
 	};
 
 private:
@@ -127,7 +127,7 @@ public:
 	void seek(float p_seconds);
 	void stop();
 	bool is_playing() const;
-	float get_pos();
+	float get_playback_position();
 
 	void set_bus(const StringName &p_bus);
 	StringName get_bus() const;

@@ -43,14 +43,14 @@ class Performance : public Object {
 	static void _bind_methods();
 
 	float _process_time;
-	float _fixed_process_time;
+	float _physics_process_time;
 
 public:
 	enum Monitor {
 
 		TIME_FPS,
 		TIME_PROCESS,
-		TIME_FIXED_PROCESS,
+		TIME_PHYSICS_PROCESS,
 		MEMORY_STATIC,
 		MEMORY_DYNAMIC,
 		MEMORY_STATIC_MAX,
@@ -79,11 +79,19 @@ public:
 		MONITOR_MAX
 	};
 
+	enum MonitorType {
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_MEMORY,
+		MONITOR_TYPE_TIME
+	};
+
 	float get_monitor(Monitor p_monitor) const;
 	String get_monitor_name(Monitor p_monitor) const;
 
+	MonitorType get_monitor_type(Monitor p_monitor) const;
+
 	void set_process_time(float p_pt);
-	void set_fixed_process_time(float p_pt);
+	void set_physics_process_time(float p_pt);
 
 	static Performance *get_singleton() { return singleton; }
 

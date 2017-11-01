@@ -31,13 +31,11 @@
 #define OS_OSX_H
 
 #include "crash_handler_osx.h"
-#include "drivers/alsa/audio_driver_alsa.h"
-#include "drivers/rtaudio/audio_driver_rtaudio.h"
+#include "drivers/coreaudio/audio_driver_coreaudio.h"
 #include "drivers/unix/os_unix.h"
 #include "joypad_osx.h"
 #include "main/input_default.h"
 #include "os/input.h"
-#include "platform/osx/audio_driver_osx.h"
 #include "power_osx.h"
 #include "servers/audio_server.h"
 #include "servers/physics_2d/physics_2d_server_sw.h"
@@ -69,7 +67,7 @@ public:
 
 	IP_Unix *ip_unix;
 
-	AudioDriverOSX audio_driver_osx;
+	AudioDriverCoreAudio audio_driver;
 
 	InputDefault *input;
 	JoypadOSX *joypad_osx;
@@ -114,21 +112,23 @@ public:
 	CrashHandler crash_handler;
 
 	float _mouse_scale(float p_scale) {
-		if (display_scale > 1.0)
+		if (_display_scale() > 1.0)
 			return p_scale;
 		else
 			return 1.0;
 	}
 
-	void _update_window();
+	float _display_scale() const;
+	float _display_scale(id screen) const;
 
-	float display_scale;
+	void _update_window();
 
 protected:
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
 	virtual VideoMode get_default_video_mode() const;
 
+	virtual void initialize_logger();
 	virtual void initialize_core();
 	virtual void initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
 	virtual void finalize();
@@ -143,8 +143,6 @@ public:
 
 	virtual String get_name();
 
-	virtual void print_error(const char *p_function, const char *p_file, int p_line, const char *p_code, const char *p_rationale, ErrorType p_type = ERR_ERROR);
-
 	virtual void alert(const String &p_alert, const String &p_title = "ALERT!");
 
 	virtual void set_cursor_shape(CursorShape p_shape);
@@ -152,7 +150,7 @@ public:
 	virtual void set_mouse_show(bool p_show);
 	virtual void set_mouse_grab(bool p_grab);
 	virtual bool is_mouse_grab_enabled() const;
-	virtual void warp_mouse_pos(const Point2 &p_to);
+	virtual void warp_mouse_position(const Point2 &p_to);
 	virtual Point2 get_mouse_position() const;
 	virtual int get_mouse_button_state() const;
 	virtual void set_window_title(const String &p_title);
@@ -184,7 +182,6 @@ public:
 	virtual void get_fullscreen_mode_list(List<VideoMode> *p_list, int p_screen = 0) const;
 
 	virtual String get_executable_path() const;
-	virtual String get_resource_dir() const;
 
 	virtual LatinKeyboardVariant get_latin_keyboard_variant() const;
 
@@ -222,6 +219,9 @@ public:
 
 	virtual bool _check_internal_feature_support(const String &p_feature);
 
+	virtual void set_use_vsync(bool p_enable);
+	virtual bool is_vsync_enabled() const;
+
 	void run();
 
 	void set_mouse_mode(MouseMode p_mode);
@@ -229,6 +229,8 @@ public:
 
 	void disable_crash_handler();
 	bool is_disable_crash_handler() const;
+
+	virtual Error move_to_trash(const String &p_path);
 
 	OS_OSX();
 };

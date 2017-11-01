@@ -95,7 +95,7 @@ void FileAccessAndroid::seek_end(int64_t p_position) {
 	pos = len + p_position;
 }
 
-size_t FileAccessAndroid::get_pos() const {
+size_t FileAccessAndroid::get_position() const {
 
 	return pos;
 }
@@ -144,6 +144,11 @@ int FileAccessAndroid::get_buffer(uint8_t *p_dst, int p_length) const {
 Error FileAccessAndroid::get_error() const {
 
 	return eof ? ERR_FILE_EOF : OK; //not sure what else it may happen
+}
+
+void FileAccessAndroid::flush() {
+
+	ERR_FAIL();
 }
 
 void FileAccessAndroid::store_8(uint8_t p_dest) {

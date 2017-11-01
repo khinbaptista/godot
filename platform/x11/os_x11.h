@@ -96,7 +96,7 @@ class OS_X11 : public OS_Unix {
 
 	int xdnd_version;
 
-#if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED)
+#if defined(OPENGL_ENABLED)
 	ContextGL_X11 *context_gl;
 #elif defined(VULKAN_ENABLED)
 	InstanceVK_X11 *vk_instance;
@@ -206,7 +206,7 @@ public:
 	void set_mouse_mode(MouseMode p_mode);
 	MouseMode get_mouse_mode() const;
 
-	virtual void warp_mouse_pos(const Point2 &p_to);
+	virtual void warp_mouse_position(const Point2 &p_to);
 	virtual Point2 get_mouse_position() const;
 	virtual int get_mouse_button_state() const;
 	virtual void set_window_title(const String &p_title);
@@ -277,6 +277,10 @@ public:
 
 	void disable_crash_handler();
 	bool is_disable_crash_handler() const;
+
+	virtual Error move_to_trash(const String &p_path);
+
+	virtual LatinKeyboardVariant get_latin_keyboard_variant() const;
 
 	OS_X11();
 };

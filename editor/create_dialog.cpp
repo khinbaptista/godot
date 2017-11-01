@@ -83,7 +83,7 @@ void CreateDialog::popup_create(bool p_dontclear) {
 	_update_favorite_list();
 
 	// Restore valid window bounds or pop up at default size.
-	if (EditorSettings::get_singleton()->has("interface/dialogs/create_new_node_bounds")) {
+	if (EditorSettings::get_singleton()->has_setting("interface/dialogs/create_new_node_bounds")) {
 		popup(EditorSettings::get_singleton()->get("interface/dialogs/create_new_node_bounds"));
 	} else {
 		popup_centered_ratio();
@@ -165,11 +165,14 @@ void CreateDialog::add_type(const String &p_type, HashMap<String, TreeItem *> &p
 	TreeItem *item = search_options->create_item(parent);
 	item->set_text(0, p_type);
 	if (!ClassDB::can_instance(p_type)) {
-		item->set_custom_color(0, Color(0.5, 0.5, 0.5));
+		item->set_custom_color(0, get_color("disabled_font_color", "Editor"));
 		item->set_selectable(0, false);
 	} else {
+		bool is_search_subsequence = search_box->get_text().is_subsequence_ofi(p_type);
+		String to_select_type = *to_select ? (*to_select)->get_text(0) : "";
+		bool current_item_is_preffered = ClassDB::is_parent_class(p_type, preferred_search_result_type) && !ClassDB::is_parent_class(to_select_type, preferred_search_result_type);
 
-		if ((!*to_select && (search_box->get_text().is_subsequence_ofi(p_type))) || search_box->get_text() == p_type) {
+		if (((!*to_select || current_item_is_preffered) && is_search_subsequence) || search_box->get_text() == p_type) {
 			*to_select = item;
 		}
 	}
@@ -361,6 +364,19 @@ void CreateDialog::set_base_type(const String &p_base) {
 	_update_search();
 }
 
+String CreateDialog::get_base_type() const {
+
+	return base_type;
+}
+
+void CreateDialog::set_preferred_search_result_type(const String &p_preferred_type) {
+	preferred_search_result_type = p_preferred_type;
+}
+
+String CreateDialog::get_preferred_search_result_type() {
+
+	return preferred_search_result_type;
+}
 String CreateDialog::get_selected_type() {
 
 	TreeItem *selected = search_options->get_selected();
@@ -409,11 +425,6 @@ Object *CreateDialog::instance_selected() {
 	}
 
 	return NULL;
-}
-
-String CreateDialog::get_base_type() const {
-
-	return base_type;
 }
 
 void CreateDialog::_item_selected() {
@@ -513,7 +524,7 @@ void CreateDialog::_favorite_activated() {
 
 Variant CreateDialog::get_drag_data_fw(const Point2 &p_point, Control *p_from) {
 
-	TreeItem *ti = favorites->get_item_at_pos(p_point);
+	TreeItem *ti = favorites->get_item_at_position(p_point);
 	if (ti) {
 		Dictionary d;
 		d["type"] = "create_favorite_drag";
@@ -544,12 +555,12 @@ void CreateDialog::drop_data_fw(const Point2 &p_point, const Variant &p_data, Co
 
 	Dictionary d = p_data;
 
-	TreeItem *ti = favorites->get_item_at_pos(p_point);
+	TreeItem *ti = favorites->get_item_at_position(p_point);
 	if (!ti)
 		return;
 
 	String drop_at = ti->get_text(0);
-	int ds = favorites->get_drop_section_at_pos(p_point);
+	int ds = favorites->get_drop_section_at_position(p_point);
 
 	int drop_idx = favorite_list.find(drop_at);
 	if (drop_idx < 0)
@@ -637,6 +648,7 @@ CreateDialog::CreateDialog() {
 	search_box->set_h_size_flags(SIZE_EXPAND_FILL);
 	search_hb->add_child(search_box);
 	favorite = memnew(Button);
+	favorite->set_flat(true);
 	favorite->set_toggle_mode(true);
 	search_hb->add_child(favorite);
 	favorite->connect("pressed", this, "_favorite_toggled");
@@ -653,6 +665,7 @@ CreateDialog::CreateDialog() {
 	search_options->connect("cell_selected", this, "_item_selected");
 	//search_options->set_hide_root(true);
 	base_type = "Object";
+	preferred_search_result_type = "";
 
 	help_bit = memnew(EditorHelpBit);
 	vbc->add_margin_child(TTR("Description:"), help_bit);

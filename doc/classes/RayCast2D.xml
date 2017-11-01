@@ -7,7 +7,7 @@
 		A RayCast represents a line from its origin to its destination position, [code]cast_to[/code]. It is used to query the 2D space in order to find the closest object along the path of the ray.
 		RayCast2D can ignore some objects by adding them to the exception list via [code]add_exception[/code], by setting proper filtering with collision layers, or by filtering object types with type masks.
 		Only enabled raycasts will be able to query the space and report collisions.
-		RayCast2D calculates intersection every fixed frame (see [Node]), and the result is cached so it can be used later until the next frame. If multiple queries are required between fixed frames (or during the same frame) use [method force_raycast_update] after adjusting the raycast.
+		RayCast2D calculates intersection every physics frame (see [Node]), and the result is cached so it can be used later until the next frame. If multiple queries are required between physics frames (or during the same frame) use [method force_raycast_update] after adjusting the raycast.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -43,7 +43,7 @@
 			<return type="void">
 			</return>
 			<description>
-				Updates the collision information for the ray.  Use this method to update the collision information immediately instead of waiting for the next [code]_fixed_process[/code] call, for example if the ray or its parent has changed state. Note: [code]enabled == true[/code] is not required for this to work.
+				Updates the collision information for the ray.  Use this method to update the collision information immediately instead of waiting for the next [code]_physics_process[/code] call, for example if the ray or its parent has changed state. Note: [code]enabled == true[/code] is not required for this to work.
 			</description>
 		</method>
 		<method name="get_cast_to" qualifiers="const">
@@ -77,11 +77,19 @@
 				[/codeblock]
 			</description>
 		</method>
-		<method name="get_collision_layer" qualifiers="const">
+		<method name="get_collision_mask" qualifiers="const">
 			<return type="int">
 			</return>
 			<description>
-				Returns the collision layer for this ray.
+				Returns the collision mask for this ray.
+			</description>
+		</method>
+		<method name="get_collision_mask_bit" qualifiers="const">
+			<return type="bool">
+			</return>
+			<argument index="0" name="bit" type="int">
+			</argument>
+			<description>
 			</description>
 		</method>
 		<method name="get_collision_normal" qualifiers="const">
@@ -153,13 +161,23 @@
 				Sets the ray destination point, so that the ray will test from the ray's origin to [code]local_point[/code]
 			</description>
 		</method>
-		<method name="set_collision_layer">
+		<method name="set_collision_mask">
 			<return type="void">
 			</return>
-			<argument index="0" name="layer" type="int">
+			<argument index="0" name="mask" type="int">
 			</argument>
 			<description>
-				Set the mask to filter objects. Only objects with at least the same mask element set will be detected.
+				Set the mask to filter objects. Only objects in at least one collision layer enabled in the mask will be detected.
+			</description>
+		</method>
+		<method name="set_collision_mask_bit">
+			<return type="void">
+			</return>
+			<argument index="0" name="bit" type="int">
+			</argument>
+			<argument index="1" name="value" type="bool">
+			</argument>
+			<description>
 			</description>
 		</method>
 		<method name="set_enabled">
@@ -194,8 +212,8 @@
 		<member name="cast_to" type="Vector2" setter="set_cast_to" getter="get_cast_to">
 			The ray's destination point, relative to the RayCast's [code]position[/code].
 		</member>
-		<member name="collision_layer" type="int" setter="set_collision_layer" getter="get_collision_layer">
-			The RayCast2D's collison layer(s). Only bodies in the same collision layer(s) will be detected.
+		<member name="collision_mask" type="int" setter="set_collision_mask" getter="get_collision_mask">
+			The ray's collision mask. Only objects in at least one collision layer enabled in the mask will be detected.
 		</member>
 		<member name="enabled" type="bool" setter="set_enabled" getter="is_enabled">
 			If [code]true[/code], collisions will be reported. Default value: [code]false[/code].

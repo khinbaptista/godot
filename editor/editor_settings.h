@@ -65,6 +65,7 @@ private:
 	struct VariantContainer {
 		int order;
 		Variant variant;
+		Variant initial;
 		bool hide_from_editor;
 		bool save;
 		VariantContainer() {
@@ -84,9 +85,11 @@ private:
 	HashMap<String, VariantContainer> props;
 	String resource_path;
 
-	bool _set(const StringName &p_name, const Variant &p_value);
+	bool _set(const StringName &p_name, const Variant &p_value, bool p_emit_signal = true);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
 	void _get_property_list(List<PropertyInfo> *p_list) const;
+
+	void _initial_set(const StringName &p_name, const Variant &p_value);
 
 	static Ref<EditorSettings> singleton;
 
@@ -123,7 +126,14 @@ public:
 		NOTIFICATION_EDITOR_SETTINGS_CHANGED = 10000
 	};
 
-	bool has(String p_var) const;
+	void set_manually(const StringName &p_name, const Variant &p_value, bool p_emit_signal = false) {
+		_set(p_name, p_value, p_emit_signal);
+	}
+
+	void set_setting(const String &p_setting, const Variant &p_value);
+	Variant get_setting(const String &p_setting) const;
+
+	bool has_setting(String p_var) const;
 	static EditorSettings *get_singleton();
 	void erase(String p_var);
 	String get_settings_path() const;
@@ -170,6 +180,11 @@ public:
 
 	Variant get_project_metadata(const String &p_section, const String &p_key, Variant p_default);
 	void set_project_metadata(const String &p_section, const String &p_key, Variant p_data);
+
+	bool property_can_revert(const String &p_name);
+	Variant property_get_revert(const String &p_name);
+
+	void set_initial_value(const StringName &p_name, const Variant &p_value);
 
 	EditorSettings();
 	~EditorSettings();

@@ -178,25 +178,25 @@ int AudioStreamPlaybackRandomPitch::get_loop_count() const {
 	return 0;
 }
 
-float AudioStreamPlaybackRandomPitch::get_pos() const {
+float AudioStreamPlaybackRandomPitch::get_playback_position() const {
 	if (playing.is_valid()) {
-		return playing->get_pos();
+		return playing->get_playback_position();
 	}
 
 	return 0;
 }
-void AudioStreamPlaybackRandomPitch::seek_pos(float p_time) {
+void AudioStreamPlaybackRandomPitch::seek(float p_time) {
 	if (playing.is_valid()) {
-		playing->seek_pos(p_time);
+		playing->seek(p_time);
 	}
 }
 
-void AudioStreamPlaybackRandomPitch::mix(AudioFrame *p_bufer, float p_rate_scale, int p_frames) {
+void AudioStreamPlaybackRandomPitch::mix(AudioFrame *p_buffer, float p_rate_scale, int p_frames) {
 	if (playing.is_valid()) {
-		playing->mix(p_bufer, p_rate_scale * pitch_scale, p_frames);
+		playing->mix(p_buffer, p_rate_scale * pitch_scale, p_frames);
 	} else {
 		for (int i = 0; i < p_frames; i++) {
-			p_bufer[i] = AudioFrame(0, 0);
+			p_buffer[i] = AudioFrame(0, 0);
 		}
 	}
 }

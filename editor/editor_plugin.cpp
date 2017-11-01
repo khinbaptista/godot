@@ -112,8 +112,10 @@ Vector<Ref<Texture> > EditorInterface::make_mesh_previews(const Vector<Ref<Mesh>
 		Rect3 rot_aabb = xform.xform(aabb);
 		print_line("rot_aabb: " + rot_aabb);
 		float m = MAX(rot_aabb.size.x, rot_aabb.size.y) * 0.5;
-		if (m == 0)
+		if (m == 0) {
+			textures.push_back(Ref<Texture>());
 			continue;
+		}
 		m = 1.0 / m;
 		m *= 0.5;
 		print_line("scale: " + rtos(m));
@@ -256,7 +258,7 @@ void EditorInterface::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_resource_previewer"), &EditorInterface::get_resource_previewer);
 	ClassDB::bind_method(D_METHOD("get_resource_filesystem"), &EditorInterface::get_resource_file_system);
 	ClassDB::bind_method(D_METHOD("get_editor_viewport"), &EditorInterface::get_editor_viewport);
-	ClassDB::bind_method(D_METHOD("make_mesh_previews"), &EditorInterface::_make_mesh_previews);
+	ClassDB::bind_method(D_METHOD("make_mesh_previews", "meshes", "preview_size"), &EditorInterface::_make_mesh_previews);
 
 	ClassDB::bind_method(D_METHOD("save_scene"), &EditorInterface::save_scene);
 	ClassDB::bind_method(D_METHOD("save_scene_as", "path", "with_preview"), &EditorInterface::save_scene_as, DEFVAL(true));
@@ -400,18 +402,18 @@ Ref<SpatialEditorGizmo> EditorPlugin::create_spatial_gizmo(Spatial *p_spatial) {
 	return Ref<SpatialEditorGizmo>();
 }
 
-bool EditorPlugin::forward_canvas_gui_input(const Transform2D &p_canvas_xform, const Ref<InputEvent> &p_event) {
+bool EditorPlugin::forward_canvas_gui_input(const Ref<InputEvent> &p_event) {
 
 	if (get_script_instance() && get_script_instance()->has_method("forward_canvas_gui_input")) {
-		return get_script_instance()->call("forward_canvas_gui_input", p_canvas_xform, p_event);
+		return get_script_instance()->call("forward_canvas_gui_input", p_event);
 	}
 	return false;
 }
 
-void EditorPlugin::forward_draw_over_canvas(const Transform2D &p_canvas_xform, Control *p_canvas) {
+void EditorPlugin::forward_draw_over_canvas(Control *p_canvas) {
 
 	if (get_script_instance() && get_script_instance()->has_method("forward_draw_over_canvas")) {
-		get_script_instance()->call("forward_draw_over_canvas", p_canvas_xform, p_canvas);
+		get_script_instance()->call("forward_draw_over_canvas", p_canvas);
 	}
 }
 
@@ -630,6 +632,7 @@ void EditorPlugin::_bind_methods() {
 	BIND_ENUM_CONSTANT(CONTAINER_SPATIAL_EDITOR_BOTTOM);
 	BIND_ENUM_CONSTANT(CONTAINER_CANVAS_EDITOR_MENU);
 	BIND_ENUM_CONSTANT(CONTAINER_CANVAS_EDITOR_SIDE);
+	BIND_ENUM_CONSTANT(CONTAINER_CANVAS_EDITOR_BOTTOM);
 	BIND_ENUM_CONSTANT(CONTAINER_PROPERTY_EDITOR_BOTTOM);
 
 	BIND_ENUM_CONSTANT(DOCK_SLOT_LEFT_UL);

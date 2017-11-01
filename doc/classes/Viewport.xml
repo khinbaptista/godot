@@ -192,14 +192,14 @@
 			<return type="Variant">
 			</return>
 			<description>
-				Returs the drag data from the GUI, that was previously returned by [method Control.get_drag_data].
+				Returns the drag data from the GUI, that was previously returned by [method Control.get_drag_data].
 			</description>
 		</method>
 		<method name="gui_has_modal_stack" qualifiers="const">
 			<return type="bool">
 			</return>
 			<description>
-				Returs whether there are shown modals on-screen.
+				Returns whether there are shown modals on-screen.
 			</description>
 		</method>
 		<method name="has_transparent_background" qualifiers="const">
@@ -303,7 +303,7 @@
 			<argument index="0" name="xform" type="Transform2D">
 			</argument>
 			<description>
-				Set the canvas transform of the viewport, useful for changing the on-screen positions of all child [CanvasItem]\ s. This is relative to the global canvas transform of the viewport.
+				Set the canvas transform of the viewport, useful for changing the on-screen positions of all child [CanvasItem]s. This is relative to the global canvas transform of the viewport.
 			</description>
 		</method>
 		<method name="set_clear_mode">
@@ -528,7 +528,7 @@
 		<method name="warp_mouse">
 			<return type="void">
 			</return>
-			<argument index="0" name="to_pos" type="Vector2">
+			<argument index="0" name="to_position" type="Vector2">
 			</argument>
 			<description>
 				Warp the mouse to a position, relative to the viewport.

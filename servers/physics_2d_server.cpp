@@ -92,16 +92,16 @@ void Physics2DDirectBodyState::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_contact_count"), &Physics2DDirectBodyState::get_contact_count);
 
-	ClassDB::bind_method(D_METHOD("get_contact_local_pos", "contact_idx"), &Physics2DDirectBodyState::get_contact_local_pos);
+	ClassDB::bind_method(D_METHOD("get_contact_local_position", "contact_idx"), &Physics2DDirectBodyState::get_contact_local_position);
 	ClassDB::bind_method(D_METHOD("get_contact_local_normal", "contact_idx"), &Physics2DDirectBodyState::get_contact_local_normal);
 	ClassDB::bind_method(D_METHOD("get_contact_local_shape", "contact_idx"), &Physics2DDirectBodyState::get_contact_local_shape);
 	ClassDB::bind_method(D_METHOD("get_contact_collider", "contact_idx"), &Physics2DDirectBodyState::get_contact_collider);
-	ClassDB::bind_method(D_METHOD("get_contact_collider_pos", "contact_idx"), &Physics2DDirectBodyState::get_contact_collider_pos);
+	ClassDB::bind_method(D_METHOD("get_contact_collider_position", "contact_idx"), &Physics2DDirectBodyState::get_contact_collider_position);
 	ClassDB::bind_method(D_METHOD("get_contact_collider_id", "contact_idx"), &Physics2DDirectBodyState::get_contact_collider_id);
 	ClassDB::bind_method(D_METHOD("get_contact_collider_object", "contact_idx"), &Physics2DDirectBodyState::get_contact_collider_object);
 	ClassDB::bind_method(D_METHOD("get_contact_collider_shape", "contact_idx"), &Physics2DDirectBodyState::get_contact_collider_shape);
 	ClassDB::bind_method(D_METHOD("get_contact_collider_shape_metadata", "contact_idx"), &Physics2DDirectBodyState::get_contact_collider_shape_metadata);
-	ClassDB::bind_method(D_METHOD("get_contact_collider_velocity_at_pos", "contact_idx"), &Physics2DDirectBodyState::get_contact_collider_velocity_at_pos);
+	ClassDB::bind_method(D_METHOD("get_contact_collider_velocity_at_position", "contact_idx"), &Physics2DDirectBodyState::get_contact_collider_velocity_at_position);
 	ClassDB::bind_method(D_METHOD("get_step"), &Physics2DDirectBodyState::get_step);
 	ClassDB::bind_method(D_METHOD("integrate_forces"), &Physics2DDirectBodyState::integrate_forces);
 	ClassDB::bind_method(D_METHOD("get_space_state"), &Physics2DDirectBodyState::get_space_state);
@@ -358,8 +358,8 @@ void Physics2DDirectSpaceState::_bind_methods() {
 	BIND_ENUM_CONSTANT(TYPE_MASK_KINEMATIC_BODY);
 	BIND_ENUM_CONSTANT(TYPE_MASK_RIGID_BODY);
 	BIND_ENUM_CONSTANT(TYPE_MASK_CHARACTER_BODY);
-	BIND_ENUM_CONSTANT(TYPE_MASK_AREA);
 	BIND_ENUM_CONSTANT(TYPE_MASK_COLLISION);
+	BIND_ENUM_CONSTANT(TYPE_MASK_AREA);
 }
 
 int Physics2DShapeQueryResult::get_result_count() const {
@@ -561,7 +561,7 @@ void Physics2DServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("body_set_state", "body", "state", "value"), &Physics2DServer::body_set_state);
 	ClassDB::bind_method(D_METHOD("body_get_state", "body", "state"), &Physics2DServer::body_get_state);
 
-	ClassDB::bind_method(D_METHOD("body_apply_impulse", "body", "pos", "impulse"), &Physics2DServer::body_apply_impulse);
+	ClassDB::bind_method(D_METHOD("body_apply_impulse", "body", "position", "impulse"), &Physics2DServer::body_apply_impulse);
 	ClassDB::bind_method(D_METHOD("body_add_force", "body", "offset", "force"), &Physics2DServer::body_add_force);
 	ClassDB::bind_method(D_METHOD("body_set_axis_velocity", "body", "axis_velocity"), &Physics2DServer::body_set_axis_velocity);
 
@@ -578,6 +578,8 @@ void Physics2DServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("body_set_force_integration_callback", "body", "receiver", "method", "userdata"), &Physics2DServer::body_set_force_integration_callback, DEFVAL(Variant()));
 
 	ClassDB::bind_method(D_METHOD("body_test_motion", "body", "from", "motion", "margin", "result"), &Physics2DServer::_body_test_motion, DEFVAL(0.08), DEFVAL(Variant()));
+
+	ClassDB::bind_method(D_METHOD("body_get_direct_state", "body"), &Physics2DServer::body_get_direct_state);
 
 	/* JOINT API */
 
@@ -613,6 +615,7 @@ void Physics2DServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(SPACE_PARAM_CONSTRAINT_DEFAULT_BIAS);
 
 	BIND_ENUM_CONSTANT(SHAPE_LINE);
+	BIND_ENUM_CONSTANT(SHAPE_RAY);
 	BIND_ENUM_CONSTANT(SHAPE_SEGMENT);
 	BIND_ENUM_CONSTANT(SHAPE_CIRCLE);
 	BIND_ENUM_CONSTANT(SHAPE_RECTANGLE);

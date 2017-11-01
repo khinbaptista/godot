@@ -58,7 +58,7 @@ int AudioStreamPlaybackOGGVorbis::_ov_seek_func(void *_f, ogg_int64_t offs, int 
 		fa->seek(offs);
 	} else if (whence == SEEK_CUR) {
 
-		fa->seek(fa->get_pos() + offs);
+		fa->seek(fa->get_position() + offs);
 	} else if (whence == SEEK_END) {
 
 		fa->seek_end(offs);
@@ -89,10 +89,10 @@ long AudioStreamPlaybackOGGVorbis::_ov_tell_func(void *_f) {
 	//printf("close %p\n",_f);
 
 	FileAccess *fa = (FileAccess *)_f;
-	return fa->get_pos();
+	return fa->get_position();
 }
 
-int AudioStreamPlaybackOGGVorbis::mix(int16_t *p_bufer, int p_frames) {
+int AudioStreamPlaybackOGGVorbis::mix(int16_t *p_buffer, int p_frames) {
 
 	if (!playing)
 		return 0;
@@ -109,9 +109,9 @@ int AudioStreamPlaybackOGGVorbis::mix(int16_t *p_bufer, int p_frames) {
 //printf("to mix %i - mix me %i bytes\n",to_mix,to_mix*stream_channels*sizeof(int16_t));
 
 #ifdef BIG_ENDIAN_ENABLED
-		long ret = ov_read(&vf, (char *)p_bufer, todo * stream_channels * sizeof(int16_t), 1, 2, 1, &current_section);
+		long ret = ov_read(&vf, (char *)p_buffer, todo * stream_channels * sizeof(int16_t), 1, 2, 1, &current_section);
 #else
-		long ret = ov_read(&vf, (char *)p_bufer, todo * stream_channels * sizeof(int16_t), 0, 2, 1, &current_section);
+		long ret = ov_read(&vf, (char *)p_buffer, todo * stream_channels * sizeof(int16_t), 0, 2, 1, &current_section);
 #endif
 
 		if (ret < 0) {
@@ -162,7 +162,7 @@ int AudioStreamPlaybackOGGVorbis::mix(int16_t *p_bufer, int p_frames) {
 
 		frames_mixed += ret;
 
-		p_bufer += ret * stream_channels;
+		p_buffer += ret * stream_channels;
 		p_frames -= ret;
 	}
 
@@ -180,7 +180,7 @@ void AudioStreamPlaybackOGGVorbis::play(float p_from) {
 	frames_mixed = 0;
 	playing = true;
 	if (p_from > 0) {
-		seek_pos(p_from);
+		seek(p_from);
 	}
 }
 
@@ -203,7 +203,7 @@ void AudioStreamPlaybackOGGVorbis::stop() {
 	//_clear();
 }
 
-float AudioStreamPlaybackOGGVorbis::get_pos() const {
+float AudioStreamPlaybackOGGVorbis::get_playback_position() const {
 
 	int32_t frames = int32_t(frames_mixed);
 	if (frames < 0)
@@ -211,7 +211,7 @@ float AudioStreamPlaybackOGGVorbis::get_pos() const {
 	return double(frames) / stream_srate;
 }
 
-void AudioStreamPlaybackOGGVorbis::seek_pos(float p_time) {
+void AudioStreamPlaybackOGGVorbis::seek(float p_time) {
 
 	if (!playing)
 		return;

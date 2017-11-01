@@ -42,7 +42,7 @@ void Performance::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(TIME_FPS);
 	BIND_ENUM_CONSTANT(TIME_PROCESS);
-	BIND_ENUM_CONSTANT(TIME_FIXED_PROCESS);
+	BIND_ENUM_CONSTANT(TIME_PHYSICS_PROCESS);
 	BIND_ENUM_CONSTANT(MEMORY_STATIC);
 	BIND_ENUM_CONSTANT(MEMORY_DYNAMIC);
 	BIND_ENUM_CONSTANT(MEMORY_STATIC_MAX);
@@ -57,10 +57,10 @@ void Performance::_bind_methods() {
 	BIND_ENUM_CONSTANT(RENDER_SHADER_CHANGES_IN_FRAME);
 	BIND_ENUM_CONSTANT(RENDER_SURFACE_CHANGES_IN_FRAME);
 	BIND_ENUM_CONSTANT(RENDER_DRAW_CALLS_IN_FRAME);
-	BIND_ENUM_CONSTANT(RENDER_USAGE_VIDEO_MEM_TOTAL);
 	BIND_ENUM_CONSTANT(RENDER_VIDEO_MEM_USED);
 	BIND_ENUM_CONSTANT(RENDER_TEXTURE_MEM_USED);
 	BIND_ENUM_CONSTANT(RENDER_VERTEX_MEM_USED);
+	BIND_ENUM_CONSTANT(RENDER_USAGE_VIDEO_MEM_TOTAL);
 	BIND_ENUM_CONSTANT(PHYSICS_2D_ACTIVE_OBJECTS);
 	BIND_ENUM_CONSTANT(PHYSICS_2D_COLLISION_PAIRS);
 	BIND_ENUM_CONSTANT(PHYSICS_2D_ISLAND_COUNT);
@@ -78,7 +78,7 @@ String Performance::get_monitor_name(Monitor p_monitor) const {
 
 		"time/fps",
 		"time/process",
-		"time/fixed_process",
+		"time/physics_process",
 		"memory/static",
 		"memory/dynamic",
 		"memory/static_max",
@@ -94,7 +94,7 @@ String Performance::get_monitor_name(Monitor p_monitor) const {
 		"raster/surface_changes",
 		"raster/draw_calls",
 		"video/video_mem",
-		"video/texure_mem",
+		"video/texture_mem",
 		"video/vertex_mem",
 		"video/video_mem_max",
 		"physics_2d/active_objects",
@@ -114,7 +114,7 @@ float Performance::get_monitor(Monitor p_monitor) const {
 	switch (p_monitor) {
 		case TIME_FPS: return Engine::get_singleton()->get_frames_per_second();
 		case TIME_PROCESS: return _process_time;
-		case TIME_FIXED_PROCESS: return _fixed_process_time;
+		case TIME_PHYSICS_PROCESS: return _physics_process_time;
 		case MEMORY_STATIC: return Memory::get_mem_usage();
 		case MEMORY_DYNAMIC: return MemoryPool::total_memory;
 		case MEMORY_STATIC_MAX: return Memory::get_mem_max_usage();
@@ -153,19 +153,57 @@ float Performance::get_monitor(Monitor p_monitor) const {
 	return 0;
 }
 
+Performance::MonitorType Performance::get_monitor_type(Monitor p_monitor) const {
+	ERR_FAIL_INDEX_V(p_monitor, MONITOR_MAX, MONITOR_TYPE_QUANTITY);
+	// ugly
+	static const MonitorType types[MONITOR_MAX] = {
+
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_TIME,
+		MONITOR_TYPE_TIME,
+		MONITOR_TYPE_MEMORY,
+		MONITOR_TYPE_MEMORY,
+		MONITOR_TYPE_MEMORY,
+		MONITOR_TYPE_MEMORY,
+		MONITOR_TYPE_MEMORY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_MEMORY,
+		MONITOR_TYPE_MEMORY,
+		MONITOR_TYPE_MEMORY,
+		MONITOR_TYPE_MEMORY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+		MONITOR_TYPE_QUANTITY,
+
+	};
+
+	return types[p_monitor];
+}
+
 void Performance::set_process_time(float p_pt) {
 
 	_process_time = p_pt;
 }
 
-void Performance::set_fixed_process_time(float p_pt) {
+void Performance::set_physics_process_time(float p_pt) {
 
-	_fixed_process_time = p_pt;
+	_physics_process_time = p_pt;
 }
 
 Performance::Performance() {
 
 	_process_time = 0;
-	_fixed_process_time = 0;
+	_physics_process_time = 0;
 	singleton = this;
 }

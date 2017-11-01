@@ -66,6 +66,7 @@ MethodDefinition D_METHOD(const char *p_name, const char *p_arg1, const char *p_
 MethodDefinition D_METHOD(const char *p_name, const char *p_arg1, const char *p_arg2, const char *p_arg3, const char *p_arg4, const char *p_arg5, const char *p_arg6, const char *p_arg7, const char *p_arg8);
 MethodDefinition D_METHOD(const char *p_name, const char *p_arg1, const char *p_arg2, const char *p_arg3, const char *p_arg4, const char *p_arg5, const char *p_arg6, const char *p_arg7, const char *p_arg8, const char *p_arg9);
 MethodDefinition D_METHOD(const char *p_name, const char *p_arg1, const char *p_arg2, const char *p_arg3, const char *p_arg4, const char *p_arg5, const char *p_arg6, const char *p_arg7, const char *p_arg8, const char *p_arg9, const char *p_arg10);
+MethodDefinition D_METHOD(const char *p_name, const char *p_arg1, const char *p_arg2, const char *p_arg3, const char *p_arg4, const char *p_arg5, const char *p_arg6, const char *p_arg7, const char *p_arg8, const char *p_arg9, const char *p_arg10, const char *p_arg11);
 
 #else
 
@@ -127,6 +128,7 @@ public:
 		StringName inherits;
 		StringName name;
 		bool disabled;
+		bool exposed;
 		Object *(*creation_func)();
 		ClassInfo();
 		~ClassInfo();
@@ -168,6 +170,7 @@ public:
 		ClassInfo *t = classes.getptr(T::get_class_static());
 		ERR_FAIL_COND(!t);
 		t->creation_func = &creator<T>;
+		t->exposed = true;
 		T::register_custom_data_to_otdb();
 	}
 
@@ -176,6 +179,9 @@ public:
 
 		GLOBAL_LOCK_FUNCTION;
 		T::initialize_class();
+		ClassInfo *t = classes.getptr(T::get_class_static());
+		ERR_FAIL_COND(!t);
+		t->exposed = true;
 		//nothing
 	}
 
@@ -193,6 +199,7 @@ public:
 		ClassInfo *t = classes.getptr(T::get_class_static());
 		ERR_FAIL_COND(!t);
 		t->creation_func = &_create_ptr_func<T>;
+		t->exposed = true;
 		T::register_custom_data_to_otdb();
 	}
 
@@ -346,6 +353,8 @@ public:
 
 	static void set_class_enabled(StringName p_class, bool p_enable);
 	static bool is_class_enabled(StringName p_class);
+
+	static bool is_class_exposed(StringName p_class);
 
 	static void add_resource_base_extension(const StringName &p_extension, const StringName &p_class);
 	static void get_resource_base_extensions(List<String> *p_extensions);

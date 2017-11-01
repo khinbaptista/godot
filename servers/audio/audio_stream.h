@@ -45,10 +45,10 @@ public:
 
 	virtual int get_loop_count() const = 0; //times it looped
 
-	virtual float get_pos() const = 0;
-	virtual void seek_pos(float p_time) = 0;
+	virtual float get_playback_position() const = 0;
+	virtual void seek(float p_time) = 0;
 
-	virtual void mix(AudioFrame *p_bufer, float p_rate_scale, int p_frames) = 0;
+	virtual void mix(AudioFrame *p_buffer, float p_rate_scale, int p_frames) = 0;
 
 	virtual float get_length() const = 0; //if supported, otherwise return 0
 };
@@ -70,7 +70,7 @@ class AudioStreamPlaybackResampled : public AudioStreamPlayback {
 
 protected:
 	void _begin_resample();
-	virtual void _mix_internal(AudioFrame *p_bufer, int p_frames) = 0;
+	virtual void _mix_internal(AudioFrame *p_buffer, int p_frames) = 0;
 	virtual float get_stream_sampling_rate() = 0;
 
 public:
@@ -133,10 +133,10 @@ public:
 
 	virtual int get_loop_count() const; //times it looped
 
-	virtual float get_pos() const;
-	virtual void seek_pos(float p_time);
+	virtual float get_playback_position() const;
+	virtual void seek(float p_time);
 
-	virtual void mix(AudioFrame *p_bufer, float p_rate_scale, int p_frames);
+	virtual void mix(AudioFrame *p_buffer, float p_rate_scale, int p_frames);
 
 	virtual float get_length() const; //if supported, otherwise return 0
 

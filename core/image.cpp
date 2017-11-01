@@ -530,7 +530,7 @@ static void _scale_cubic(const uint8_t *p_src, uint8_t *p_dst, uint32_t p_src_wi
 	int height = p_src_height;
 	double xfac = (double)width / p_dst_width;
 	double yfac = (double)height / p_dst_height;
-	// coordinates of source points and cooefficiens
+	// coordinates of source points and coefficients
 	double ox, oy, dx, dy, k1, k2;
 	int ox1, oy1, ox2, oy2;
 	// destination pixel values
@@ -561,7 +561,7 @@ static void _scale_cubic(const uint8_t *p_src, uint8_t *p_dst, uint32_t p_src_wi
 			}
 
 			for (int n = -1; n < 3; n++) {
-				// get Y cooefficient
+				// get Y coefficient
 				k1 = _bicubic_interp_kernel(dy - (double)n);
 
 				oy2 = oy1 + n;
@@ -571,7 +571,7 @@ static void _scale_cubic(const uint8_t *p_src, uint8_t *p_dst, uint32_t p_src_wi
 					oy2 = ymax;
 
 				for (int m = -1; m < 3; m++) {
-					// get X cooefficient
+					// get X coefficient
 					k2 = k1 * _bicubic_interp_kernel((double)m - dx);
 
 					ox2 = ox1 + m;
@@ -1013,8 +1013,8 @@ void Image::shrink_x2() {
 			copymem(w.ptr(), &r[ofs], new_size);
 		}
 
-		width /= 2;
-		height /= 2;
+		width = MAX(width / 2, 1);
+		height = MAX(height / 2, 1);
 		data = new_img;
 
 	} else {
@@ -1061,7 +1061,6 @@ Error Image::generate_mipmaps() {
 	int size = _get_dst_image_size(width, height, format, mmcount);
 
 	data.resize(size);
-	print_line("to gen mipmaps w " + itos(width) + " h " + itos(height) + " format " + get_format_name(format) + " mipmaps " + itos(mmcount) + " new size is: " + itos(size));
 
 	PoolVector<uint8_t>::Write wp = data.write();
 
@@ -2474,6 +2473,7 @@ void Image::fix_alpha_edges() {
 					if (rp[3] < alpha_threshold)
 						continue;
 
+					closest_dist = dist;
 					closest_color[0] = rp[0];
 					closest_color[1] = rp[1];
 					closest_color[2] = rp[2];

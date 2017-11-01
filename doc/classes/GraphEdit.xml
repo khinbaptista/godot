@@ -177,7 +177,7 @@
 			</argument>
 			<argument index="1" name="from_slot" type="int">
 			</argument>
-			<argument index="2" name="release_pos" type="Vector2">
+			<argument index="2" name="release_position" type="Vector2">
 			</argument>
 			<description>
 			</description>

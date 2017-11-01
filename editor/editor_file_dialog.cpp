@@ -56,15 +56,15 @@ void EditorFileDialog::_notification(int p_what) {
 		//_update_icons
 		mode_thumbnails->set_icon(get_icon("FileThumbnail", "EditorIcons"));
 		mode_list->set_icon(get_icon("FileList", "EditorIcons"));
-		dir_prev->set_icon(get_icon("ArrowLeft", "EditorIcons"));
-		dir_next->set_icon(get_icon("ArrowRight", "EditorIcons"));
+		dir_prev->set_icon(get_icon("Back", "EditorIcons"));
+		dir_next->set_icon(get_icon("Forward", "EditorIcons"));
 		dir_up->set_icon(get_icon("ArrowUp", "EditorIcons"));
 		refresh->set_icon(get_icon("Reload", "EditorIcons"));
 		favorite->set_icon(get_icon("Favorites", "EditorIcons"));
 
 		fav_up->set_icon(get_icon("MoveUp", "EditorIcons"));
 		fav_down->set_icon(get_icon("MoveDown", "EditorIcons"));
-		fav_rm->set_icon(get_icon("RemoveSmall", "EditorIcons"));
+		fav_rm->set_icon(get_icon("Remove", "EditorIcons"));
 
 	} else if (p_what == NOTIFICATION_PROCESS) {
 
@@ -97,15 +97,15 @@ void EditorFileDialog::_notification(int p_what) {
 		//_update_icons
 		mode_thumbnails->set_icon(get_icon("FileThumbnail", "EditorIcons"));
 		mode_list->set_icon(get_icon("FileList", "EditorIcons"));
-		dir_prev->set_icon(get_icon("ArrowLeft", "EditorIcons"));
-		dir_next->set_icon(get_icon("ArrowRight", "EditorIcons"));
+		dir_prev->set_icon(get_icon("Back", "EditorIcons"));
+		dir_next->set_icon(get_icon("Forward", "EditorIcons"));
 		dir_up->set_icon(get_icon("ArrowUp", "EditorIcons"));
 		refresh->set_icon(get_icon("Reload", "EditorIcons"));
 		favorite->set_icon(get_icon("Favorites", "EditorIcons"));
 
 		fav_up->set_icon(get_icon("MoveUp", "EditorIcons"));
 		fav_down->set_icon(get_icon("MoveDown", "EditorIcons"));
-		fav_rm->set_icon(get_icon("RemoveSmall", "EditorIcons"));
+		fav_rm->set_icon(get_icon("Remove", "EditorIcons"));
 
 		update_file_list();
 	}
@@ -1281,6 +1281,7 @@ EditorFileDialog::EditorFileDialog() {
 	dir_prev = memnew(ToolButton);
 	dir_next = memnew(ToolButton);
 	dir_up = memnew(ToolButton);
+	dir_up->set_tooltip(TTR("Go to parent folder"));
 
 	pathhb->add_child(dir_prev);
 	pathhb->add_child(dir_next);
@@ -1289,6 +1290,8 @@ EditorFileDialog::EditorFileDialog() {
 	dir_prev->connect("pressed", this, "_go_back");
 	dir_next->connect("pressed", this, "_go_forward");
 	dir_up->connect("pressed", this, "_go_up");
+
+	pathhb->add_child(memnew(Label(TTR("Path:"))));
 
 	dir = memnew(LineEdit);
 	pathhb->add_child(dir);
@@ -1299,6 +1302,7 @@ EditorFileDialog::EditorFileDialog() {
 	pathhb->add_child(refresh);
 
 	favorite = memnew(ToolButton);
+	favorite->set_flat(true);
 	favorite->set_toggle_mode(true);
 	favorite->connect("toggled", this, "_favorite_toggled");
 	pathhb->add_child(favorite);
@@ -1329,9 +1333,9 @@ EditorFileDialog::EditorFileDialog() {
 	makedir->connect("pressed", this, "_make_dir");
 	pathhb->add_child(makedir);
 
-	list_hb = memnew(HBoxContainer);
+	list_hb = memnew(HSplitContainer);
 
-	vbc->add_margin_child(TTR("Path:"), pathhb);
+	vbc->add_child(pathhb);
 	vbc->add_child(list_hb);
 	list_hb->set_v_size_flags(SIZE_EXPAND_FILL);
 
@@ -1364,35 +1368,41 @@ EditorFileDialog::EditorFileDialog() {
 
 	VBoxContainer *item_vb = memnew(VBoxContainer);
 	list_hb->add_child(item_vb);
-	item_vb->set_h_size_flags(SIZE_EXPAND_FILL);
+
+	HBoxContainer *preview_hb = memnew(HBoxContainer);
+	preview_hb->set_v_size_flags(SIZE_EXPAND_FILL);
+	item_vb->add_child(preview_hb);
+
+	VBoxContainer *list_vb = memnew(VBoxContainer);
+	list_vb->set_h_size_flags(SIZE_EXPAND_FILL);
+	list_vb->add_child(memnew(Label(TTR("Directories & Files:"))));
+	preview_hb->add_child(list_vb);
 
 	item_list = memnew(ItemList);
 	item_list->set_v_size_flags(SIZE_EXPAND_FILL);
-	item_vb->add_margin_child(TTR("Directories & Files:"), item_list, true);
-
-	HBoxContainer *filter_hb = memnew(HBoxContainer);
-	item_vb->add_child(filter_hb);
-
-	VBoxContainer *filter_vb = memnew(VBoxContainer);
-	filter_hb->add_child(filter_vb);
-	filter_vb->set_h_size_flags(SIZE_EXPAND_FILL);
+	list_vb->add_child(item_list);
 
 	preview_vb = memnew(VBoxContainer);
-	filter_hb->add_child(preview_vb);
+	preview_hb->add_child(preview_vb);
 	CenterContainer *prev_cc = memnew(CenterContainer);
 	preview_vb->add_margin_child(TTR("Preview:"), prev_cc);
 	preview = memnew(TextureRect);
 	prev_cc->add_child(preview);
 	preview_vb->hide();
 
+	HBoxContainer *filename_hbc = memnew(HBoxContainer);
+	filename_hbc->add_child(memnew(Label(TTR("File:"))));
 	file = memnew(LineEdit);
-	//add_child(file);
-	filter_vb->add_margin_child(TTR("File:"), file);
-
+	file->set_stretch_ratio(4);
+	file->set_h_size_flags(SIZE_EXPAND_FILL);
+	filename_hbc->add_child(file);
 	filter = memnew(OptionButton);
-	//add_child(filter);
-	filter_vb->add_margin_child(TTR("Filter:"), filter);
+	filter->set_stretch_ratio(3);
+	filter->set_h_size_flags(SIZE_EXPAND_FILL);
 	filter->set_clip_text(true); //too many extensions overflow it
+	filename_hbc->add_child(filter);
+	filename_hbc->set_h_size_flags(SIZE_EXPAND_FILL);
+	item_vb->add_child(filename_hbc);
 
 	dir_access = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 	access = ACCESS_RESOURCES;

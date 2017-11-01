@@ -189,16 +189,6 @@ Error HTTPClient::request(Method p_method, const String &p_url, const Vector<Str
 	return OK;
 }
 
-Error HTTPClient::send_body_text(const String &p_body) {
-
-	return OK;
-}
-
-Error HTTPClient::send_body_data(const PoolByteArray &p_body) {
-
-	return OK;
-}
-
 bool HTTPClient::has_response() const {
 
 	return response_headers.size() != 0;
@@ -297,7 +287,7 @@ Error HTTPClient::poll() {
 				case StreamPeerTCP::STATUS_CONNECTED: {
 					if (ssl) {
 						Ref<StreamPeerSSL> ssl = StreamPeerSSL::create();
-						Error err = ssl->connect_to_stream(tcp_connection, true, ssl_verify_host ? conn_host : String());
+						Error err = ssl->connect_to_stream(tcp_connection, ssl_verify_host, ssl_verify_host ? conn_host : String());
 						if (err != OK) {
 							close();
 							status = STATUS_SSL_HANDSHAKE_ERROR;
@@ -629,8 +619,6 @@ void HTTPClient::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_connection"), &HTTPClient::get_connection);
 	ClassDB::bind_method(D_METHOD("request_raw", "method", "url", "headers", "body"), &HTTPClient::request_raw);
 	ClassDB::bind_method(D_METHOD("request", "method", "url", "headers", "body"), &HTTPClient::request, DEFVAL(String()));
-	ClassDB::bind_method(D_METHOD("send_body_text", "body"), &HTTPClient::send_body_text);
-	ClassDB::bind_method(D_METHOD("send_body_data", "body"), &HTTPClient::send_body_data);
 	ClassDB::bind_method(D_METHOD("close"), &HTTPClient::close);
 
 	ClassDB::bind_method(D_METHOD("has_response"), &HTTPClient::has_response);

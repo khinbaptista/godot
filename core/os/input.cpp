@@ -58,6 +58,7 @@ void Input::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_action_just_released", "action"), &Input::is_action_just_released);
 	ClassDB::bind_method(D_METHOD("add_joy_mapping", "mapping", "update_existing"), &Input::add_joy_mapping, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("remove_joy_mapping", "guid"), &Input::remove_joy_mapping);
+	ClassDB::bind_method(D_METHOD("joy_connection_changed", "device", "connected", "name", "guid"), &Input::joy_connection_changed);
 	ClassDB::bind_method(D_METHOD("is_joy_known", "device"), &Input::is_joy_known);
 	ClassDB::bind_method(D_METHOD("get_joy_axis", "device", "axis"), &Input::get_joy_axis);
 	ClassDB::bind_method(D_METHOD("get_joy_name", "device"), &Input::get_joy_name);
@@ -80,7 +81,7 @@ void Input::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_mouse_button_mask"), &Input::get_mouse_button_mask);
 	ClassDB::bind_method(D_METHOD("set_mouse_mode", "mode"), &Input::set_mouse_mode);
 	ClassDB::bind_method(D_METHOD("get_mouse_mode"), &Input::get_mouse_mode);
-	ClassDB::bind_method(D_METHOD("warp_mouse_pos", "to"), &Input::warp_mouse_pos);
+	ClassDB::bind_method(D_METHOD("warp_mouse_position", "to"), &Input::warp_mouse_position);
 	ClassDB::bind_method(D_METHOD("action_press", "action"), &Input::action_press);
 	ClassDB::bind_method(D_METHOD("action_release", "action"), &Input::action_release);
 	ClassDB::bind_method(D_METHOD("set_custom_mouse_cursor", "image", "hotspot"), &Input::set_custom_mouse_cursor, DEFVAL(Vector2()));

@@ -910,10 +910,10 @@ void RigidBody2D::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("body_exited", PropertyInfo(Variant::OBJECT, "body")));
 	ADD_SIGNAL(MethodInfo("sleeping_state_changed"));
 
-	BIND_ENUM_CONSTANT(MODE_STATIC);
-	BIND_ENUM_CONSTANT(MODE_KINEMATIC);
 	BIND_ENUM_CONSTANT(MODE_RIGID);
+	BIND_ENUM_CONSTANT(MODE_STATIC);
 	BIND_ENUM_CONSTANT(MODE_CHARACTER);
+	BIND_ENUM_CONSTANT(MODE_KINEMATIC);
 
 	BIND_ENUM_CONSTANT(CCD_MODE_DISABLED);
 	BIND_ENUM_CONSTANT(CCD_MODE_CAST_RAY);
@@ -999,7 +999,7 @@ bool KinematicBody2D::move_and_collide(const Vector2 &p_motion, Collision &r_col
 
 Vector2 KinematicBody2D::move_and_slide(const Vector2 &p_linear_velocity, const Vector2 &p_floor_direction, float p_slope_stop_min_velocity, int p_max_slides, float p_floor_max_angle) {
 
-	Vector2 motion = (floor_velocity + p_linear_velocity) * get_fixed_process_delta_time();
+	Vector2 motion = (floor_velocity + p_linear_velocity) * get_physics_process_delta_time();
 	Vector2 lv = p_linear_velocity;
 
 	on_floor = false;

@@ -53,6 +53,49 @@
 #include "scene/resources/packed_scene.h"
 #include "scene/scene_string_names.h"
 
+void EditorResourceConversionPlugin::_bind_methods() {
+
+	MethodInfo mi;
+	mi.name = "_convert";
+	mi.return_val.type = Variant::OBJECT;
+	mi.return_val.class_name = "Resource";
+	mi.return_val.hint = PROPERTY_HINT_RESOURCE_TYPE;
+	mi.return_val.hint_string = "Resource";
+	mi.arguments.push_back(mi.return_val);
+	mi.arguments[0].name = "resource";
+
+	BIND_VMETHOD(mi)
+
+	mi.name = "_handles";
+	mi.return_val = PropertyInfo(Variant::BOOL, "");
+
+	BIND_VMETHOD(MethodInfo(Variant::BOOL, "_converts_to"));
+}
+
+String EditorResourceConversionPlugin::converts_to() const {
+
+	if (get_script_instance())
+		return get_script_instance()->call("_converts_to");
+
+	return "";
+}
+
+bool EditorResourceConversionPlugin::handles(const Ref<Resource> &p_resource) const {
+
+	if (get_script_instance())
+		return get_script_instance()->call("_handles", p_resource);
+
+	return false;
+}
+
+Ref<Resource> EditorResourceConversionPlugin::convert(const Ref<Resource> &p_resource) {
+
+	if (get_script_instance())
+		return get_script_instance()->call("_convert", p_resource);
+
+	return Ref<Resource>();
+}
+
 void CustomPropertyEditor::_notification(int p_what) {
 
 	if (p_what == NOTIFICATION_DRAW) {
@@ -213,6 +256,20 @@ void CustomPropertyEditor::_menu_option(int p_which) {
 				} break;
 				default: {
 
+					if (p_which >= CONVERT_BASE_ID) {
+
+						int to_type = p_which - CONVERT_BASE_ID;
+
+						Vector<Ref<EditorResourceConversionPlugin> > conversions = EditorNode::get_singleton()->find_resource_conversion_plugin(RES(v));
+
+						ERR_FAIL_INDEX(to_type, conversions.size());
+
+						Ref<Resource> new_res = conversions[to_type]->convert(v);
+
+						v = new_res;
+						emit_signal("variant_changed");
+						break;
+					}
 					ERR_FAIL_COND(inheritors_array.empty());
 
 					String intype = inheritors_array[p_which - TYPE_BASE_ID];
@@ -319,7 +376,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 			if (hint == PROPERTY_HINT_RANGE) {
 
 				int c = hint_text.get_slice_count(",");
-				float min = 0, max = 100, step = 1;
+				float min = 0, max = 100, step = type == Variant::REAL ? .01 : 1;
 				if (c >= 1) {
 
 					if (!hint_text.get_slice(",", 0).empty())
@@ -804,7 +861,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 			names.push_back(TTR("Assign"));
 			names.push_back(TTR("Clear"));
 
-			if (owner->is_class("Node") && (v.get_type() == Variant::NODE_PATH) && Object::cast_to<Node>(owner)->has_node(v))
+			if (owner && owner->is_class("Node") && (v.get_type() == Variant::NODE_PATH) && Object::cast_to<Node>(owner)->has_node(v))
 				names.push_back(TTR("Select Node"));
 
 			config_action_buttons(names);
@@ -900,6 +957,27 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 				if (paste_valid) {
 
 					menu->add_item(TTR("Paste"), OBJ_MENU_PASTE);
+				}
+			}
+
+			if (!RES(v).is_null()) {
+
+				Vector<Ref<EditorResourceConversionPlugin> > conversions = EditorNode::get_singleton()->find_resource_conversion_plugin(RES(v));
+				if (conversions.size()) {
+					menu->add_separator();
+				}
+				for (int i = 0; i < conversions.size(); i++) {
+					String what = conversions[i]->converts_to();
+					Ref<Texture> icon;
+					if (has_icon(what, "EditorIcons")) {
+
+						icon = get_icon(what, "EditorIcons");
+					} else {
+
+						icon = get_icon(what, "Resource");
+					}
+
+					menu->add_icon_item(icon, vformat(TTR("Convert To %s"), what), CONVERT_BASE_ID + i);
 				}
 			}
 
@@ -1688,19 +1766,19 @@ void CustomPropertyEditor::_focus_exit() {
 
 void CustomPropertyEditor::config_action_buttons(const List<String> &p_strings) {
 
-	int w = 100;
-	int h = 18;
-	int m = 5;
+	int cell_width = 60;
+	int cell_height = 25;
+	int cell_margin = 5;
 
-	set_size(Size2(w, m * 2 + (h + m) * p_strings.size()));
+	set_size(Size2(cell_margin + (cell_width + cell_margin) * p_strings.size(), (cell_margin * 2) + cell_height) * EDSCALE);
 
 	for (int i = 0; i < MAX_ACTION_BUTTONS; i++) {
 
 		if (i < p_strings.size()) {
 			action_buttons[i]->show();
 			action_buttons[i]->set_text(p_strings[i]);
-			action_buttons[i]->set_position(Point2(m, m + i * (h + m)));
-			action_buttons[i]->set_size(Size2(w - m * 2, h));
+			action_buttons[i]->set_position(Point2(cell_margin + (cell_width + cell_margin) * i, cell_margin) * EDSCALE);
+			action_buttons[i]->set_size(Size2(cell_width, cell_height - cell_margin * 2) * EDSCALE);
 			action_buttons[i]->set_flat(true);
 		} else {
 			action_buttons[i]->hide();
@@ -1710,13 +1788,14 @@ void CustomPropertyEditor::config_action_buttons(const List<String> &p_strings) 
 
 void CustomPropertyEditor::config_value_editors(int p_amount, int p_columns, int p_label_w, const List<String> &p_strings) {
 
-	int w = 80;
-	int h = 20;
-	int m = 10;
+	int cell_width = 95;
+	int cell_height = 25;
+	int cell_margin = 5;
+	int hor_spacing = 5; // Spacing between labels and their values
 
 	int rows = ((p_amount - 1) / p_columns) + 1;
 
-	set_size(Size2(m * (1 + p_columns) + (w + p_label_w) * p_columns, m * (1 + rows) + h * rows));
+	set_size(Size2(cell_margin + p_label_w + (cell_width + cell_margin + p_label_w) * p_columns, cell_margin + (cell_height + cell_margin) * rows) * EDSCALE);
 
 	for (int i = 0; i < MAX_VALUE_EDITORS; i++) {
 
@@ -1727,9 +1806,9 @@ void CustomPropertyEditor::config_value_editors(int p_amount, int p_columns, int
 			value_editor[i]->show();
 			value_label[i]->show();
 			value_label[i]->set_text(i < p_strings.size() ? p_strings[i] : String(""));
-			value_editor[i]->set_position(Point2(m + p_label_w + c * (w + m + p_label_w), m + r * (h + m)));
-			value_editor[i]->set_size(Size2(w, h));
-			value_label[i]->set_position(Point2(m + c * (w + m + p_label_w), m + r * (h + m)));
+			value_editor[i]->set_position(Point2(cell_margin + p_label_w + hor_spacing + (cell_width + cell_margin + p_label_w + hor_spacing) * c, cell_margin + (cell_height + cell_margin) * r) * EDSCALE);
+			value_editor[i]->set_size(Size2(cell_width, cell_height));
+			value_label[i]->set_position(Point2(cell_margin + (cell_width + cell_margin + p_label_w + hor_spacing) * c, cell_margin + (cell_height + cell_margin) * r) * EDSCALE);
 			value_editor[i]->set_editable(!read_only);
 		} else {
 			value_editor[i]->hide();
@@ -1811,7 +1890,7 @@ CustomPropertyEditor::CustomPropertyEditor() {
 
 	text_edit = memnew(TextEdit);
 	add_child(text_edit);
-	text_edit->set_area_as_parent_rect(5);
+	text_edit->set_anchors_and_margins_preset(Control::PRESET_WIDE, Control::PRESET_MODE_MINSIZE, 5);
 	text_edit->set_margin(MARGIN_BOTTOM, -30);
 
 	text_edit->hide();
@@ -1870,12 +1949,12 @@ CustomPropertyEditor::CustomPropertyEditor() {
 
 	spinbox = memnew(SpinBox);
 	add_child(spinbox);
-	spinbox->set_area_as_parent_rect(5);
+	spinbox->set_anchors_and_margins_preset(Control::PRESET_WIDE, Control::PRESET_MODE_MINSIZE, 5);
 	spinbox->connect("value_changed", this, "_range_modified");
 
 	slider = memnew(HSlider);
 	add_child(slider);
-	slider->set_area_as_parent_rect(5);
+	slider->set_anchors_and_margins_preset(Control::PRESET_WIDE, Control::PRESET_MODE_MINSIZE, 5);
 	slider->connect("value_changed", this, "_range_modified");
 
 	create_dialog = NULL;
@@ -2355,7 +2434,7 @@ bool PropertyEditor::_is_drop_valid(const Dictionary &p_drag_data, const Diction
 void PropertyEditor::_mark_drop_fields(TreeItem *p_at) {
 
 	if (_is_drop_valid(get_viewport()->gui_get_drag_data(), p_at->get_metadata(0)))
-		p_at->set_custom_bg_color(1, Color(0.7, 0.5, 0.2), true);
+		p_at->set_custom_bg_color(1, get_color("accent_color", "Editor"), true);
 
 	if (p_at->get_children()) {
 		_mark_drop_fields(p_at->get_children());
@@ -2368,7 +2447,7 @@ void PropertyEditor::_mark_drop_fields(TreeItem *p_at) {
 
 Variant PropertyEditor::get_drag_data_fw(const Point2 &p_point, Control *p_from) {
 
-	TreeItem *item = tree->get_item_at_pos(p_point);
+	TreeItem *item = tree->get_item_at_position(p_point);
 	if (!item)
 		return Variant();
 
@@ -2376,7 +2455,7 @@ Variant PropertyEditor::get_drag_data_fw(const Point2 &p_point, Control *p_from)
 	if (!d.has("name"))
 		return Variant();
 
-	int col = tree->get_column_at_pos(p_point);
+	int col = tree->get_column_at_position(p_point);
 	if (col == 0) {
 
 		Dictionary dp;
@@ -2407,11 +2486,11 @@ Variant PropertyEditor::get_drag_data_fw(const Point2 &p_point, Control *p_from)
 
 bool PropertyEditor::can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const {
 
-	TreeItem *item = tree->get_item_at_pos(p_point);
+	TreeItem *item = tree->get_item_at_position(p_point);
 	if (!item)
 		return false;
 
-	int col = tree->get_column_at_pos(p_point);
+	int col = tree->get_column_at_position(p_point);
 	if (col != 1)
 		return false;
 
@@ -2419,11 +2498,11 @@ bool PropertyEditor::can_drop_data_fw(const Point2 &p_point, const Variant &p_da
 }
 void PropertyEditor::drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) {
 
-	TreeItem *item = tree->get_item_at_pos(p_point);
+	TreeItem *item = tree->get_item_at_position(p_point);
 	if (!item)
 		return;
 
-	int col = tree->get_column_at_pos(p_point);
+	int col = tree->get_column_at_position(p_point);
 	if (col != 1)
 		return;
 
@@ -2507,10 +2586,10 @@ void PropertyEditor::_notification(int p_what) {
 		}
 	}
 
-	if (p_what == NOTIFICATION_FIXED_PROCESS) {
+	if (p_what == NOTIFICATION_PHYSICS_PROCESS) {
 
 		if (refresh_countdown > 0) {
-			refresh_countdown -= get_fixed_process_delta_time();
+			refresh_countdown -= get_physics_process_delta_time();
 			if (refresh_countdown <= 0) {
 				TreeItem *root = tree->get_root();
 				_refresh_item(root);
@@ -2880,7 +2959,7 @@ void PropertyEditor::update_tree() {
 		item->set_metadata(1, p.name);
 
 		if (draw_red)
-			item->set_custom_color(0, Color(0.8, 0.4, 0.20));
+			item->set_custom_color(0, get_color("error_color", "Editor"));
 
 		if (p.name == selected_property) {
 
@@ -2954,7 +3033,7 @@ void PropertyEditor::update_tree() {
 				if (p.hint == PROPERTY_HINT_SPRITE_FRAME || p.hint == PROPERTY_HINT_RANGE || p.hint == PROPERTY_HINT_EXP_RANGE) {
 
 					int c = p.hint_string.get_slice_count(",");
-					float min = 0, max = 100, step = 1;
+					float min = 0, max = 100, step = p.type == Variant::REAL ? .01 : 1;
 					if (c >= 1) {
 
 						min = p.hint_string.get_slice(",", 0).to_double();
@@ -3460,14 +3539,14 @@ void PropertyEditor::_draw_transparency(Object *t, const Rect2 &p_rect) {
 		return;
 
 	Color color = obj->get(ti->get_metadata(1));
-	Ref<Texture> arrow = tree->get_icon("select_arrow");
+	Ref<Texture> arrow = tree->get_icon("select_option");
 
 	// make a little space between consecutive color fields
 	Rect2 area = p_rect;
 	area.position.y += 1;
 	area.size.height -= 2;
 	area.size.width -= arrow->get_size().width + 5;
-	tree->draw_texture_rect(get_icon("Transparent", "EditorIcons"), area, true);
+	tree->draw_texture_rect(get_icon("GuiMiniCheckerboard", "EditorIcons"), area, true);
 	tree->draw_rect(area, color);
 }
 
@@ -4149,7 +4228,7 @@ PropertyEditor::PropertyEditor() {
 
 	tree->set_drag_forwarding(this);
 
-	set_fixed_process(true);
+	set_physics_process(true);
 
 	custom_editor = memnew(CustomPropertyEditor);
 	add_child(custom_editor);
@@ -4179,7 +4258,7 @@ PropertyEditor::PropertyEditor() {
 	use_filter = false;
 	subsection_selectable = false;
 	property_selectable = false;
-	show_type_icons = EDITOR_DEF("interface/show_type_icons", false);
+	show_type_icons = EDITOR_DEF("interface/editor/show_type_icons", false);
 }
 
 PropertyEditor::~PropertyEditor() {

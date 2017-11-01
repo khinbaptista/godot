@@ -588,6 +588,8 @@ void ThemeEditor::_notification(int p_what) {
 			time_left = 1.5;
 			_refresh_interval();
 		}
+	} else if (p_what == NOTIFICATION_THEME_CHANGED) {
+		theme_menu->set_icon(get_icon("Theme", "EditorIcons"));
 	}
 }
 
@@ -607,7 +609,7 @@ ThemeEditor::ThemeEditor() {
 
 	scroll = memnew(ScrollContainer);
 	add_child(scroll);
-	scroll->set_area_as_parent_rect(3);
+	scroll->set_anchors_and_margins_preset(Control::PRESET_WIDE, Control::PRESET_MODE_MINSIZE, 3);
 	scroll->set_margin(MARGIN_TOP, 30 * EDSCALE);
 	//scroll->set_enable_h_scroll(true);
 	scroll->set_enable_v_scroll(true);
@@ -621,13 +623,15 @@ ThemeEditor::ThemeEditor() {
 
 	main_vb = memnew(VBoxContainer);
 	panel->add_child(main_vb);
-	main_vb->set_area_as_parent_rect(4 * EDSCALE);
+	main_vb->set_anchors_and_margins_preset(Control::PRESET_WIDE, Control::PRESET_MODE_MINSIZE, 4 * EDSCALE);
 
 	HBoxContainer *hb_menu = memnew(HBoxContainer);
 	main_vb->add_child(hb_menu);
 
 	theme_menu = memnew(MenuButton);
-	theme_menu->set_text(TTR("Theme"));
+	theme_menu->set_text(TTR("Edit theme.."));
+	theme_menu->set_flat(false);
+	theme_menu->set_tooltip(TTR("Theme editing menu."));
 	theme_menu->get_popup()->add_item(TTR("Add Item"), POPUP_ADD);
 	theme_menu->get_popup()->add_item(TTR("Add Class Items"), POPUP_CLASS_ADD);
 	theme_menu->get_popup()->add_item(TTR("Remove Item"), POPUP_REMOVE);
@@ -648,7 +652,7 @@ ThemeEditor::ThemeEditor() {
 	main_hb->add_child(first_vb);
 
 	//main_panel->add_child(panel);
-	//panel->set_area_as_parent_rect();
+	//panel->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	//panel->set_margin( MARGIN_TOP,20 );
 
 	first_vb->add_child(memnew(Label("Label")));

@@ -138,7 +138,7 @@ Transform2D Camera2D::get_camera_transform() {
 
 		if (smoothing_enabled && !Engine::get_singleton()->is_editor_hint()) {
 
-			float c = smoothing * get_fixed_process_delta_time();
+			float c = smoothing * get_physics_process_delta_time();
 			smoothed_camera_pos = ((camera_pos - smoothed_camera_pos) * c) + smoothed_camera_pos;
 			ret_camera_pos = smoothed_camera_pos;
 			//camera_pos=camera_pos*(1.0-smoothing)+new_camera_pos*smoothing;
@@ -212,14 +212,14 @@ void Camera2D::_notification(int p_what) {
 
 	switch (p_what) {
 
-		case NOTIFICATION_FIXED_PROCESS: {
+		case NOTIFICATION_PHYSICS_PROCESS: {
 
 			_update_scroll();
 
 		} break;
 		case NOTIFICATION_TRANSFORM_CHANGED: {
 
-			if (!is_fixed_processing())
+			if (!is_physics_processing())
 				_update_scroll();
 
 		} break;
@@ -241,7 +241,7 @@ void Camera2D::_notification(int p_what) {
 			add_to_group(canvas_group_name);
 
 			if (Engine::get_singleton()->is_editor_hint()) {
-				set_fixed_process(false);
+				set_physics_process(false);
 			}
 
 			_update_scroll();
@@ -452,7 +452,7 @@ float Camera2D::get_drag_margin(Margin p_margin) const {
 	return drag_margin[p_margin];
 }
 
-Vector2 Camera2D::get_camera_pos() const {
+Vector2 Camera2D::get_camera_position() const {
 
 	return camera_pos;
 }
@@ -498,9 +498,9 @@ void Camera2D::set_follow_smoothing(float p_speed) {
 
 	smoothing = p_speed;
 	if (smoothing > 0 && !(is_inside_tree() && Engine::get_singleton()->is_editor_hint()))
-		set_fixed_process(true);
+		set_physics_process(true);
 	else
-		set_fixed_process(false);
+		set_physics_process(false);
 }
 
 float Camera2D::get_follow_smoothing() const {
@@ -673,7 +673,7 @@ void Camera2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_drag_margin", "margin", "drag_margin"), &Camera2D::set_drag_margin);
 	ClassDB::bind_method(D_METHOD("get_drag_margin", "margin"), &Camera2D::get_drag_margin);
 
-	ClassDB::bind_method(D_METHOD("get_camera_pos"), &Camera2D::get_camera_pos);
+	ClassDB::bind_method(D_METHOD("get_camera_position"), &Camera2D::get_camera_position);
 	ClassDB::bind_method(D_METHOD("get_camera_screen_center"), &Camera2D::get_camera_screen_center);
 
 	ClassDB::bind_method(D_METHOD("set_zoom", "zoom"), &Camera2D::set_zoom);
@@ -735,8 +735,8 @@ void Camera2D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "editor_draw_limits"), "set_limit_drawing_enabled", "is_limit_drawing_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "editor_draw_drag_margin"), "set_margin_drawing_enabled", "is_margin_drawing_enabled");
 
-	BIND_ENUM_CONSTANT(ANCHOR_MODE_DRAG_CENTER);
 	BIND_ENUM_CONSTANT(ANCHOR_MODE_FIXED_TOP_LEFT);
+	BIND_ENUM_CONSTANT(ANCHOR_MODE_DRAG_CENTER);
 }
 
 Camera2D::Camera2D() {

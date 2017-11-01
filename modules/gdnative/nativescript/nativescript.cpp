@@ -31,11 +31,11 @@
 
 #include "gdnative/gdnative.h"
 
-#include "global_constants.h"
+#include "core/global_constants.h"
+#include "core/project_settings.h"
 #include "io/file_access_encrypted.h"
 #include "os/file_access.h"
 #include "os/os.h"
-#include "project_settings.h"
 
 #include "scene/main/scene_tree.h"
 #include "scene/resources/scene_format_text.h"
@@ -137,7 +137,6 @@ bool NativeScript::can_instance() const {
 #endif
 }
 
-// TODO(karroffel): implement this
 Ref<Script> NativeScript::get_base_script() const {
 	NativeScriptDesc *script_data = get_script_desc();
 
@@ -269,10 +268,6 @@ bool NativeScript::is_tool() const {
 		return script_data->is_tool;
 
 	return false;
-}
-
-String NativeScript::get_node_type() const {
-	return ""; // NOTE(karroffel): uhm?
 }
 
 ScriptLanguage *NativeScript::get_language() const {
@@ -909,6 +904,9 @@ Script *NativeScriptLanguage::create_script() const {
 bool NativeScriptLanguage::has_named_classes() const {
 	return true;
 }
+bool NativeScriptLanguage::supports_builtin_mode() const {
+	return true;
+}
 int NativeScriptLanguage::find_function(const String &p_function, const String &p_code) const {
 	return -1;
 }
@@ -1010,17 +1008,15 @@ void NativeScriptLanguage::init_library(const Ref<GDNativeLibrary> &lib) {
 		if (!library_script_users.has(lib_path))
 			library_script_users.insert(lib_path, Set<NativeScript *>());
 
-		void *args[1] = {
-			(void *)&lib_path
-		};
+		void *proc_ptr;
 
-		// here the library registers all the classes and stuff.
-		gdn->call_native_raw(_init_call_type,
-				_init_call_name,
-				NULL,
-				1,
-				args,
-				NULL);
+		Error err = gdn->get_symbol(_init_call_name, proc_ptr);
+
+		if (err != OK) {
+			ERR_PRINT(String("No " + _init_call_name + " in \"" + lib_path + "\" found").utf8().get_data());
+		} else {
+			((void (*)(godot_string *))proc_ptr)((godot_string *)&lib_path);
+		}
 	} else {
 		// already initialized. Nice.
 	}
@@ -1053,13 +1049,13 @@ void NativeScriptLanguage::call_libraries_cb(const StringName &name) {
 	// library_gdnatives is modified only from the main thread, so it's safe not to use mutex here
 	for (Map<String, Ref<GDNative> >::Element *L = library_gdnatives.front(); L; L = L->next()) {
 		if (L->get()->is_initialized()) {
-			L->get()->call_native_raw(
-					_noarg_call_type,
-					name,
-					NULL,
-					0,
-					NULL,
-					NULL);
+
+			void *proc_ptr;
+			Error err = L->get()->get_symbol(name, proc_ptr);
+
+			if (!err) {
+				((void (*)())proc_ptr)();
+			}
 		}
 	}
 }
@@ -1142,12 +1138,14 @@ void NativeReloadNode::_notification(int p_what) {
 				};
 
 				// here the library registers all the classes and stuff.
-				L->get()->call_native_raw(NSL->_init_call_type,
-						NSL->_init_call_name,
-						NULL,
-						1,
-						args,
-						NULL);
+
+				void *proc_ptr;
+				Error err = L->get()->get_symbol("godot_nativescript_init", proc_ptr);
+				if (err != OK) {
+					ERR_PRINT(String("No godot_nativescript_init in \"" + L->key() + "\" found").utf8().get_data());
+				} else {
+					((void (*)(void *))proc_ptr)((void *)&L->key());
+				}
 
 				for (Map<String, Set<NativeScript *> >::Element *U = NSL->library_script_users.front(); U; U = U->next()) {
 					for (Set<NativeScript *>::Element *S = U->get().front(); S; S = S->next()) {

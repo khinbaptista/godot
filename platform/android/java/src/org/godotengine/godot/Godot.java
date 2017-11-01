@@ -191,6 +191,7 @@ public class Godot extends Activity implements SensorEventListener, IDownloaderC
 		protected void onMainPause() {}
 		protected void onMainResume() {}
 		protected void onMainDestroy() {}
+		protected boolean onMainBackPressed() { return false; }
 
 		protected void onGLDrawFrame(GL10 gl) {}
 		protected void onGLSurfaceChanged(GL10 gl, int width, int height) {} // singletons will always miss first onGLSurfaceChanged call
@@ -276,6 +277,21 @@ public class Godot extends Activity implements SensorEventListener, IDownloaderC
 		layout.addView(mView,new LayoutParams(LayoutParams.FILL_PARENT,LayoutParams.FILL_PARENT));
 		edittext.setView(mView);
 		io.setEdit(edittext);
+
+		final Godot godot = this;
+		mView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+				@Override
+				public void onGlobalLayout() {
+					Point fullSize = new Point();
+					godot.getWindowManager().getDefaultDisplay().getSize(fullSize);
+					Rect gameSize = new Rect();
+					godot.mView.getWindowVisibleDisplayFrame(gameSize);
+
+					final int keyboardHeight = fullSize.y - gameSize.bottom;
+					Log.d("GODOT", "setVirtualKeyboardHeight: " + keyboardHeight);
+					GodotLib.setVirtualKeyboardHeight(keyboardHeight);
+				}
+		});
 
 		// Ad layout
 		adLayout = new RelativeLayout(this);
@@ -752,9 +768,16 @@ public class Godot extends Activity implements SensorEventListener, IDownloaderC
 */
 
 	@Override public void onBackPressed() {
+		boolean shouldQuit = true;
+
+		for(int i=0;i<singleton_count;i++) {
+			if (singletons[i].onMainBackPressed()) {
+				shouldQuit = false;
+			}
+		}
 
 		System.out.printf("** BACK REQUEST!\n");
-		if (mView != null) {
+		if (shouldQuit && mView != null) {
 			mView.queueEvent(new Runnable() {
 				@Override
 				public void run() {

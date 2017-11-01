@@ -1,5 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
+import fnmatch
 import os
 import sys
 import re
@@ -22,6 +23,7 @@ flags = {
     'o': True,
     'i': False,
     'a': True,
+    'e': False,
 }
 flag_descriptions = {
     'c': 'Toggle colors when outputting.',
@@ -34,6 +36,7 @@ flag_descriptions = {
     'o': 'Toggle overall column.',
     'i': 'Toggle collapse of class items columns.',
     'a': 'Toggle showing all items.',
+    'e': 'Toggle hiding empty items.',
 }
 long_flags = {
     'colors': 'c',
@@ -63,6 +66,8 @@ long_flags = {
     'collapse': 'i',
 
     'all': 'a',
+
+    'empty': 'e',
 }
 table_columns = ['name', 'brief_description', 'description', 'methods', 'constants', 'members', 'signals']
 table_column_names = ['Name', 'Brief Desc.', 'Desc.', 'Methods', 'Constants', 'Members', 'Signals']
@@ -91,7 +96,7 @@ def validate_tag(elem, tag):
 
 
 def color(color, string):
-    if flags['c']:
+    if flags['c'] and terminal_supports_color():
         color_format = ''
         for code in colors[color]:
             color_format += '\033[' + str(code) + 'm'
@@ -105,6 +110,15 @@ ansi_escape = re.compile(r'\x1b[^m]*m')
 def nonescape_len(s):
     return len(ansi_escape.sub('', s))
 
+def terminal_supports_color():
+    p = sys.platform
+    supported_platform = p != 'Pocket PC' and (p != 'win32' or
+                                           'ANSICON' in os.environ)
+
+    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
+    if not supported_platform or not is_a_tty:
+        return False
+    return True
 
 ################################################################################
 #                                   Classes                                    #
@@ -134,8 +148,8 @@ class ClassStatusProgress:
             return self.to_colored_string()
 
     def to_colored_string(self, format='{has}/{total}', pad_format='{pad_described}{s}{pad_total}'):
-        ratio = self.described / self.total if self.total != 0 else 1
-        percent = round(100 * ratio)
+        ratio = float(self.described) / float(self.total) if self.total != 0 else 1
+        percent = int(round(100 * ratio))
         s = format.format(has=str(self.described), total=str(self.total), percent=str(percent))
         if self.described >= self.total:
             s = color('part_good', s)
@@ -182,6 +196,14 @@ class ClassStatus:
             ok = ok and self.progresses[k].is_ok()
         return ok
 
+    def is_empty(self):
+        sum = 0
+        for k in self.progresses:
+            if self.progresses[k].is_ok():
+                continue
+            sum += self.progresses[k].total
+        return sum < 1
+
     def make_output(self):
         output = {}
         output['name'] = color('name', self.name)
@@ -218,6 +240,7 @@ class ClassStatus:
 
         return output
 
+    @staticmethod
     def generate_for_class(c):
         status = ClassStatus()
         status.name = c.attrib['name']
@@ -227,15 +250,16 @@ class ClassStatus:
         for tag in list(c):
             if tag.tag in ['methods']:
                 for sub_tag in list(tag):
-                    methods.append(sub_tag.find('name'))
+                    methods.append(sub_tag.attrib['name'])
             if tag.tag in ['members']:
                 for sub_tag in list(tag):
                     try:
-                        methods.remove(sub_tag.find('setter'))
-                        methods.remove(sub_tag.find('getter'))
+                        if(sub_tag.attrib['setter'].startswith('_') == False):
+                            methods.remove(sub_tag.attrib['setter'])
+                        if(sub_tag.attrib['getter'].startswith('_') == False):
+                            methods.remove(sub_tag.attrib['getter'])
                     except:
                         pass
-
         for tag in list(c):
 
             if tag.tag == 'brief_description':
@@ -246,7 +270,7 @@ class ClassStatus:
 
             elif tag.tag in ['methods', 'signals']:
                 for sub_tag in list(tag):
-                    if sub_tag.find('name') in methods or tag.tag == 'signals':
+                    if sub_tag.attrib['name'] in methods or tag.tag == 'signals':
                         descr = sub_tag.find('description')
                         status.progresses[tag.tag].increment(len(descr.text.strip()) > 0)
             elif tag.tag in ['constants', 'members']:
@@ -274,17 +298,21 @@ input_class_list = []
 merged_file = ""
 
 for arg in sys.argv[1:]:
-    if arg.startswith('--'):
-        flags[long_flags[arg[2:]]] = not flags[long_flags[arg[2:]]]
-    elif arg.startswith('-'):
-        for f in arg[1:]:
-            flags[f] = not flags[f]
-    elif os.path.isdir(arg):
-        for f in os.listdir(arg):
-            if f.endswith('.xml'):
-                input_file_list.append(os.path.join(arg, f));
-    else:
-        input_class_list.append(arg)
+    try:
+        if arg.startswith('--'):
+            flags[long_flags[arg[2:]]] = not flags[long_flags[arg[2:]]]
+        elif arg.startswith('-'):
+            for f in arg[1:]:
+                flags[f] = not flags[f]
+        elif os.path.isdir(arg):
+            for f in os.listdir(arg):
+                if f.endswith('.xml'):
+                    input_file_list.append(os.path.join(arg, f));
+        else:
+            input_class_list.append(arg)
+    except KeyError:
+        print("Unknown command line flag: " + arg)
+        sys.exit(1)
 
 if flags['i']:
     for r in ['methods', 'constants', 'members', 'signals']:
@@ -356,8 +384,13 @@ for file in input_file_list:
 class_names.sort()
 
 if len(input_class_list) < 1:
-    input_class_list = class_names
+    input_class_list = ['*']
 
+filtered_classes = set()
+for pattern in input_class_list:
+    filtered_classes |= set(fnmatch.filter(class_names, pattern))
+filtered_classes = list(filtered_classes)
+filtered_classes.sort()
 
 ################################################################################
 #                               Make output table                              #
@@ -369,10 +402,7 @@ table_column_chars = '|'
 
 total_status = ClassStatus('Total')
 
-for cn in input_class_list:
-    if not cn in classes:
-        print('Cannot find class ' + cn + '!')
-        sys.exit(255)
+for cn in filtered_classes:
 
     c = classes[cn]
     validate_tag(c, 'class')
@@ -381,6 +411,9 @@ for cn in input_class_list:
     total_status = total_status + status
 
     if (flags['b'] and status.is_ok()) or (flags['g'] and not status.is_ok()) or (not flags['a']):
+        continue
+
+    if flags['e'] and status.is_empty():
         continue
 
     out = status.make_output()
@@ -436,7 +469,7 @@ for row_i, row in enumerate(table):
         if cell_i == 0:
             row_string += table_row_chars[3] + cell + table_row_chars[3] * (padding_needed - 1)
         else:
-            row_string += table_row_chars[3] * math.floor(padding_needed / 2) + cell + table_row_chars[3] * math.ceil((padding_needed / 2))
+            row_string += table_row_chars[3] * int(math.floor(float(padding_needed) / 2)) + cell + table_row_chars[3] * int(math.ceil(float(padding_needed) / 2))
         row_string += table_column_chars
 
     print(row_string)

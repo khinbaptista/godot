@@ -282,7 +282,6 @@ Error ResourceInteractiveLoaderBinary::parse_variant(Variant &r_v) {
 			property = _get_string();
 
 			NodePath np = NodePath(names, subnames, absolute, property);
-			//print_line("got path: "+String(np));
 
 			r_v = np;
 
@@ -640,7 +639,6 @@ Error ResourceInteractiveLoaderBinary::poll() {
 
 		String path = external_resources[s].path;
 
-		print_line("load external res: " + path);
 		if (remaps.has(path)) {
 			path = remaps[path];
 		}
@@ -705,8 +703,6 @@ Error ResourceInteractiveLoaderBinary::poll() {
 	f->seek(offset);
 
 	String t = get_unicode_string();
-
-	//	print_line("loading resource of type "+t+" path is "+path);
 
 	Object *obj = ClassDB::instance(t);
 	if (!obj) {
@@ -906,20 +902,6 @@ void ResourceInteractiveLoaderBinary::open(FileAccess *p_f) {
 		er.path = get_unicode_string();
 		external_resources.push_back(er);
 	}
-
-	//see if the exporter has different set of external resources for more efficient loading
-	/*
-	String preload_depts = "deps/"+res_path.md5_text();
-	if (Globals::get_singleton()->has(preload_depts)) {
-		external_resources.clear();
-		//ignore external resources and use these
-		NodePath depts=Globals::get_singleton()->get(preload_depts);
-		external_resources.resize(depts.get_name_count());
-		for(int i=0;i<depts.get_name_count();i++) {
-			external_resources[i].path=depts.get_name(i);
-		}
-		print_line(res_path+" - EXTERNAL RESOURCES: "+itos(external_resources.size()));
-	}*/
 
 	print_bl("ext resources: " + itos(ext_resources_size));
 	uint32_t int_resources_size = f->get_32();
@@ -1179,7 +1161,7 @@ Error ResourceFormatLoaderBinary::rename_dependencies(const String &p_path, cons
 
 	save_ustring(fw, get_ustring(f)); //type
 
-	size_t md_ofs = f->get_pos();
+	size_t md_ofs = f->get_position();
 	size_t importmd_ofs = f->get_64();
 	fw->store_64(0); //metadata offset
 
@@ -1227,7 +1209,7 @@ Error ResourceFormatLoaderBinary::rename_dependencies(const String &p_path, cons
 		save_ustring(fw, path);
 	}
 
-	int64_t size_diff = (int64_t)fw->get_pos() - (int64_t)f->get_pos();
+	int64_t size_diff = (int64_t)fw->get_position() - (int64_t)f->get_position();
 
 	//internal resources
 	uint32_t int_resources_size = f->get_32();
@@ -1880,7 +1862,7 @@ Error ResourceFormatSaverBinaryInstance::save(const String &p_path, const RES &p
 		} else {
 			save_unicode_string(r->get_path()); //actual external
 		}
-		ofs_pos.push_back(f->get_pos());
+		ofs_pos.push_back(f->get_position());
 		f->store_64(0); //offset in 64 bits
 	}
 
@@ -1891,7 +1873,7 @@ Error ResourceFormatSaverBinaryInstance::save(const String &p_path, const RES &p
 
 		ResourceData &rd = E->get();
 
-		ofs_table.push_back(f->get_pos());
+		ofs_table.push_back(f->get_position());
 		save_unicode_string(rd.type);
 		f->store_32(rd.properties.size());
 

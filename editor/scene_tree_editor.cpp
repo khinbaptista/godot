@@ -185,7 +185,7 @@ bool SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 	if (part_of_subscene) {
 
 		//item->set_selectable(0,marked_selectable);
-		item->set_custom_color(0, get_color("error_color", "Editor").linear_interpolate(get_color("warning_color", "Editor"), 0.4));
+		item->set_custom_color(0, get_color("disabled_font_color", "Editor"));
 
 	} else if (marked.has(p_node)) {
 
@@ -215,9 +215,9 @@ bool SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 		bool has_groups = p_node->has_persistent_groups();
 
 		if (has_connections && has_groups) {
-			item->add_button(0, get_icon("ConnectionAndGroups", "EditorIcons"), BUTTON_SIGNALS, false, TTR("Node has connection(s) and group(s)\nClick to show signals dock."));
+			item->add_button(0, get_icon("SignalsAndGroups", "EditorIcons"), BUTTON_SIGNALS, false, TTR("Node has connection(s) and group(s)\nClick to show signals dock."));
 		} else if (has_connections) {
-			item->add_button(0, get_icon("Connect", "EditorIcons"), BUTTON_SIGNALS, false, TTR("Node has connections.\nClick to show signals dock."));
+			item->add_button(0, get_icon("Signals", "EditorIcons"), BUTTON_SIGNALS, false, TTR("Node has connections.\nClick to show signals dock."));
 		} else if (has_groups) {
 			item->add_button(0, get_icon("Groups", "EditorIcons"), BUTTON_GROUPS, false, TTR("Node is in group(s).\nClick to show groups dock."));
 		}
@@ -345,7 +345,7 @@ void SceneTreeEditor::_update_visibility_color(Node *p_node, TreeItem *p_item) {
 		Color color(1, 1, 1, 1);
 		bool visible_on_screen = p_node->call("is_visible_in_tree");
 		if (!visible_on_screen) {
-			color = Color(0.6, 0.6, 0.6, 1);
+			color.a = 0.6;
 		}
 		int idx = p_item->get_button_by_id(0, BUTTON_VISIBILITY);
 		p_item->set_button_color(0, idx, color);
@@ -817,11 +817,11 @@ bool SceneTreeEditor::can_drop_data_fw(const Point2 &p_point, const Variant &p_d
 	if (!d.has("type"))
 		return false;
 
-	TreeItem *item = tree->get_item_at_pos(p_point);
+	TreeItem *item = tree->get_item_at_position(p_point);
 	if (!item)
 		return false;
 
-	int section = tree->get_drop_section_at_pos(p_point);
+	int section = tree->get_drop_section_at_position(p_point);
 	if (section < -1 || (section == -1 && !item->get_parent()))
 		return false;
 
@@ -860,10 +860,10 @@ void SceneTreeEditor::drop_data_fw(const Point2 &p_point, const Variant &p_data,
 	if (!can_drop_data_fw(p_point, p_data, p_from))
 		return;
 
-	TreeItem *item = tree->get_item_at_pos(p_point);
+	TreeItem *item = tree->get_item_at_position(p_point);
 	if (!item)
 		return;
-	int section = tree->get_drop_section_at_pos(p_point);
+	int section = tree->get_drop_section_at_position(p_point);
 	if (section < -1)
 		return;
 
@@ -950,7 +950,7 @@ void SceneTreeEditor::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("nodes_rearranged", PropertyInfo(Variant::ARRAY, "paths"), PropertyInfo(Variant::NODE_PATH, "to_path"), PropertyInfo(Variant::INT, "type")));
 	ADD_SIGNAL(MethodInfo("files_dropped", PropertyInfo(Variant::POOL_STRING_ARRAY, "files"), PropertyInfo(Variant::NODE_PATH, "to_path"), PropertyInfo(Variant::INT, "type")));
 	ADD_SIGNAL(MethodInfo("script_dropped", PropertyInfo(Variant::STRING, "file"), PropertyInfo(Variant::NODE_PATH, "to_path")));
-	ADD_SIGNAL(MethodInfo("rmb_pressed", PropertyInfo(Variant::VECTOR2, "pos")));
+	ADD_SIGNAL(MethodInfo("rmb_pressed", PropertyInfo(Variant::VECTOR2, "position")));
 
 	ADD_SIGNAL(MethodInfo("open"));
 	ADD_SIGNAL(MethodInfo("open_script"));

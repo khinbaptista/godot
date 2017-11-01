@@ -279,7 +279,7 @@ Vector3 Basis::get_signed_scale() const {
 
 // Decomposes a Basis into a rotation-reflection matrix (an element of the group O(3)) and a positive scaling matrix as B = O.S.
 // Returns the rotation-reflection matrix via reference argument, and scaling information is returned as a Vector3.
-// This (internal) function is too specıfıc and named too ugly to expose to users, and probably there's no need to do so.
+// This (internal) function is too specific and named too ugly to expose to users, and probably there's no need to do so.
 Vector3 Basis::rotref_posscale_decomposition(Basis &rotref) const {
 #ifdef MATH_CHECKS
 	ERR_FAIL_COND_V(determinant() == 0, Vector3());
@@ -371,31 +371,30 @@ Vector3 Basis::get_euler_xyz() const {
 #ifdef MATH_CHECKS
 	ERR_FAIL_COND_V(is_rotation() == false, euler);
 #endif
-	euler.y = Math::asin(elements[0][2]);
-	if (euler.y < Math_PI * 0.5) {
-		if (euler.y > -Math_PI * 0.5) {
+	real_t sy = elements[0][2];
+	if (sy < 1.0) {
+		if (sy > -1.0) {
 			// is this a pure Y rotation?
 			if (elements[1][0] == 0.0 && elements[0][1] == 0.0 && elements[1][2] == 0 && elements[2][1] == 0 && elements[1][1] == 1) {
-				// return the simplest form
+				// return the simplest form (human friendlier in editor and scripts)
 				euler.x = 0;
 				euler.y = atan2(elements[0][2], elements[0][0]);
 				euler.z = 0;
 			} else {
 				euler.x = Math::atan2(-elements[1][2], elements[2][2]);
+				euler.y = Math::asin(sy);
 				euler.z = Math::atan2(-elements[0][1], elements[0][0]);
 			}
-
 		} else {
-			real_t r = Math::atan2(elements[1][0], elements[1][1]);
+			euler.x = -Math::atan2(elements[0][1], elements[1][1]);
+			euler.y = -Math_PI / 2.0;
 			euler.z = 0.0;
-			euler.x = euler.z - r;
 		}
 	} else {
-		real_t r = Math::atan2(elements[0][1], elements[1][1]);
-		euler.z = 0;
-		euler.x = r - euler.z;
+		euler.x = Math::atan2(elements[0][1], elements[1][1]);
+		euler.y = Math_PI / 2.0;
+		euler.z = 0.0;
 	}
-
 	return euler;
 }
 
@@ -445,7 +444,7 @@ Vector3 Basis::get_euler_yxz() const {
 		if (m12 > -1) {
 			// is this a pure X rotation?
 			if (elements[1][0] == 0 && elements[0][1] == 0 && elements[0][2] == 0 && elements[2][0] == 0 && elements[0][0] == 1) {
-				// return the simplest form
+				// return the simplest form (human friendlier in editor and scripts)
 				euler.x = atan2(-m12, elements[1][1]);
 				euler.y = 0;
 				euler.z = 0;
@@ -538,7 +537,7 @@ Basis::operator String() const {
 	return mtx;
 }
 
-Basis::operator Quat() const {
+Quat Basis::get_quat() const {
 	//commenting this check because precision issues cause it to fail when it shouldn't
 	//#ifdef MATH_CHECKS
 	//ERR_FAIL_COND_V(is_rotation() == false, Quat());
@@ -710,12 +709,7 @@ void Basis::get_axis_angle(Vector3 &r_axis, real_t &r_angle) const {
 	r_angle = angle;
 }
 
-Basis::Basis(const Vector3 &p_euler) {
-
-	set_euler(p_euler);
-}
-
-Basis::Basis(const Quat &p_quat) {
+void Basis::set_quat(const Quat &p_quat) {
 
 	real_t d = p_quat.length_squared();
 	real_t s = 2.0 / d;
@@ -749,8 +743,4 @@ void Basis::set_axis_angle(const Vector3 &p_axis, real_t p_phi) {
 	elements[2][0] = p_axis.z * p_axis.x * (1.0 - cosine) - p_axis.y * sine;
 	elements[2][1] = p_axis.y * p_axis.z * (1.0 - cosine) + p_axis.x * sine;
 	elements[2][2] = axis_sq.z + cosine * (1.0 - axis_sq.z);
-}
-
-Basis::Basis(const Vector3 &p_axis, real_t p_phi) {
-	set_axis_angle(p_axis, p_phi);
 }

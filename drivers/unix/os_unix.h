@@ -54,11 +54,11 @@ protected:
 	virtual int get_audio_driver_count() const;
 	virtual const char *get_audio_driver_name(int p_driver) const;
 
+	virtual void initialize_logger();
 	virtual void initialize_core();
 	virtual int unix_initialize_audio(int p_audio_driver);
 	//virtual void initialize(int p_video_driver,int p_audio_driver);
 
-	//virtual void finalize();
 	virtual void finalize_core();
 
 	String stdin_buf;
@@ -66,10 +66,6 @@ protected:
 	String get_global_settings_path() const;
 
 public:
-	virtual void print_error(const char *p_function, const char *p_file, int p_line, const char *p_code, const char *p_rationale, ErrorType p_type = ERR_ERROR);
-
-	virtual void print(const char *p_format, ...);
-	virtual void vprint(const char *p_format, va_list p_list, bool p_stder = false);
 	virtual void alert(const String &p_alert, const String &p_title = "ALERT!");
 	virtual String get_stdin_string(bool p_block);
 
@@ -101,7 +97,7 @@ public:
 	virtual void delay_usec(uint32_t p_usec) const;
 	virtual uint64_t get_ticks_usec() const;
 
-	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL);
+	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL, bool read_stderr = false);
 	virtual Error kill(const ProcessID &p_pid);
 	virtual int get_process_id() const;
 
@@ -118,6 +114,12 @@ public:
 	virtual String get_data_dir() const;
 
 	//virtual void run( MainLoop * p_main_loop );
+};
+
+class UnixTerminalLogger : public StdLogger {
+public:
+	virtual void log_error(const char *p_function, const char *p_file, int p_line, const char *p_code, const char *p_rationale, ErrorType p_type = ERR_ERROR);
+	virtual ~UnixTerminalLogger();
 };
 
 #endif

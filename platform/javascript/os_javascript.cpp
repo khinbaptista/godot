@@ -85,6 +85,10 @@ void OS_JavaScript::initialize_core() {
 	FileAccess::make_default<FileAccessBufferedFA<FileAccessUnix> >(FileAccess::ACCESS_RESOURCES);
 }
 
+void OS_JavaScript::initialize_logger() {
+	_set_logger(memnew(StdLogger));
+}
+
 void OS_JavaScript::set_opengl_extensions(const char *p_gl_extensions) {
 
 	ERR_FAIL_COND(!p_gl_extensions);
@@ -172,14 +176,14 @@ static EM_BOOL _mousebutton_callback(int event_type, const EmscriptenMouseEvent 
 		if (!is_canvas_focused()) {
 			focus_canvas();
 		}
-		mask |= 1 << ev->get_button_index();
-	} else if (mask & (1 << ev->get_button_index())) {
-		mask &= ~(1 << ev->get_button_index());
+		mask |= ev->get_button_index();
+	} else if (mask & ev->get_button_index()) {
+		mask &= ~ev->get_button_index();
 	} else {
 		// release event, but press was outside the canvas, so ignore
 		return false;
 	}
-	ev->set_button_mask(mask >> 1);
+	ev->set_button_mask(mask);
 
 	_input->parse_input_event(ev);
 	// prevent selection dragging
@@ -200,7 +204,7 @@ static EM_BOOL _mousemove_callback(int event_type, const EmscriptenMouseEvent *m
 	Ref<InputEventMouseMotion> ev;
 	ev.instance();
 	dom2godot_mod(mouse_event, ev);
-	ev->set_button_mask(input_mask >> 1);
+	ev->set_button_mask(input_mask);
 
 	ev->set_position(pos);
 	ev->set_global_position(ev->get_position());
@@ -227,7 +231,7 @@ static EM_BOOL _wheel_callback(int event_type, const EmscriptenWheelEvent *wheel
 
 	Ref<InputEventMouseButton> ev;
 	ev.instance();
-	ev->set_button_mask(_input->get_mouse_button_mask() >> 1);
+	ev->set_button_mask(_input->get_mouse_button_mask());
 	ev->set_position(_input->get_mouse_position());
 	ev->set_global_position(ev->get_position());
 
@@ -291,7 +295,7 @@ static EM_BOOL _touchpress_callback(int event_type, const EmscriptenTouchEvent *
 
 		Ref<InputEventMouseButton> ev_mouse;
 		ev_mouse.instance();
-		ev_mouse->set_button_mask(_input->get_mouse_button_mask() >> 1);
+		ev_mouse->set_button_mask(_input->get_mouse_button_mask());
 		dom2godot_mod(touch_event, ev_mouse);
 
 		const EmscriptenTouchPoint &first_touch = touch_event->touches[lowest_id_index];
@@ -334,7 +338,7 @@ static EM_BOOL _touchmove_callback(int event_type, const EmscriptenTouchEvent *t
 		Ref<InputEventMouseMotion> ev_mouse;
 		ev_mouse.instance();
 		dom2godot_mod(touch_event, ev_mouse);
-		ev_mouse->set_button_mask(_input->get_mouse_button_mask() >> 1);
+		ev_mouse->set_button_mask(_input->get_mouse_button_mask());
 
 		const EmscriptenTouchPoint &first_touch = touch_event->touches[lowest_id_index];
 		ev_mouse->set_position(Point2(first_touch.canvasX, first_touch.canvasY));
@@ -821,7 +825,7 @@ bool OS_JavaScript::main_loop_iterate() {
 	if (!main_loop)
 		return false;
 
-	if (time_to_save_sync >= 0) {
+	if (idbfs_available && time_to_save_sync >= 0) {
 		int64_t newtime = get_ticks_msec();
 		int64_t elapsed = newtime - last_sync_time;
 		last_sync_time = newtime;
@@ -911,10 +915,10 @@ String OS_JavaScript::get_executable_path() const {
 
 void OS_JavaScript::_close_notification_funcs(const String &p_file, int p_flags) {
 
-	print_line("close " + p_file + " flags " + itos(p_flags));
-	if (p_file.begins_with("/userfs") && p_flags & FileAccess::WRITE) {
-		static_cast<OS_JavaScript *>(get_singleton())->last_sync_time = OS::get_singleton()->get_ticks_msec();
-		static_cast<OS_JavaScript *>(get_singleton())->time_to_save_sync = 5000; //five seconds since last save
+	OS_JavaScript *os = static_cast<OS_JavaScript *>(get_singleton());
+	if (os->idbfs_available && p_file.begins_with("/userfs") && p_flags & FileAccess::WRITE) {
+		os->last_sync_time = OS::get_singleton()->get_ticks_msec();
+		os->time_to_save_sync = 5000; //five seconds since last save
 	}
 }
 
@@ -989,6 +993,16 @@ bool OS_JavaScript::_check_internal_feature_support(const String &p_feature) {
 	return p_feature == "web" || p_feature == "s3tc"; // TODO check for these features really being available
 }
 
+void OS_JavaScript::set_idbfs_available(bool p_idbfs_available) {
+
+	idbfs_available = p_idbfs_available;
+}
+
+bool OS_JavaScript::is_userfs_persistent() const {
+
+	return idbfs_available;
+}
+
 OS_JavaScript::OS_JavaScript(const char *p_execpath, GetDataDirFunc p_get_data_dir_func) {
 	set_cmdline(p_execpath, get_cmdline_args());
 	main_loop = NULL;
@@ -1000,6 +1014,7 @@ OS_JavaScript::OS_JavaScript(const char *p_execpath, GetDataDirFunc p_get_data_d
 	get_data_dir_func = p_get_data_dir_func;
 	FileAccessUnix::close_notification_func = _close_notification_funcs;
 
+	idbfs_available = false;
 	time_to_save_sync = -1;
 }
 

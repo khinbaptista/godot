@@ -62,7 +62,7 @@ Error FileAccessCompressed::open_after_magic(FileAccess *p_base) {
 	block_size = f->get_32();
 	read_total = f->get_32();
 	int bc = (read_total / block_size) + 1;
-	int acc_ofs = f->get_pos() + bc * 4;
+	int acc_ofs = f->get_position() + bc * 4;
 	int max_bs = 0;
 	for (int i = 0; i < bc; i++) {
 
@@ -232,7 +232,7 @@ void FileAccessCompressed::seek_end(int64_t p_position) {
 		seek(read_total + p_position);
 	}
 }
-size_t FileAccessCompressed::get_pos() const {
+size_t FileAccessCompressed::get_position() const {
 
 	ERR_FAIL_COND_V(!f, 0);
 	if (writing) {
@@ -336,6 +336,13 @@ int FileAccessCompressed::get_buffer(uint8_t *p_dst, int p_length) const {
 Error FileAccessCompressed::get_error() const {
 
 	return read_eof ? ERR_FILE_EOF : OK;
+}
+
+void FileAccessCompressed::flush() {
+	ERR_FAIL_COND(!f);
+	ERR_FAIL_COND(!writing);
+
+	// compressed files keep data in memory till close()
 }
 
 void FileAccessCompressed::store_8(uint8_t p_dest) {

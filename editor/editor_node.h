@@ -605,9 +605,10 @@ private:
 
 	void _start_dimming(bool p_dimming);
 	void _dim_timeout();
-	void _check_gui_base_size();
 
 	void _license_tree_selected();
+
+	Vector<Ref<EditorResourceConversionPlugin> > resource_conversion_plugins;
 
 protected:
 	void _notification(int p_what);
@@ -777,6 +778,10 @@ public:
 	~EditorNode();
 	void get_singleton(const char *arg1, bool arg2);
 
+	void add_resource_conversion_plugin(const Ref<EditorResourceConversionPlugin> &p_plugin);
+	void remove_resource_conversion_plugin(const Ref<EditorResourceConversionPlugin> &p_plugin);
+	Vector<Ref<EditorResourceConversionPlugin> > find_resource_conversion_plugin(const Ref<Resource> &p_for_resource);
+
 	static void add_init_callback(EditorNodeInitCallback p_callback) { _init_callbacks.push_back(p_callback); }
 	static void add_build_callback(EditorBuildCallback p_callback);
 };
@@ -807,9 +812,9 @@ public:
 
 	void make_visible(bool p_visible);
 	void edit(Object *p_object);
-	bool forward_gui_input(const Transform2D &p_canvas_xform, const Ref<InputEvent> &p_event);
+	bool forward_gui_input(const Ref<InputEvent> &p_event);
 	bool forward_spatial_gui_input(Camera *p_camera, const Ref<InputEvent> &p_event, bool serve_when_force_input_enabled);
-	void forward_draw_over_canvas(const Transform2D &p_canvas_xform, Control *p_canvas);
+	void forward_draw_over_canvas(Control *p_canvas);
 	void add_plugin(EditorPlugin *p_plugin);
 	void clear();
 	bool empty();

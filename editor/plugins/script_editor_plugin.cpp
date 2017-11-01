@@ -467,6 +467,8 @@ void ScriptEditor::_update_recent_scripts() {
 
 	recent_scripts->add_separator();
 	recent_scripts->add_shortcut(ED_SHORTCUT("script_editor/clear_recent", TTR("Clear Recent Files")));
+
+	recent_scripts->set_as_minsize();
 }
 
 void ScriptEditor::_open_recent_script(int p_idx) {
@@ -474,7 +476,7 @@ void ScriptEditor::_open_recent_script(int p_idx) {
 	// clear button
 	if (p_idx == recent_scripts->get_item_count() - 1) {
 		previous_scripts.clear();
-		_update_recent_scripts();
+		call_deferred("_update_recent_scripts");
 		return;
 	}
 
@@ -1167,6 +1169,8 @@ void ScriptEditor::_notification(int p_what) {
 
 			script_forward->set_icon(get_icon("Forward", "EditorIcons"));
 			script_back->set_icon(get_icon("Back", "EditorIcons"));
+
+			recent_scripts->set_as_minsize();
 		} break;
 
 		default:
@@ -1278,7 +1282,11 @@ void ScriptEditor::_members_overview_selected(int p_idx) {
 	if (!se) {
 		return;
 	}
-	se->goto_line(members_overview->get_item_metadata(p_idx));
+	Dictionary state;
+	state["scroll_position"] = members_overview->get_item_metadata(p_idx);
+	state["column"] = 0;
+	state["row"] = members_overview->get_item_metadata(p_idx);
+	se->set_edit_state(state);
 	se->ensure_focus();
 }
 
@@ -1403,8 +1411,10 @@ void ScriptEditor::_update_members_overview() {
 void ScriptEditor::_update_help_overview_visibility() {
 
 	int selected = tab_container->get_current_tab();
-	if (selected < 0 || selected >= tab_container->get_child_count())
+	if (selected < 0 || selected >= tab_container->get_child_count()) {
+		help_overview->set_visible(false);
 		return;
+	}
 
 	Node *current = tab_container->get_child(tab_container->get_current_tab());
 	EditorHelp *se = Object::cast_to<EditorHelp>(current);
@@ -1421,6 +1431,7 @@ void ScriptEditor::_update_help_overview_visibility() {
 }
 
 void ScriptEditor::_update_help_overview() {
+	help_overview->clear();
 
 	int selected = tab_container->get_current_tab();
 	if (selected < 0 || selected >= tab_container->get_child_count())
@@ -1432,16 +1443,11 @@ void ScriptEditor::_update_help_overview() {
 		return;
 	}
 
-	help_overview->clear();
-
 	Vector<Pair<String, int> > sections = se->get_sections();
 	for (int i = 0; i < sections.size(); i++) {
 		help_overview->add_item(sections[i].first);
 		help_overview->set_item_metadata(i, sections[i].second);
 	}
-}
-
-void _help_overview_selected(int p_idx) {
 }
 
 void ScriptEditor::_update_script_colors() {
@@ -1589,6 +1595,8 @@ void ScriptEditor::_update_script_names() {
 
 	_update_members_overview();
 	_update_help_overview();
+	_update_members_overview_visibility();
+	_update_help_overview_visibility();
 	_update_script_colors();
 }
 
@@ -1683,9 +1691,8 @@ bool ScriptEditor::edit(const Ref<Script> &p_script, int p_line, int p_col, bool
 	}
 	ERR_FAIL_COND_V(!se, false);
 
-	// load script before adding as child else editor will crash at theme loading
-	se->set_edited_script(p_script);
 	tab_container->add_child(se);
+	se->set_edited_script(p_script);
 	se->set_tooltip_request_func("_get_debug_tooltip", this);
 	if (se->get_edit_menu()) {
 		se->get_edit_menu()->hide();
@@ -2237,6 +2244,7 @@ void ScriptEditor::_bind_methods() {
 	ClassDB::bind_method("_live_auto_reload_running_scripts", &ScriptEditor::_live_auto_reload_running_scripts);
 	ClassDB::bind_method("_unhandled_input", &ScriptEditor::_unhandled_input);
 	ClassDB::bind_method("_script_changed", &ScriptEditor::_script_changed);
+	ClassDB::bind_method("_update_recent_scripts", &ScriptEditor::_update_recent_scripts);
 
 	ClassDB::bind_method(D_METHOD("get_current_script"), &ScriptEditor::_get_current_script);
 	ClassDB::bind_method(D_METHOD("get_open_scripts"), &ScriptEditor::_get_open_scripts);
@@ -2352,7 +2360,7 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	debug_menu->get_popup()->add_shortcut(ED_SHORTCUT("debugger/step_into", TTR("Step Into"), KEY_F11), DEBUG_STEP);
 	debug_menu->get_popup()->add_separator();
 	debug_menu->get_popup()->add_shortcut(ED_SHORTCUT("debugger/break", TTR("Break")), DEBUG_BREAK);
-	debug_menu->get_popup()->add_shortcut(ED_SHORTCUT("debugger/continue", TTR("Continue")), DEBUG_CONTINUE);
+	debug_menu->get_popup()->add_shortcut(ED_SHORTCUT("debugger/continue", TTR("Continue"), KEY_F12), DEBUG_CONTINUE);
 	debug_menu->get_popup()->add_separator();
 	//debug_menu->get_popup()->add_check_item("Show Debugger",DEBUG_SHOW);
 	debug_menu->get_popup()->add_check_shortcut(ED_SHORTCUT("debugger/keep_debugger_open", TTR("Keep Debugger Open")), DEBUG_SHOW_KEEP_OPEN);

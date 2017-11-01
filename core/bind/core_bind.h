@@ -204,6 +204,7 @@ public:
 	bool has_virtual_keyboard() const;
 	void show_virtual_keyboard(const String &p_existing_text = "");
 	void hide_virtual_keyboard();
+	int get_virtual_keyboard_height();
 
 	void print_resources_in_use(bool p_short = false);
 	void print_all_resources(const String &p_to_file);
@@ -266,6 +267,8 @@ public:
 
 	bool can_draw() const;
 
+	bool is_userfs_persistent() const;
+
 	bool is_stdout_verbose() const;
 
 	int get_processor_count() const;
@@ -314,6 +317,8 @@ public:
 	PowerState get_power_state();
 	int get_power_seconds_left();
 	int get_power_percent_left();
+
+	bool has_feature(const String &p_feature) const;
 
 	static _OS *get_singleton() { return singleton; }
 
@@ -399,7 +404,7 @@ public:
 
 	void seek(int64_t p_position); ///< seek to a given position
 	void seek_end(int64_t p_position = 0); ///< seek from the end of file
-	int64_t get_pos() const; ///< get position in the file
+	int64_t get_position() const; ///< get position in the file
 	int64_t get_len() const; ///< get size of the file
 
 	bool eof_reached() const; ///< reading passed EOF
@@ -661,7 +666,7 @@ public:
 
 	Dictionary get_version_info() const;
 
-	bool is_in_fixed_frame() const;
+	bool is_in_physics_frame() const;
 
 	void set_editor_hint(bool p_enabled);
 	bool is_editor_hint() const;

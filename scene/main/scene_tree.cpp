@@ -85,6 +85,11 @@ void SceneTree::tree_changed() {
 	emit_signal(tree_changed_name);
 }
 
+void SceneTree::node_added(Node *p_node) {
+
+	emit_signal(node_added_name, p_node);
+}
+
 void SceneTree::node_removed(Node *p_node) {
 
 	if (current_scene == p_node) {
@@ -446,12 +451,12 @@ bool SceneTree::iteration(float p_time) {
 	_flush_transform_notifications();
 
 	MainLoop::iteration(p_time);
-	fixed_process_time = p_time;
+	physics_process_time = p_time;
 
-	emit_signal("fixed_frame");
+	emit_signal("physics_frame");
 
-	_notify_group_pause("fixed_process_internal", Node::NOTIFICATION_INTERNAL_FIXED_PROCESS);
-	_notify_group_pause("fixed_process", Node::NOTIFICATION_FIXED_PROCESS);
+	_notify_group_pause("physics_process_internal", Node::NOTIFICATION_INTERNAL_PHYSICS_PROCESS);
+	_notify_group_pause("physics_process", Node::NOTIFICATION_PHYSICS_PROCESS);
 	_flush_ugc();
 	MessageQueue::get_singleton()->flush(); //small little hack
 	_flush_transform_notifications();
@@ -650,7 +655,7 @@ void SceneTree::set_quit_on_go_back(bool p_enable) {
 
 bool SceneTree::is_node_being_edited(const Node *p_node) const {
 
-	return Engine::get_singleton()->is_editor_hint() && edited_scene_root && edited_scene_root->is_a_parent_of(p_node);
+	return Engine::get_singleton()->is_editor_hint() && edited_scene_root && (edited_scene_root->is_a_parent_of(p_node) || edited_scene_root == p_node);
 }
 #endif
 
@@ -1172,7 +1177,7 @@ void SceneTree::_update_root_rect() {
 	}
 }
 
-void SceneTree::set_screen_stretch(StretchMode p_mode, StretchAspect p_aspect, const Size2 p_minsize, int p_shrink) {
+void SceneTree::set_screen_stretch(StretchMode p_mode, StretchAspect p_aspect, const Size2 p_minsize, real_t p_shrink) {
 
 	stretch_mode = p_mode;
 	stretch_aspect = p_aspect;
@@ -2189,12 +2194,13 @@ void SceneTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_server_disconnected"), &SceneTree::_server_disconnected);
 
 	ADD_SIGNAL(MethodInfo("tree_changed"));
+	ADD_SIGNAL(MethodInfo("node_added", PropertyInfo(Variant::OBJECT, "node")));
 	ADD_SIGNAL(MethodInfo("node_removed", PropertyInfo(Variant::OBJECT, "node")));
 	ADD_SIGNAL(MethodInfo("screen_resized"));
 	ADD_SIGNAL(MethodInfo("node_configuration_warning_changed", PropertyInfo(Variant::OBJECT, "node")));
 
 	ADD_SIGNAL(MethodInfo("idle_frame"));
-	ADD_SIGNAL(MethodInfo("fixed_frame"));
+	ADD_SIGNAL(MethodInfo("physics_frame"));
 
 	ADD_SIGNAL(MethodInfo("files_dropped", PropertyInfo(Variant::POOL_STRING_ARRAY, "files"), PropertyInfo(Variant::INT, "screen")));
 	ADD_SIGNAL(MethodInfo("network_peer_connected", PropertyInfo(Variant::INT, "id")));
@@ -2216,6 +2222,7 @@ void SceneTree::_bind_methods() {
 	BIND_ENUM_CONSTANT(STRETCH_ASPECT_KEEP);
 	BIND_ENUM_CONSTANT(STRETCH_ASPECT_KEEP_WIDTH);
 	BIND_ENUM_CONSTANT(STRETCH_ASPECT_KEEP_HEIGHT);
+	BIND_ENUM_CONSTANT(STRETCH_ASPECT_EXPAND);
 }
 
 SceneTree *SceneTree::singleton = NULL;
@@ -2253,12 +2260,13 @@ SceneTree::SceneTree() {
 	collision_debug_contacts = GLOBAL_DEF("debug/shapes/collision/max_contacts_displayed", 10000);
 
 	tree_version = 1;
-	fixed_process_time = 1;
+	physics_process_time = 1;
 	idle_process_time = 1;
 	last_id = 1;
 	root = NULL;
 	current_frame = 0;
 	tree_changed_name = "tree_changed";
+	node_added_name = "node_added";
 	node_removed_name = "node_removed";
 	ugc_locked = false;
 	call_lock = 0;

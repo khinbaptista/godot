@@ -183,7 +183,7 @@ PhysicsDirectSpaceState *PhysicsServerSW::space_get_direct_state(RID p_space) {
 	ERR_FAIL_COND_V(!space, NULL);
 	if (!doing_sync || space->is_locked()) {
 
-		ERR_EXPLAIN("Space state is inaccessible right now, wait for iteration or fixed process notification.");
+		ERR_EXPLAIN("Space state is inaccessible right now, wait for iteration or physics process notification.");
 		ERR_FAIL_V(NULL);
 	}
 
@@ -233,14 +233,7 @@ void PhysicsServerSW::area_set_space(RID p_area, RID p_space) {
 	if (area->get_space() == space)
 		return; //pointless
 
-	for (Set<ConstraintSW *>::Element *E = area->get_constraints().front(); E; E = E->next()) {
-		RID self = E->get()->get_self();
-		if (!self.is_valid())
-			continue;
-		free(self);
-	}
 	area->clear_constraints();
-
 	area->set_space(space);
 };
 
@@ -494,14 +487,7 @@ void PhysicsServerSW::body_set_space(RID p_body, RID p_space) {
 	if (body->get_space() == space)
 		return; //pointless
 
-	for (Map<ConstraintSW *, int>::Element *E = body->get_constraint_map().front(); E; E = E->next()) {
-		RID self = E->key()->get_self();
-		if (!self.is_valid())
-			continue;
-		free(self);
-	}
 	body->clear_constraint_map();
-
 	body->set_space(space);
 };
 
@@ -914,6 +900,21 @@ bool PhysicsServerSW::body_test_motion(RID p_body, const Transform &p_from, cons
 	return body->get_space()->test_body_motion(body, p_from, p_motion, p_margin, r_result);
 }
 
+PhysicsDirectBodyState *PhysicsServerSW::body_get_direct_state(RID p_body) {
+
+	BodySW *body = body_owner.get(p_body);
+	ERR_FAIL_COND_V(!body, NULL);
+
+	if (!doing_sync || body->get_space()->is_locked()) {
+
+		ERR_EXPLAIN("Body state is inaccessible right now, wait for iteration or physics process notification.");
+		ERR_FAIL_V(NULL);
+	}
+
+	direct_state->body = body;
+	return direct_state;
+}
+
 /* JOINT API */
 
 RID PhysicsServerSW::joint_create_pin(RID p_body_A, const Vector3 &p_local_A, RID p_body_B, const Vector3 &p_local_B) {
@@ -968,7 +969,7 @@ Vector3 PhysicsServerSW::pin_joint_get_local_a(RID p_joint) const {
 	ERR_FAIL_COND_V(!joint, Vector3());
 	ERR_FAIL_COND_V(joint->get_type() != JOINT_PIN, Vector3());
 	PinJointSW *pin_joint = static_cast<PinJointSW *>(joint);
-	return pin_joint->get_pos_a();
+	return pin_joint->get_position_a();
 }
 
 void PhysicsServerSW::pin_joint_set_local_b(RID p_joint, const Vector3 &p_B) {
@@ -985,7 +986,7 @@ Vector3 PhysicsServerSW::pin_joint_get_local_b(RID p_joint) const {
 	ERR_FAIL_COND_V(!joint, Vector3());
 	ERR_FAIL_COND_V(joint->get_type() != JOINT_PIN, Vector3());
 	PinJointSW *pin_joint = static_cast<PinJointSW *>(joint);
-	return pin_joint->get_pos_b();
+	return pin_joint->get_position_b();
 }
 
 RID PhysicsServerSW::joint_create_hinge(RID p_body_A, const Transform &p_frame_A, RID p_body_B, const Transform &p_frame_B) {

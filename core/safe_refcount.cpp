@@ -27,122 +27,10 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "safe_refcount.h"
 
-// Atomic functions, these are used for multithread safe reference counters!
-
-#ifdef NO_THREADS
-
-/* Bogus implementation unaware of multiprocessing */
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_conditional_increment_impl(register T *pw) {
-
-	if (*pw == 0)
-		return 0;
-
-	(*pw)++;
-
-	return *pw;
-}
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_decrement_impl(register T *pw) {
-
-	(*pw)--;
-
-	return *pw;
-}
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_increment_impl(register T *pw) {
-
-	(*pw)++;
-
-	return *pw;
-}
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_sub_impl(register T *pw, register T val) {
-
-	(*pw) -= val;
-
-	return *pw;
-}
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_add_impl(register T *pw, register T val) {
-
-	(*pw) += val;
-
-	return *pw;
-}
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_exchange_if_greater_impl(register T *pw, register T val) {
-
-	if (val > *pw)
-		*pw = val;
-
-	return *pw;
-}
-
-#elif defined(__GNUC__)
-
-/* Implementation for GCC & Clang */
-
-// GCC guarantees atomic intrinsics for sizes of 1, 2, 4 and 8 bytes.
-// Clang states it supports GCC atomic builtins.
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_conditional_increment_impl(register T *pw) {
-
-	while (true) {
-		T tmp = static_cast<T const volatile &>(*pw);
-		if (tmp == 0)
-			return 0; // if zero, can't add to it anymore
-		if (__sync_val_compare_and_swap(pw, tmp, tmp + 1) == tmp)
-			return tmp + 1;
-	}
-}
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_decrement_impl(register T *pw) {
-
-	return __sync_sub_and_fetch(pw, 1);
-}
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_increment_impl(register T *pw) {
-
-	return __sync_add_and_fetch(pw, 1);
-}
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_sub_impl(register T *pw, register T val) {
-
-	return __sync_sub_and_fetch(pw, val);
-}
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_add_impl(register T *pw, register T val) {
-
-	return __sync_add_and_fetch(pw, val);
-}
-
-template <class T>
-static _ALWAYS_INLINE_ T _atomic_exchange_if_greater_impl(register T *pw, register T val) {
-
-	while (true) {
-		T tmp = static_cast<T const volatile &>(*pw);
-		if (tmp >= val)
-			return tmp; // already greater, or equal
-		if (__sync_val_compare_and_swap(pw, tmp, val) == tmp)
-			return val;
-	}
-}
-
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
 
 /* Implementation for MSVC-Windows */
 
@@ -169,72 +57,65 @@ static _ALWAYS_INLINE_ T _atomic_exchange_if_greater_impl(register T *pw, regist
 			return m_val;                                                                   \
 	}
 
-static _ALWAYS_INLINE_ uint32_t _atomic_conditional_increment_impl(register uint32_t *pw) {
+_ALWAYS_INLINE_ uint32_t _atomic_conditional_increment_impl(register uint32_t *pw) {
 
 	ATOMIC_CONDITIONAL_INCREMENT_BODY(pw, LONG, InterlockedCompareExchange, uint32_t)
 }
 
-static _ALWAYS_INLINE_ uint32_t _atomic_decrement_impl(register uint32_t *pw) {
+_ALWAYS_INLINE_ uint32_t _atomic_decrement_impl(register uint32_t *pw) {
 
 	return InterlockedDecrement((LONG volatile *)pw);
 }
 
-static _ALWAYS_INLINE_ uint32_t _atomic_increment_impl(register uint32_t *pw) {
+_ALWAYS_INLINE_ uint32_t _atomic_increment_impl(register uint32_t *pw) {
 
 	return InterlockedIncrement((LONG volatile *)pw);
 }
 
-static _ALWAYS_INLINE_ uint32_t _atomic_sub_impl(register uint32_t *pw, register uint32_t val) {
+_ALWAYS_INLINE_ uint32_t _atomic_sub_impl(register uint32_t *pw, register uint32_t val) {
 
 	return InterlockedExchangeAdd((LONG volatile *)pw, -(int32_t)val) - val;
 }
 
-static _ALWAYS_INLINE_ uint32_t _atomic_add_impl(register uint32_t *pw, register uint32_t val) {
+_ALWAYS_INLINE_ uint32_t _atomic_add_impl(register uint32_t *pw, register uint32_t val) {
 
 	return InterlockedAdd((LONG volatile *)pw, val);
 }
 
-static _ALWAYS_INLINE_ uint32_t _atomic_exchange_if_greater_impl(register uint32_t *pw, register uint32_t val) {
+_ALWAYS_INLINE_ uint32_t _atomic_exchange_if_greater_impl(register uint32_t *pw, register uint32_t val) {
 
 	ATOMIC_EXCHANGE_IF_GREATER_BODY(pw, val, LONG, InterlockedCompareExchange, uint32_t)
 }
 
-static _ALWAYS_INLINE_ uint64_t _atomic_conditional_increment_impl(register uint64_t *pw) {
+_ALWAYS_INLINE_ uint64_t _atomic_conditional_increment_impl(register uint64_t *pw) {
 
 	ATOMIC_CONDITIONAL_INCREMENT_BODY(pw, LONGLONG, InterlockedCompareExchange64, uint64_t)
 }
 
-static _ALWAYS_INLINE_ uint64_t _atomic_decrement_impl(register uint64_t *pw) {
+_ALWAYS_INLINE_ uint64_t _atomic_decrement_impl(register uint64_t *pw) {
 
 	return InterlockedDecrement64((LONGLONG volatile *)pw);
 }
 
-static _ALWAYS_INLINE_ uint64_t _atomic_increment_impl(register uint64_t *pw) {
+_ALWAYS_INLINE_ uint64_t _atomic_increment_impl(register uint64_t *pw) {
 
 	return InterlockedIncrement64((LONGLONG volatile *)pw);
 }
 
-static _ALWAYS_INLINE_ uint64_t _atomic_sub_impl(register uint64_t *pw, register uint64_t val) {
+_ALWAYS_INLINE_ uint64_t _atomic_sub_impl(register uint64_t *pw, register uint64_t val) {
 
 	return InterlockedExchangeAdd64((LONGLONG volatile *)pw, -(int64_t)val) - val;
 }
 
-static _ALWAYS_INLINE_ uint64_t _atomic_add_impl(register uint64_t *pw, register uint64_t val) {
+_ALWAYS_INLINE_ uint64_t _atomic_add_impl(register uint64_t *pw, register uint64_t val) {
 
 	return InterlockedAdd64((LONGLONG volatile *)pw, val);
 }
 
-static _ALWAYS_INLINE_ uint64_t _atomic_exchange_if_greater_impl(register uint64_t *pw, register uint64_t val) {
+_ALWAYS_INLINE_ uint64_t _atomic_exchange_if_greater_impl(register uint64_t *pw, register uint64_t val) {
 
 	ATOMIC_EXCHANGE_IF_GREATER_BODY(pw, val, LONGLONG, InterlockedCompareExchange64, uint64_t)
 }
-
-#else
-
-//no threads supported?
-#error Must provide atomic functions for this platform or compiler!
-
-#endif
 
 // The actual advertised functions; they'll call the right implementation
 
@@ -285,3 +166,4 @@ uint64_t atomic_add(register uint64_t *pw, register uint64_t val) {
 uint64_t atomic_exchange_if_greater(register uint64_t *pw, register uint64_t val) {
 	return _atomic_exchange_if_greater_impl(pw, val);
 }
+#endif

@@ -40,6 +40,7 @@
 #include "platform/windows/packet_peer_udp_winsock.h"
 #include "platform/windows/stream_peer_winsock.h"
 #include "platform/windows/tcp_server_winsock.h"
+#include "platform/windows/windows_terminal_logger.h"
 #include "project_settings.h"
 #include "servers/audio_server.h"
 #include "servers/visual/visual_server_raster.h"
@@ -180,6 +181,15 @@ void OSUWP::initialize_core() {
 	IP_Unix::make_default();
 
 	cursor_shape = CURSOR_ARROW;
+}
+
+void OSUWP::initialize_logger() {
+	Vector<Logger *> loggers;
+	loggers.push_back(memnew(WindowsTerminalLogger));
+	// FIXME: Reenable once we figure out how to get this properly in user://
+	// instead of littering the user's working dirs (res:// + pwd) with log files (GH-12277)
+	//loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
+	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
 bool OSUWP::can_draw() const {
@@ -371,32 +381,6 @@ void OSUWP::finalize() {
 void OSUWP::finalize_core() {
 }
 
-void OSUWP::vprint(const char *p_format, va_list p_list, bool p_stderr) {
-
-	char buf[16384 + 1];
-	int len = vsnprintf(buf, 16384, p_format, p_list);
-	if (len <= 0)
-		return;
-	buf[len] = 0;
-
-	int wlen = MultiByteToWideChar(CP_UTF8, 0, buf, len, NULL, 0);
-	if (wlen < 0)
-		return;
-
-	wchar_t *wbuf = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
-	MultiByteToWideChar(CP_UTF8, 0, buf, len, wbuf, wlen);
-	wbuf[wlen] = 0;
-
-	if (p_stderr)
-		fwprintf(stderr, L"%s", wbuf);
-	else
-		wprintf(L"%s", wbuf);
-
-	free(wbuf);
-
-	fflush(stdout);
-};
-
 void OSUWP::alert(const String &p_alert, const String &p_title) {
 
 	Platform::String ^ alert = ref new Platform::String(p_alert.c_str());
@@ -518,30 +502,6 @@ OS::VideoMode OSUWP::get_video_mode(int p_screen) const {
 	return video_mode;
 }
 void OSUWP::get_fullscreen_mode_list(List<VideoMode> *p_list, int p_screen) const {
-}
-
-void OSUWP::print_error(const char *p_function, const char *p_file, int p_line, const char *p_code, const char *p_rationale, ErrorType p_type) {
-
-	const char *err_details;
-	if (p_rationale && p_rationale[0])
-		err_details = p_rationale;
-	else
-		err_details = p_code;
-
-	switch (p_type) {
-		case ERR_ERROR:
-			print("ERROR: %s: %s\n", p_function, err_details);
-			print("   At: %s:%i\n", p_file, p_line);
-			break;
-		case ERR_WARNING:
-			print("WARNING: %s: %s\n", p_function, err_details);
-			print("     At: %s:%i\n", p_file, p_line);
-			break;
-		case ERR_SCRIPT:
-			print("SCRIPT ERROR: %s: %s\n", p_function, err_details);
-			print("          At: %s:%i\n", p_file, p_line);
-			break;
-	}
 }
 
 String OSUWP::get_name() {
@@ -716,7 +676,7 @@ void OSUWP::set_cursor_shape(CursorShape p_shape) {
 	cursor_shape = p_shape;
 }
 
-Error OSUWP::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode) {
+Error OSUWP::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr) {
 
 	return FAILED;
 };
@@ -890,6 +850,8 @@ OSUWP::OSUWP() {
 	mouse_mode_changed = CreateEvent(NULL, TRUE, FALSE, L"os_mouse_mode_changed");
 
 	AudioDriverManager::add_driver(&audio_driver);
+
+	_set_logger(memnew(WindowsTerminalLogger));
 }
 
 OSUWP::~OSUWP() {

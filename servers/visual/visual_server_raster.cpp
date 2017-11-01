@@ -90,16 +90,9 @@ void VisualServerRaster::request_frame_drawn_callback(Object *p_where, const Str
 	fdc.param = p_userdata;
 
 	frame_drawn_callbacks.push_back(fdc);
-
-	print_line("added callback to draw");
 }
 
 void VisualServerRaster::draw() {
-
-	/*
-	if (changes)
-		print_line("changes: "+itos(changes));
-	*/
 
 	changes = 0;
 
@@ -109,9 +102,8 @@ void VisualServerRaster::draw() {
 
 	VSG::viewport->draw_viewports();
 	VSG::scene->render_probes();
-	//_draw_cursors_and_margins();
+	_draw_margins();
 	VSG::rasterizer->end_frame();
-	//draw_extra_frame=VS:rasterizer->needs_to_draw_next_frame();
 
 	while (frame_drawn_callbacks.front()) {
 
@@ -128,8 +120,6 @@ void VisualServerRaster::draw() {
 
 		frame_drawn_callbacks.pop_front();
 	}
-
-	_draw_margins();
 }
 void VisualServerRaster::sync() {
 }

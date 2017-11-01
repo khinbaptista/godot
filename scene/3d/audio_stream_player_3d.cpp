@@ -214,7 +214,7 @@ void AudioStreamPlayer3D::_notification(int p_what) {
 		}
 	}
 
-	if (p_what == NOTIFICATION_INTERNAL_FIXED_PROCESS) {
+	if (p_what == NOTIFICATION_INTERNAL_PHYSICS_PROCESS) {
 
 		//update anything related to position first, if possible of course
 
@@ -512,7 +512,7 @@ void AudioStreamPlayer3D::_notification(int p_what) {
 
 		//stop playing if no longer active
 		if (!active) {
-			set_fixed_process_internal(false);
+			set_physics_process_internal(false);
 			//do not update, this makes it easier to animate (will shut off otherise)
 			//_change_notify("playing"); //update property in editor
 			emit_signal("finished");
@@ -582,7 +582,7 @@ void AudioStreamPlayer3D::play(float p_from_pos) {
 	if (stream_playback.is_valid()) {
 		setplay = p_from_pos;
 		output_ready = false;
-		set_fixed_process_internal(true);
+		set_physics_process_internal(true);
 	}
 }
 
@@ -597,7 +597,7 @@ void AudioStreamPlayer3D::stop() {
 
 	if (stream_playback.is_valid()) {
 		active = false;
-		set_fixed_process_internal(false);
+		set_physics_process_internal(false);
 		setplay = -1;
 	}
 }
@@ -611,10 +611,10 @@ bool AudioStreamPlayer3D::is_playing() const {
 	return false;
 }
 
-float AudioStreamPlayer3D::get_pos() {
+float AudioStreamPlayer3D::get_playback_position() {
 
 	if (stream_playback.is_valid()) {
-		return stream_playback->get_pos();
+		return stream_playback->get_playback_position();
 	}
 
 	return 0;
@@ -776,7 +776,7 @@ void AudioStreamPlayer3D::set_doppler_tracking(DopplerTracking p_tracking) {
 
 	if (doppler_tracking != DOPPLER_TRACKING_DISABLED) {
 		set_notify_transform(true);
-		velocity_tracker->set_track_fixed_step(doppler_tracking == DOPPLER_TRACKING_FIXED_STEP);
+		velocity_tracker->set_track_physics_step(doppler_tracking == DOPPLER_TRACKING_PHYSICS_STEP);
 		velocity_tracker->reset(get_global_transform().origin);
 	} else {
 		set_notify_transform(false);
@@ -802,12 +802,12 @@ void AudioStreamPlayer3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_max_db", "max_db"), &AudioStreamPlayer3D::set_max_db);
 	ClassDB::bind_method(D_METHOD("get_max_db"), &AudioStreamPlayer3D::get_max_db);
 
-	ClassDB::bind_method(D_METHOD("play", "from_pos"), &AudioStreamPlayer3D::play, DEFVAL(0.0));
-	ClassDB::bind_method(D_METHOD("seek", "to_pos"), &AudioStreamPlayer3D::seek);
+	ClassDB::bind_method(D_METHOD("play", "from_position"), &AudioStreamPlayer3D::play, DEFVAL(0.0));
+	ClassDB::bind_method(D_METHOD("seek", "to_position"), &AudioStreamPlayer3D::seek);
 	ClassDB::bind_method(D_METHOD("stop"), &AudioStreamPlayer3D::stop);
 
 	ClassDB::bind_method(D_METHOD("is_playing"), &AudioStreamPlayer3D::is_playing);
-	ClassDB::bind_method(D_METHOD("get_pos"), &AudioStreamPlayer3D::get_pos);
+	ClassDB::bind_method(D_METHOD("get_playback_position"), &AudioStreamPlayer3D::get_playback_position);
 
 	ClassDB::bind_method(D_METHOD("set_bus", "bus"), &AudioStreamPlayer3D::set_bus);
 	ClassDB::bind_method(D_METHOD("get_bus"), &AudioStreamPlayer3D::get_bus);
@@ -869,7 +869,7 @@ void AudioStreamPlayer3D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "attenuation_filter_cutoff_hz", PROPERTY_HINT_RANGE, "50,50000,1"), "set_attenuation_filter_cutoff_hz", "get_attenuation_filter_cutoff_hz");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "attenuation_filter_db", PROPERTY_HINT_RANGE, "-80,0,0.1"), "set_attenuation_filter_db", "get_attenuation_filter_db");
 	ADD_GROUP("Doppler", "doppler_");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "doppler_tracking", PROPERTY_HINT_ENUM, "Disabled,Idle,Fixed"), "set_doppler_tracking", "get_doppler_tracking");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "doppler_tracking", PROPERTY_HINT_ENUM, "Disabled,Idle,Physics"), "set_doppler_tracking", "get_doppler_tracking");
 
 	BIND_ENUM_CONSTANT(ATTENUATION_INVERSE_DISTANCE);
 	BIND_ENUM_CONSTANT(ATTENUATION_INVERSE_SQUARE_DISTANCE);
@@ -880,7 +880,7 @@ void AudioStreamPlayer3D::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(DOPPLER_TRACKING_DISABLED);
 	BIND_ENUM_CONSTANT(DOPPLER_TRACKING_IDLE_STEP);
-	BIND_ENUM_CONSTANT(DOPPLER_TRACKING_FIXED_STEP);
+	BIND_ENUM_CONSTANT(DOPPLER_TRACKING_PHYSICS_STEP);
 
 	ADD_SIGNAL(MethodInfo("finished"));
 }

@@ -49,7 +49,7 @@ Variant Control::edit_get_state() const {
 
 	Dictionary s;
 	s["rect"] = get_rect();
-	s["rot"] = get_rotation();
+	s["rotation"] = get_rotation();
 	s["scale"] = get_scale();
 	Array anchors;
 	anchors.push_back(get_anchor(MARGIN_LEFT));
@@ -66,7 +66,7 @@ void Control::edit_set_state(const Variant &p_state) {
 	Rect2 state = s["rect"];
 	set_position(state.position);
 	set_size(state.size);
-	set_rotation(s["rot"]);
+	set_rotation(s["rotation"]);
 	set_scale(s["scale"]);
 	Array anchors = s["anchors"];
 	set_anchor(MARGIN_LEFT, anchors[0]);
@@ -1471,6 +1471,140 @@ void Control::set_anchors_preset(LayoutPreset p_preset, bool p_keep_margin) {
 	}
 }
 
+void Control::set_margins_preset(LayoutPreset p_preset, LayoutPresetMode p_resize_mode, int p_margin) {
+	// Calculate the size if the node is not resized
+	Size2 min_size = get_minimum_size();
+	Size2 new_size = get_size();
+	if (p_resize_mode == PRESET_MODE_MINSIZE || p_resize_mode == PRESET_MODE_KEEP_HEIGHT) {
+		new_size.x = min_size.x;
+	}
+	if (p_resize_mode == PRESET_MODE_MINSIZE || p_resize_mode == PRESET_MODE_KEEP_WIDTH) {
+		new_size.y = min_size.y;
+	}
+
+	float pw = _get_parent_range(0);
+	float ph = _get_parent_range(1);
+
+	//Left
+	switch (p_preset) {
+		case PRESET_TOP_LEFT:
+		case PRESET_BOTTOM_LEFT:
+		case PRESET_CENTER_LEFT:
+		case PRESET_TOP_WIDE:
+		case PRESET_BOTTOM_WIDE:
+		case PRESET_LEFT_WIDE:
+		case PRESET_HCENTER_WIDE:
+		case PRESET_WIDE:
+			data.margin[0] = pw * (0.0 - data.anchor[0]) + p_margin;
+			break;
+
+		case PRESET_CENTER_TOP:
+		case PRESET_CENTER_BOTTOM:
+		case PRESET_CENTER:
+		case PRESET_VCENTER_WIDE:
+			data.margin[0] = pw * (0.5 - data.anchor[0]) - new_size.x / 2;
+			break;
+
+		case PRESET_TOP_RIGHT:
+		case PRESET_BOTTOM_RIGHT:
+		case PRESET_CENTER_RIGHT:
+		case PRESET_RIGHT_WIDE:
+			data.margin[0] = pw * (1.0 - data.anchor[0]) - new_size.x - p_margin;
+			break;
+	}
+
+	// Top
+	switch (p_preset) {
+		case PRESET_TOP_LEFT:
+		case PRESET_TOP_RIGHT:
+		case PRESET_CENTER_TOP:
+		case PRESET_LEFT_WIDE:
+		case PRESET_RIGHT_WIDE:
+		case PRESET_TOP_WIDE:
+		case PRESET_VCENTER_WIDE:
+		case PRESET_WIDE:
+			data.margin[1] = ph * (0.0 - data.anchor[1]) + p_margin;
+			break;
+
+		case PRESET_CENTER_LEFT:
+		case PRESET_CENTER_RIGHT:
+		case PRESET_CENTER:
+		case PRESET_HCENTER_WIDE:
+			data.margin[1] = ph * (0.5 - data.anchor[1]) - new_size.y / 2;
+			break;
+
+		case PRESET_BOTTOM_LEFT:
+		case PRESET_BOTTOM_RIGHT:
+		case PRESET_CENTER_BOTTOM:
+		case PRESET_BOTTOM_WIDE:
+			data.margin[1] = ph * (1.0 - data.anchor[1]) - new_size.y - p_margin;
+			break;
+	}
+
+	// Right
+	switch (p_preset) {
+		case PRESET_TOP_LEFT:
+		case PRESET_BOTTOM_LEFT:
+		case PRESET_CENTER_LEFT:
+		case PRESET_LEFT_WIDE:
+			data.margin[2] = pw * (0.0 - data.anchor[2]) + new_size.x + p_margin;
+			break;
+
+		case PRESET_CENTER_TOP:
+		case PRESET_CENTER_BOTTOM:
+		case PRESET_CENTER:
+		case PRESET_VCENTER_WIDE:
+			data.margin[2] = pw * (0.5 - data.anchor[2]) + new_size.x / 2;
+			break;
+
+		case PRESET_TOP_RIGHT:
+		case PRESET_BOTTOM_RIGHT:
+		case PRESET_CENTER_RIGHT:
+		case PRESET_TOP_WIDE:
+		case PRESET_RIGHT_WIDE:
+		case PRESET_BOTTOM_WIDE:
+		case PRESET_HCENTER_WIDE:
+		case PRESET_WIDE:
+			data.margin[2] = pw * (1.0 - data.anchor[2]) - p_margin;
+			break;
+	}
+
+	// Bottom
+	switch (p_preset) {
+		case PRESET_TOP_LEFT:
+		case PRESET_TOP_RIGHT:
+		case PRESET_CENTER_TOP:
+		case PRESET_TOP_WIDE:
+			data.margin[3] = ph * (0.0 - data.anchor[3]) + new_size.y + p_margin;
+			break;
+
+		case PRESET_CENTER_LEFT:
+		case PRESET_CENTER_RIGHT:
+		case PRESET_CENTER:
+		case PRESET_HCENTER_WIDE:
+			data.margin[3] = ph * (0.5 - data.anchor[3]) + new_size.y / 2;
+			break;
+
+		case PRESET_BOTTOM_LEFT:
+		case PRESET_BOTTOM_RIGHT:
+		case PRESET_CENTER_BOTTOM:
+		case PRESET_LEFT_WIDE:
+		case PRESET_RIGHT_WIDE:
+		case PRESET_BOTTOM_WIDE:
+		case PRESET_VCENTER_WIDE:
+		case PRESET_WIDE:
+			data.margin[3] = ph * (1.0 - data.anchor[3]) - p_margin;
+			break;
+	}
+
+	_size_changed();
+}
+
+void Control::set_anchors_and_margins_preset(LayoutPreset p_preset, LayoutPresetMode p_resize_mode, int p_margin) {
+	set_anchors_preset(p_preset);
+	set_margins_preset(p_preset, p_resize_mode, p_margin);
+}
+
 float Control::get_anchor(Margin p_margin) const {
 
 	return data.anchor[p_margin];
@@ -1620,20 +1754,6 @@ Rect2 Control::get_rect() const {
 Rect2 Control::get_item_rect() const {
 
 	return Rect2(Point2(), get_size());
-}
-
-void Control::set_area_as_parent_rect(int p_margin) {
-
-	data.anchor[MARGIN_LEFT] = ANCHOR_BEGIN;
-	data.margin[MARGIN_LEFT] = p_margin;
-	data.anchor[MARGIN_TOP] = ANCHOR_BEGIN;
-	data.margin[MARGIN_TOP] = p_margin;
-	data.anchor[MARGIN_RIGHT] = ANCHOR_END;
-	data.margin[MARGIN_RIGHT] = -p_margin;
-	data.anchor[MARGIN_BOTTOM] = ANCHOR_END;
-	data.margin[MARGIN_BOTTOM] = -p_margin;
-
-	_size_changed();
 }
 
 void Control::add_icon_override(const StringName &p_name, const Ref<Texture> &p_icon) {
@@ -2471,18 +2591,20 @@ void Control::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("accept_event"), &Control::accept_event);
 	ClassDB::bind_method(D_METHOD("get_minimum_size"), &Control::get_minimum_size);
 	ClassDB::bind_method(D_METHOD("get_combined_minimum_size"), &Control::get_combined_minimum_size);
+	ClassDB::bind_method(D_METHOD("set_anchors_preset", "preset", "keep_margin"), &Control::set_anchors_preset, DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("set_margins_preset", "preset", "resize_mode", "margin"), &Control::set_margins_preset, DEFVAL(PRESET_MODE_MINSIZE), DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("set_anchors_and_margins_preset", "preset", "resize_mode", "margin"), &Control::set_anchors_and_margins_preset, DEFVAL(PRESET_MODE_MINSIZE), DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("set_anchor", "margin", "anchor", "keep_margin", "push_opposite_anchor"), &Control::set_anchor, DEFVAL(false), DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("_set_anchor", "margin", "anchor"), &Control::_set_anchor);
-	ClassDB::bind_method(D_METHOD("set_anchors_preset", "preset", "keep_margin"), &Control::set_anchors_preset, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("get_anchor", "margin"), &Control::get_anchor);
 	ClassDB::bind_method(D_METHOD("set_margin", "margin", "offset"), &Control::set_margin);
 	ClassDB::bind_method(D_METHOD("set_anchor_and_margin", "margin", "anchor", "offset", "push_opposite_anchor"), &Control::set_anchor_and_margin, DEFVAL(false));
-	ClassDB::bind_method(D_METHOD("set_begin", "pos"), &Control::set_begin);
-	ClassDB::bind_method(D_METHOD("set_end", "pos"), &Control::set_end);
-	ClassDB::bind_method(D_METHOD("set_position", "pos"), &Control::set_position);
+	ClassDB::bind_method(D_METHOD("set_begin", "position"), &Control::set_begin);
+	ClassDB::bind_method(D_METHOD("set_end", "position"), &Control::set_end);
+	ClassDB::bind_method(D_METHOD("set_position", "position"), &Control::set_position);
 	ClassDB::bind_method(D_METHOD("set_size", "size"), &Control::set_size);
 	ClassDB::bind_method(D_METHOD("set_custom_minimum_size", "size"), &Control::set_custom_minimum_size);
-	ClassDB::bind_method(D_METHOD("set_global_position", "pos"), &Control::set_global_position);
+	ClassDB::bind_method(D_METHOD("set_global_position", "position"), &Control::set_global_position);
 	ClassDB::bind_method(D_METHOD("set_rotation", "radians"), &Control::set_rotation);
 	ClassDB::bind_method(D_METHOD("set_rotation_deg", "degrees"), &Control::set_rotation_deg);
 	// TODO: Obsolete this method (old name) properly (GH-4397)
@@ -2505,7 +2627,6 @@ void Control::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_global_position"), &Control::get_global_position);
 	ClassDB::bind_method(D_METHOD("get_rect"), &Control::get_rect);
 	ClassDB::bind_method(D_METHOD("get_global_rect"), &Control::get_global_rect);
-	ClassDB::bind_method(D_METHOD("set_area_as_parent_rect", "margin"), &Control::set_area_as_parent_rect, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("show_modal", "exclusive"), &Control::show_modal, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("set_focus_mode", "mode"), &Control::set_focus_mode);
 	ClassDB::bind_method(D_METHOD("get_focus_mode"), &Control::get_focus_mode);
@@ -2560,12 +2681,12 @@ void Control::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_v_grow_direction"), &Control::get_v_grow_direction);
 
 	ClassDB::bind_method(D_METHOD("set_tooltip", "tooltip"), &Control::set_tooltip);
-	ClassDB::bind_method(D_METHOD("get_tooltip", "atpos"), &Control::get_tooltip, DEFVAL(Point2()));
+	ClassDB::bind_method(D_METHOD("get_tooltip", "at_position"), &Control::get_tooltip, DEFVAL(Point2()));
 	ClassDB::bind_method(D_METHOD("_get_tooltip"), &Control::_get_tooltip);
 
 	ClassDB::bind_method(D_METHOD("set_default_cursor_shape", "shape"), &Control::set_default_cursor_shape);
 	ClassDB::bind_method(D_METHOD("get_default_cursor_shape"), &Control::get_default_cursor_shape);
-	ClassDB::bind_method(D_METHOD("get_cursor_shape", "pos"), &Control::get_cursor_shape, DEFVAL(Point2()));
+	ClassDB::bind_method(D_METHOD("get_cursor_shape", "position"), &Control::get_cursor_shape, DEFVAL(Point2()));
 
 	ClassDB::bind_method(D_METHOD("set_focus_neighbour", "margin", "neighbour"), &Control::set_focus_neighbour);
 	ClassDB::bind_method(D_METHOD("get_focus_neighbour", "margin"), &Control::get_focus_neighbour);
@@ -2583,7 +2704,7 @@ void Control::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_drag_forwarding", "target"), &Control::set_drag_forwarding);
 	ClassDB::bind_method(D_METHOD("set_drag_preview", "control"), &Control::set_drag_preview);
 
-	ClassDB::bind_method(D_METHOD("warp_mouse", "to_pos"), &Control::warp_mouse);
+	ClassDB::bind_method(D_METHOD("warp_mouse", "to_position"), &Control::warp_mouse);
 
 	ClassDB::bind_method(D_METHOD("minimum_size_changed"), &Control::minimum_size_changed);
 
@@ -2593,9 +2714,9 @@ void Control::_bind_methods() {
 
 	BIND_VMETHOD(MethodInfo("_gui_input", PropertyInfo(Variant::OBJECT, "event", PROPERTY_HINT_RESOURCE_TYPE, "InputEvent")));
 	BIND_VMETHOD(MethodInfo(Variant::VECTOR2, "_get_minimum_size"));
-	BIND_VMETHOD(MethodInfo(Variant::OBJECT, "get_drag_data", PropertyInfo(Variant::VECTOR2, "pos")));
-	BIND_VMETHOD(MethodInfo(Variant::BOOL, "can_drop_data", PropertyInfo(Variant::VECTOR2, "pos"), PropertyInfo(Variant::NIL, "data")));
-	BIND_VMETHOD(MethodInfo("drop_data", PropertyInfo(Variant::VECTOR2, "pos"), PropertyInfo(Variant::NIL, "data")));
+	BIND_VMETHOD(MethodInfo(Variant::OBJECT, "get_drag_data", PropertyInfo(Variant::VECTOR2, "position")));
+	BIND_VMETHOD(MethodInfo(Variant::BOOL, "can_drop_data", PropertyInfo(Variant::VECTOR2, "position"), PropertyInfo(Variant::NIL, "data")));
+	BIND_VMETHOD(MethodInfo("drop_data", PropertyInfo(Variant::VECTOR2, "position"), PropertyInfo(Variant::NIL, "data")));
 
 	ADD_GROUP("Anchor", "anchor_");
 	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "anchor_left", PROPERTY_HINT_RANGE, "0,1,0.01"), "_set_anchor", "get_anchor", MARGIN_LEFT);
@@ -2689,8 +2810,13 @@ void Control::_bind_methods() {
 	BIND_ENUM_CONSTANT(PRESET_HCENTER_WIDE);
 	BIND_ENUM_CONSTANT(PRESET_WIDE);
 
-	BIND_ENUM_CONSTANT(SIZE_EXPAND);
+	BIND_ENUM_CONSTANT(PRESET_MODE_MINSIZE);
+	BIND_ENUM_CONSTANT(PRESET_MODE_KEEP_WIDTH);
+	BIND_ENUM_CONSTANT(PRESET_MODE_KEEP_HEIGHT);
+	BIND_ENUM_CONSTANT(PRESET_MODE_KEEP_SIZE);
+
 	BIND_ENUM_CONSTANT(SIZE_FILL);
+	BIND_ENUM_CONSTANT(SIZE_EXPAND);
 	BIND_ENUM_CONSTANT(SIZE_EXPAND_FILL);
 	BIND_ENUM_CONSTANT(SIZE_SHRINK_CENTER);
 	BIND_ENUM_CONSTANT(SIZE_SHRINK_END);

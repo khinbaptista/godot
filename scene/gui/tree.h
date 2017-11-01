@@ -418,6 +418,7 @@ private:
 		Ref<Texture> arrow_collapsed;
 		Ref<Texture> arrow;
 		Ref<Texture> select_arrow;
+		Ref<Texture> select_option;
 		Ref<Texture> updown;
 
 		Color font_color;
@@ -525,9 +526,9 @@ protected:
 public:
 	virtual String get_tooltip(const Point2 &p_pos) const;
 
-	TreeItem *get_item_at_pos(const Point2 &p_pos) const;
-	int get_column_at_pos(const Point2 &p_pos) const;
-	int get_drop_section_at_pos(const Point2 &p_pos) const;
+	TreeItem *get_item_at_position(const Point2 &p_pos) const;
+	int get_column_at_position(const Point2 &p_pos) const;
+	int get_drop_section_at_position(const Point2 &p_pos) const;
 
 	void clear();
 

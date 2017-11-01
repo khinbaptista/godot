@@ -208,8 +208,11 @@ void GraphNode::_notification(int p_what) {
 		Ref<Texture> close = get_icon("close");
 		Ref<Texture> resizer = get_icon("resizer");
 		int close_offset = get_constant("close_offset");
+		int close_h_offset = get_constant("close_h_offset");
+		Color close_color = get_color("close_color");
 		Ref<Font> title_font = get_font("title_font");
 		int title_offset = get_constant("title_offset");
+		int title_h_offset = get_constant("title_h_offset");
 		Color title_color = get_color("title_color");
 		Point2i icofs = -port->get_size() * 0.5;
 		int edgeofs = get_constant("port_offset");
@@ -236,10 +239,10 @@ void GraphNode::_notification(int p_what) {
 		if (show_close)
 			w -= close->get_width();
 
-		draw_string(title_font, Point2(sb->get_margin(MARGIN_LEFT), -title_font->get_height() + title_font->get_ascent() + title_offset), title, title_color, w);
+		draw_string(title_font, Point2(sb->get_margin(MARGIN_LEFT) + title_h_offset, -title_font->get_height() + title_font->get_ascent() + title_offset), title, title_color, w);
 		if (show_close) {
-			Vector2 cpos = Point2(w + sb->get_margin(MARGIN_LEFT), -close->get_height() + close_offset);
-			draw_texture(close, cpos);
+			Vector2 cpos = Point2(w + sb->get_margin(MARGIN_LEFT) + close_h_offset, -close->get_height() + close_offset);
+			draw_texture(close, cpos, close_color);
 			close_rect.position = cpos;
 			close_rect.size = close->get_size();
 		} else {
@@ -515,7 +518,7 @@ int GraphNode::get_connection_output_count() {
 	return conn_output_cache.size();
 }
 
-Vector2 GraphNode::get_connection_input_pos(int p_idx) {
+Vector2 GraphNode::get_connection_input_position(int p_idx) {
 
 	if (connpos_dirty)
 		_connpos_update();
@@ -545,7 +548,7 @@ Color GraphNode::get_connection_input_color(int p_idx) {
 	return conn_input_cache[p_idx].color;
 }
 
-Vector2 GraphNode::get_connection_output_pos(int p_idx) {
+Vector2 GraphNode::get_connection_output_position(int p_idx) {
 
 	if (connpos_dirty)
 		_connpos_update();
@@ -687,10 +690,10 @@ void GraphNode::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_connection_output_count"), &GraphNode::get_connection_output_count);
 	ClassDB::bind_method(D_METHOD("get_connection_input_count"), &GraphNode::get_connection_input_count);
 
-	ClassDB::bind_method(D_METHOD("get_connection_output_pos", "idx"), &GraphNode::get_connection_output_pos);
+	ClassDB::bind_method(D_METHOD("get_connection_output_position", "idx"), &GraphNode::get_connection_output_position);
 	ClassDB::bind_method(D_METHOD("get_connection_output_type", "idx"), &GraphNode::get_connection_output_type);
 	ClassDB::bind_method(D_METHOD("get_connection_output_color", "idx"), &GraphNode::get_connection_output_color);
-	ClassDB::bind_method(D_METHOD("get_connection_input_pos", "idx"), &GraphNode::get_connection_input_pos);
+	ClassDB::bind_method(D_METHOD("get_connection_input_position", "idx"), &GraphNode::get_connection_input_position);
 	ClassDB::bind_method(D_METHOD("get_connection_input_type", "idx"), &GraphNode::get_connection_input_type);
 	ClassDB::bind_method(D_METHOD("get_connection_input_color", "idx"), &GraphNode::get_connection_input_color);
 

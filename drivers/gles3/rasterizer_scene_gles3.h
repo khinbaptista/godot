@@ -110,6 +110,7 @@ public:
 		struct SceneDataUBO {
 			//this is a std140 compatible struct. Please read the OpenGL 3.3 Specificaiton spec before doing any changes
 			float projection_matrix[16];
+			float inv_projection_matrix[16];
 			float camera_inverse_matrix[16];
 			float camera_matrix[16];
 			float ambient_light_color[4];
@@ -123,6 +124,7 @@ public:
 			float z_slope_scale;
 			float shadow_dual_paraboloid_render_zfar;
 			float shadow_dual_paraboloid_render_side;
+			float viewport_size[2];
 			float screen_pixel_size[2];
 			float shadow_atlas_pixel_size[2];
 			float shadow_directional_pixel_size[2];
@@ -142,7 +144,7 @@ public:
 			float fog_height_min;
 			float fog_height_max;
 			float fog_height_curve;
-			uint8_t padding[8];
+			// make sure this struct is padded to be a multiple of 16 bytes for webgl
 
 		} ubo_data;
 
@@ -351,7 +353,7 @@ public:
 		VS::EnvironmentBG bg_mode;
 
 		RID sky;
-		float sky_scale;
+		float sky_custom_fov;
 
 		Color bg_color;
 		float bg_energy;
@@ -378,7 +380,9 @@ public:
 		float ssao_bias;
 		float ssao_light_affect;
 		Color ssao_color;
-		bool ssao_filter;
+		VS::EnvironmentSSAOQuality ssao_quality;
+		float ssao_bilateral_sharpness;
+		VS::EnvironmentSSAOBlur ssao_filter;
 
 		bool glow_enabled;
 		int glow_levels;
@@ -434,7 +438,7 @@ public:
 
 		Environment() {
 			bg_mode = VS::ENV_BG_CLEAR_COLOR;
-			sky_scale = 1.0;
+			sky_custom_fov = 0.0;
 			bg_energy = 1.0;
 			sky_ambient = 0;
 			ambient_energy = 1.0;
@@ -455,7 +459,9 @@ public:
 			ssao_radius2 = 0.0;
 			ssao_bias = 0.01;
 			ssao_light_affect = 0;
-			ssao_filter = true;
+			ssao_filter = VS::ENV_SSAO_BLUR_3x3;
+			ssao_quality = VS::ENV_SSAO_QUALITY_LOW;
+			ssao_bilateral_sharpness = 4;
 
 			tone_mapper = VS::ENV_TONE_MAPPER_LINEAR;
 			tone_mapper_exposure = 1.0;
@@ -519,7 +525,7 @@ public:
 
 	virtual void environment_set_background(RID p_env, VS::EnvironmentBG p_bg);
 	virtual void environment_set_sky(RID p_env, RID p_sky);
-	virtual void environment_set_sky_scale(RID p_env, float p_scale);
+	virtual void environment_set_sky_custom_fov(RID p_env, float p_scale);
 	virtual void environment_set_bg_color(RID p_env, const Color &p_color);
 	virtual void environment_set_bg_energy(RID p_env, float p_energy);
 	virtual void environment_set_canvas_max_layer(RID p_env, int p_max_layer);
@@ -531,7 +537,7 @@ public:
 	virtual void environment_set_fog(RID p_env, bool p_enable, float p_begin, float p_end, RID p_gradient_texture);
 
 	virtual void environment_set_ssr(RID p_env, bool p_enable, int p_max_steps, float p_fade_in, float p_fade_out, float p_depth_tolerance, bool p_roughness);
-	virtual void environment_set_ssao(RID p_env, bool p_enable, float p_radius, float p_intensity, float p_radius2, float p_intensity2, float p_bias, float p_light_affect, const Color &p_color, bool p_blur);
+	virtual void environment_set_ssao(RID p_env, bool p_enable, float p_radius, float p_intensity, float p_radius2, float p_intensity2, float p_bias, float p_light_affect, const Color &p_color, VS::EnvironmentSSAOQuality p_quality, VS::EnvironmentSSAOBlur p_blur, float p_bilateral_sharpness);
 
 	virtual void environment_set_tonemap(RID p_env, VS::EnvironmentToneMapper p_tone_mapper, float p_exposure, float p_white, bool p_auto_exposure, float p_min_luminance, float p_max_luminance, float p_auto_exp_speed, float p_auto_exp_scale);
 
@@ -810,7 +816,7 @@ public:
 
 	_FORCE_INLINE_ void _add_geometry_with_material(RasterizerStorageGLES3::Geometry *p_geometry, InstanceBase *p_instance, RasterizerStorageGLES3::GeometryOwner *p_owner, RasterizerStorageGLES3::Material *p_material, bool p_depth_pass);
 
-	void _draw_sky(RasterizerStorageGLES3::Sky *p_sky, const CameraMatrix &p_projection, const Transform &p_transform, bool p_vflip, float p_scale, float p_energy);
+	void _draw_sky(RasterizerStorageGLES3::Sky *p_sky, const CameraMatrix &p_projection, const Transform &p_transform, bool p_vflip, float p_custom_fov, float p_energy);
 
 	void _setup_environment(Environment *env, const CameraMatrix &p_cam_projection, const Transform &p_cam_transform);
 	void _setup_directional_light(int p_index, const Transform &p_camera_inverse_transform, bool p_use_shadows);

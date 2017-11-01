@@ -281,7 +281,7 @@ class VisualServerRaster : public VisualServer {
 			Set<Instance*> owned_instances;
 			BakedLightSampler *sampler;
 			int resolution;
-			Vector<Color> light_bufer;
+			Vector<Color> light_buffer;
 			RID sampled_light;
 			uint64_t last_pass;
 			Transform xform; // viewspace normal to lightspace, might not use one.
@@ -589,11 +589,29 @@ class VisualServerRaster : public VisualServer {
 #endif
 
 	void _draw_margins();
+	static void _changes_changed() {}
 
 public:
+//if editor is redrawing when it shouldn't, enable this and put a breakpoint in _changes_changed()
+//#define DEBUG_CHANGES
+
+#ifdef DEBUG_CHANGES
+	_FORCE_INLINE_ static void redraw_request() {
+		changes++;
+		_changes_changed();
+	}
+
+#define DISPLAY_CHANGED \
+	changes++;          \
+	_changes_changed();
+
+#else
 	_FORCE_INLINE_ static void redraw_request() { changes++; }
 
-#define DISPLAY_CHANGED changes++;
+#define DISPLAY_CHANGED \
+	changes++;
+#endif
+//	print_line(String("CHANGED: ") + __FUNCTION__);
 
 #define BIND0R(m_r, m_name) \
 	m_r m_name() { return BINDBASE->m_name(); }
@@ -634,6 +652,8 @@ public:
 	void m_name(m_type1 arg1, m_type2 arg2, m_type3 arg3, m_type4 arg4, m_type5 arg5, m_type6 arg6, m_type7 arg7, m_type8 arg8, m_type9 arg9, m_type10 arg10) { DISPLAY_CHANGED BINDBASE->m_name(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10); }
 #define BIND11(m_name, m_type1, m_type2, m_type3, m_type4, m_type5, m_type6, m_type7, m_type8, m_type9, m_type10, m_type11) \
 	void m_name(m_type1 arg1, m_type2 arg2, m_type3 arg3, m_type4 arg4, m_type5 arg5, m_type6 arg6, m_type7 arg7, m_type8 arg8, m_type9 arg9, m_type10 arg10, m_type11 arg11) { DISPLAY_CHANGED BINDBASE->m_name(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11); }
+#define BIND12(m_name, m_type1, m_type2, m_type3, m_type4, m_type5, m_type6, m_type7, m_type8, m_type9, m_type10, m_type11, m_type12) \
+	void m_name(m_type1 arg1, m_type2 arg2, m_type3 arg3, m_type4 arg4, m_type5 arg5, m_type6 arg6, m_type7 arg7, m_type8 arg8, m_type9 arg9, m_type10 arg10, m_type11 arg11, m_type12 arg12) { DISPLAY_CHANGED BINDBASE->m_name(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12); }
 
 //from now on, calls forwarded to this singleton
 #define BINDBASE VSG::storage
@@ -950,13 +970,13 @@ public:
 
 	BIND2(environment_set_background, RID, EnvironmentBG)
 	BIND2(environment_set_sky, RID, RID)
-	BIND2(environment_set_sky_scale, RID, float)
+	BIND2(environment_set_sky_custom_fov, RID, float)
 	BIND2(environment_set_bg_color, RID, const Color &)
 	BIND2(environment_set_bg_energy, RID, float)
 	BIND2(environment_set_canvas_max_layer, RID, int)
 	BIND4(environment_set_ambient_light, RID, const Color &, float, float)
 	BIND7(environment_set_ssr, RID, bool, int, float, float, float, bool)
-	BIND10(environment_set_ssao, RID, bool, float, float, float, float, float, float, const Color &, bool)
+	BIND12(environment_set_ssao, RID, bool, float, float, float, float, float, float, const Color &, EnvironmentSSAOQuality, EnvironmentSSAOBlur, float)
 
 	BIND6(environment_set_dof_blur_near, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
 	BIND6(environment_set_dof_blur_far, RID, bool, float, float, float, EnvironmentDOFBlurQuality)

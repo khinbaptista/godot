@@ -76,14 +76,14 @@ void AnimationPlayerEditor::_notification(int p_what) {
 						}
 					}
 				}
-				frame->set_value(player->get_current_animation_pos());
-				key_editor->set_anim_pos(player->get_current_animation_pos());
+				frame->set_value(player->get_current_animation_position());
+				key_editor->set_anim_pos(player->get_current_animation_position());
 				EditorNode::get_singleton()->get_property_editor()->refresh();
 
 			} else if (last_active) {
 				//need the last frame after it stopped
 
-				frame->set_value(player->get_current_animation_pos());
+				frame->set_value(player->get_current_animation_position());
 			}
 
 			last_active = player->is_playing();
@@ -103,13 +103,11 @@ void AnimationPlayerEditor::_notification(int p_what) {
 			get_tree()->connect("node_removed", this, "_node_removed");
 
 			add_style_override("panel", editor->get_gui_base()->get_stylebox("panel", "Panel"));
-			add_constant_override("separation", get_constant("separation", "VBoxContainer"));
 		} break;
 
 		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
 
 			add_style_override("panel", editor->get_gui_base()->get_stylebox("panel", "Panel"));
-			add_constant_override("separation", get_constant("separation", "VBoxContainer"));
 		} break;
 
 		case NOTIFICATION_THEME_CHANGED: {
@@ -199,7 +197,7 @@ void AnimationPlayerEditor::_play_from_pressed() {
 
 	if (current != "") {
 
-		float time = player->get_current_animation_pos();
+		float time = player->get_current_animation_position();
 
 		if (current == player->get_current_animation() && player->is_playing()) {
 
@@ -247,7 +245,7 @@ void AnimationPlayerEditor::_play_bw_from_pressed() {
 
 	if (current != "") {
 
-		float time = player->get_current_animation_pos();
+		float time = player->get_current_animation_position();
 		if (current == player->get_current_animation())
 			player->stop(); //so it wont blend with itself
 
@@ -559,7 +557,7 @@ void AnimationPlayerEditor::_animation_blend() {
 
 	String current = animation->get_item_text(animation->get_selected());
 
-	blend_editor.dialog->popup_centered(Size2(400, 400));
+	blend_editor.dialog->popup_centered(Size2(400, 400) * EDSCALE);
 
 	blend_editor.tree->set_hide_root(true);
 	blend_editor.tree->set_column_min_width(0, 10);
@@ -946,7 +944,7 @@ void AnimationPlayerEditor::_seek_value_changed(float p_value, bool p_set) {
 	}
 
 	if (player->is_valid() && !p_set) {
-		float cpos = player->get_current_animation_pos();
+		float cpos = player->get_current_animation_position();
 
 		player->seek_delta(pos, pos - cpos);
 	} else {
@@ -1428,7 +1426,7 @@ AnimationPlayerEditorPlugin::AnimationPlayerEditorPlugin(EditorNode *p_node) {
 	editor->add_bottom_panel_item(TTR("Animation"), anim_editor);
 	/*
 	editor->get_viewport()->add_child(anim_editor);
-	anim_editor->set_area_as_parent_rect();
+	anim_editor->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	anim_editor->set_anchor( MARGIN_TOP, Control::ANCHOR_END);
 	anim_editor->set_margin( MARGIN_TOP, 75 );
 	anim_editor->set_anchor( MARGIN_RIGHT, Control::ANCHOR_END);

@@ -44,7 +44,7 @@ class AnimationPlayer : public Node {
 
 public:
 	enum AnimationProcessMode {
-		ANIMATION_PROCESS_FIXED,
+		ANIMATION_PROCESS_PHYSICS,
 		ANIMATION_PROCESS_IDLE,
 	};
 
@@ -279,7 +279,7 @@ public:
 
 	void seek(float p_time, bool p_update = false);
 	void seek_delta(float p_time, float p_delta);
-	float get_current_animation_pos() const;
+	float get_current_animation_position() const;
 	float get_current_animation_length() const;
 
 	void advance(float p_time);

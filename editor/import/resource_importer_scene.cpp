@@ -114,19 +114,19 @@ bool ResourceImporterScene::get_option_visibility(const String &p_option, const 
 }
 
 int ResourceImporterScene::get_preset_count() const {
-	return 6;
+	return PRESET_MAX;
 }
 String ResourceImporterScene::get_preset_name(int p_idx) const {
 
 	switch (p_idx) {
 		case PRESET_SINGLE_SCENE: return TTR("Import as Single Scene");
-		case PRESET_SEPERATE_ANIMATIONS: return TTR("Import with Seperate Animations");
+		case PRESET_SEPARATE_ANIMATIONS: return TTR("Import with Separate Animations");
 		case PRESET_SEPARATE_MATERIALS: return TTR("Import with Separate Materials");
 		case PRESET_SEPARATE_MESHES: return TTR("Import with Separate Objects");
 		case PRESET_SEPARATE_MESHES_AND_MATERIALS: return TTR("Import with Separate Objects+Materials");
-		case PRESET_SEPARATE_MESHES_AND_ANIMATIONS: return TTR("Import with Seperate Objects+Animations");
-		case PRESET_SEPERATE_MATERIALS_AND_ANIMATIONS: return TTR("Import with Seperate Materials+Animations");
-		case PRESET_SEPERATE_MESHES_MATERIALS_AND_ANIMATIONS: return TTR("Import with Seperate Objects+Materials+Animations");
+		case PRESET_SEPARATE_MESHES_AND_ANIMATIONS: return TTR("Import with Separate Objects+Animations");
+		case PRESET_SEPARATE_MATERIALS_AND_ANIMATIONS: return TTR("Import with Separate Materials+Animations");
+		case PRESET_SEPARATE_MESHES_MATERIALS_AND_ANIMATIONS: return TTR("Import with Separate Objects+Materials+Animations");
 		case PRESET_MULTIPLE_SCENES: return TTR("Import as Multiple Scenes");
 		case PRESET_MULTIPLE_SCENES_AND_MATERIALS: return TTR("Import as Multiple Scenes+Materials");
 	}
@@ -954,10 +954,10 @@ void ResourceImporterScene::get_import_options(List<ImportOption> *r_options, in
 		script_ext_hint += "*." + E->get();
 	}
 
-	bool materials_out = p_preset == PRESET_SEPARATE_MATERIALS || p_preset == PRESET_SEPARATE_MESHES_AND_MATERIALS || p_preset == PRESET_MULTIPLE_SCENES_AND_MATERIALS || p_preset == PRESET_SEPERATE_MATERIALS_AND_ANIMATIONS || p_preset == PRESET_SEPERATE_MESHES_MATERIALS_AND_ANIMATIONS;
-	bool meshes_out = p_preset == PRESET_SEPARATE_MESHES || p_preset == PRESET_SEPARATE_MESHES_AND_MATERIALS || PRESET_SEPARATE_MESHES_AND_ANIMATIONS || PRESET_SEPERATE_MESHES_MATERIALS_AND_ANIMATIONS;
+	bool materials_out = p_preset == PRESET_SEPARATE_MATERIALS || p_preset == PRESET_SEPARATE_MESHES_AND_MATERIALS || p_preset == PRESET_MULTIPLE_SCENES_AND_MATERIALS || p_preset == PRESET_SEPARATE_MATERIALS_AND_ANIMATIONS || p_preset == PRESET_SEPARATE_MESHES_MATERIALS_AND_ANIMATIONS;
+	bool meshes_out = p_preset == PRESET_SEPARATE_MESHES || p_preset == PRESET_SEPARATE_MESHES_AND_MATERIALS || p_preset == PRESET_SEPARATE_MESHES_AND_ANIMATIONS || p_preset == PRESET_SEPARATE_MESHES_MATERIALS_AND_ANIMATIONS;
 	bool scenes_out = p_preset == PRESET_MULTIPLE_SCENES || p_preset == PRESET_MULTIPLE_SCENES_AND_MATERIALS;
-	bool animations_out = p_preset == PRESET_SEPERATE_ANIMATIONS || PRESET_SEPARATE_MESHES_AND_ANIMATIONS || p_preset == PRESET_SEPERATE_MATERIALS_AND_ANIMATIONS || p_preset == PRESET_SEPERATE_MESHES_MATERIALS_AND_ANIMATIONS;
+	bool animations_out = p_preset == PRESET_SEPARATE_ANIMATIONS || p_preset == PRESET_SEPARATE_MESHES_AND_ANIMATIONS || p_preset == PRESET_SEPARATE_MATERIALS_AND_ANIMATIONS || p_preset == PRESET_SEPARATE_MESHES_MATERIALS_AND_ANIMATIONS;
 
 	r_options->push_back(ImportOption(PropertyInfo(Variant::STRING, "nodes/custom_script", PROPERTY_HINT_FILE, script_ext_hint), ""));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "nodes/storage", PROPERTY_HINT_ENUM, "Single Scene,Instanced Sub-Scenes"), scenes_out ? 1 : 0));
@@ -966,7 +966,7 @@ void ResourceImporterScene::get_import_options(List<ImportOption> *r_options, in
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "materials/keep_on_reimport"), materials_out ? true : false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "meshes/compress"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "meshes/ensure_tangents"), true));
-	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/storage", PROPERTY_HINT_ENUM, "Built-In,Files"), meshes_out ? true : false));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/storage", PROPERTY_HINT_ENUM, "Built-In,Files"), meshes_out ? 1 : 0));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "external_files/store_in_subdir"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "animation/import", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::REAL, "animation/fps", PROPERTY_HINT_RANGE, "1,120,1"), 15));

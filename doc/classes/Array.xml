@@ -104,6 +104,7 @@
 			<return type="Array">
 			</return>
 			<description>
+				Returns a copy of this [code]Array[/code].
 			</description>
 		</method>
 		<method name="empty">
@@ -168,7 +169,7 @@
 			</description>
 		</method>
 		<method name="insert">
-			<argument index="0" name="pos" type="int">
+			<argument index="0" name="position" type="int">
 			</argument>
 			<argument index="1" name="value" type="var">
 			</argument>
@@ -178,7 +179,7 @@
 		</method>
 		<method name="invert">
 			<description>
-				Reverse the order of the elements in the array (so first element will now be the last).
+				Reverse the order of the elements in the array (so first element will now be the last) and return reference to the array.
 			</description>
 		</method>
 		<method name="pop_back">
@@ -206,14 +207,14 @@
 			</description>
 		</method>
 		<method name="remove">
-			<argument index="0" name="pos" type="int">
+			<argument index="0" name="position" type="int">
 			</argument>
 			<description>
 				Remove an element from the array by index.
 			</description>
 		</method>
 		<method name="resize">
-			<argument index="0" name="pos" type="int">
+			<argument index="0" name="size" type="int">
 			</argument>
 			<description>
 				Resize the array to contain a different number of elements. If the array size is smaller, elements are cleared, if bigger, new elements are Null.
@@ -239,7 +240,7 @@
 		</method>
 		<method name="sort">
 			<description>
-				Sort the array using natural order.
+				Sort the array using natural order and return reference to the array.
 			</description>
 		</method>
 		<method name="sort_custom">
@@ -248,7 +249,7 @@
 			<argument index="1" name="func" type="String">
 			</argument>
 			<description>
-				Sort the array using a custom method. The arguments are an object that holds the method and the name of such method. The custom method receives two arguments (a pair of elements from the array) and must return true if the first argument is less than the second, and return false otherwise. Note: you cannot randomize the return value as the heapsort algorithm expects a deterministic result. Doing so will result in unexpected behavior.
+				Sort the array using a custom method and return reference to the array. The arguments are an object that holds the method and the name of such method. The custom method receives two arguments (a pair of elements from the array) and must return true if the first argument is less than the second, and return false otherwise. Note: you cannot randomize the return value as the heapsort algorithm expects a deterministic result. Doing so will result in unexpected behavior.
 			</description>
 		</method>
 	</methods>
