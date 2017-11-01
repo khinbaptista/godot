@@ -418,7 +418,104 @@ public:
 
 	struct Material : public RID_Data {
 
+		struct RasterizerOptions {
+			vk::PolygonMode polygonMode;
+			vk::CullModeFlags cullMode;
+			vk::FrontFace frontFace;
+
+			float lineWidth;
+			bool depthClampEnable;
+			bool rasterizerDiscardEnable;
+
+			RasterizerOptions() {
+				polygonMode = vk::PolygonMode::eFill;
+				cullMode = vk::CullModeFlagBits::eBack;
+				frontFace = vk::FrontFace::eClockwise;
+				lineWidth = 1.0f;
+				depthClampEnable = false;
+				rasterizerDiscardEnable = false;
+			}
+		};
+		RasterizerOptions raster_opt;
+
+		struct DepthStencilOptions {
+			bool depthTestEnable;
+			bool depthWriteEnable; // useful for transparent materials
+			vk::CompareOp depthCompareOp;
+			bool depthBoundsTestEnable;
+			float minDepthBounds;
+			float maxDepthBounds;
+
+			bool stencilTestEnable;
+			vk::StencilOpState front;
+			vk::StencilOpState back;
+
+			DepthStencilOptions() {
+				depthTestEnable = true;
+				depthWriteEnable = true;
+				depthCompareOp = vk::CompareOp::eLess;
+				depthBoundsTestEnable = false;
+				minDepthBounds = 0.0f;
+				maxDepthBounds = 1.0f;
+
+				stencilTestEnable = false;
+				front = {};
+				back = {};
+			}
+		};
+		DepthStencilOptions depth_stencil_opt;
+
+		struct ColorBlendAttachmentOptions {
+			bool blendEnable;
+			vk::ColorComponentFlags colorWriteMask;
+
+			vk::BlendFactor srcColorBlendFactor;
+			vk::BlendFactor dstColorBlendFactor;
+			vk::BlendOp colorBlendOp;
+
+			vk::BlendFactor srcAlphaBlendFactor;
+			vk::BlendFactor dstAlphaBlendFactor;
+			vk::BlendOp alphaBlendOp;
+
+			ColorBlendAttachmentOptions() {
+				blendEnable = false;
+				colorWriteMask =
+						vk::ColorComponentFlagBits::eR |
+						vk::ColorComponentFlagBits::eG |
+						vk::ColorComponentFlagBits::eB |
+						vk::ColorComponentFlagBits::eA;
+				srcColorBlendFactor = vk::BlendFactor::eOne;
+				dstColorBlendFactor = vk::BlendFactor::eZero;
+				colorBlendOp = vk::BlendOp::eAdd;
+				srcAlphaBlendFactor = vk::BlendFactor::eOne;
+				dstAlphaBlendFactor = vk::BlendFactor::eZero;
+				alphaBlendOp = vk::BlendOp::eAdd;
+			}
+		};
+		std::vector<ColorBlendAttachmentOptions> attachment_opt;
+
+		struct ColorBlendOptions {
+			bool logicOpEnable;
+			vk::LogicOp logicOp;
+			float blendCostants[4];
+
+			ColorBlendOptions() {
+				logicOpEnable = false;
+				logicOp = vk::LogicOp::eCopy;
+				blendCostants[0] = 0.0f;
+				blendCostants[1] = 0.0f;
+				blendCostants[2] = 0.0f;
+				blendCostants[3] = 0.0f;
+			}
+		};
+		ColorBlendOptions blend_opt;
+
+		vk::PrimitiveTopology topology; // input assembly
+
+		vk::Viewport *viewport_ref;
+		vk::PipelineLayout pipeline_layout;
 		vk::Pipeline graphics_pipeline;
+		vk::RenderPass render_pass;
 
 		Shader *shader;
 		//GLuint ubo_id;
@@ -451,24 +548,43 @@ public:
 			ubo_size = 0;
 			last_pass = 0;
 			render_priority = 0;
+
+			topology = vk::PrimitiveTopology::eTriangleList;
 		}
 	};
 
 	mutable SelfList<Material>::List _material_dirty_list;
-	//void _material_make_dirty(Material *p_material) const;
+	void _material_make_dirty(Material *p_material) const;
 	//void _material_add_geometry(RID p_material, Geometry *p_geometry);
 	//void _material_remove_geometry(RID p_material, Geometry *p_geometry);
+	void _material_setup(Material*);
 
 	mutable RID_Owner<Material> material_owner;
 
 	virtual RID material_create();
+	Material::RasterizerOptions material_get_rasterizer_opt(RID) const;
+	Material::DepthStencilOptions material_get_depth_opt(RID) const;
+	std::vector<Material::ColorBlendAttachmentOptions>
+			material_get_attachment_opt(RID) const;
+	Material::ColorBlendOptions material_get_blend_opt(RID) const;
+	void material_set_rasterizer_opt(RID, Material::RasterizerOptions);
+	void material_set_depth_opt(RID, Material::DepthStencilOptions);
+	void material_set_attachment_opt(
+		RID, std::vector<Material::ColorBlendAttachmentOptions>);
+	void material_set_blend_opt(RID, Material::ColorBlendOptions);
 
 	virtual void material_set_render_priority(RID p_material, int priority);
 	virtual void material_set_shader(RID p_shader_material, RID p_shader);
 	virtual RID material_get_shader(RID p_shader_material) const;
 
-	virtual void material_set_param(RID p_material, const StringName &p_param, const Variant &p_value);
-	virtual Variant material_get_param(RID p_material, const StringName &p_param) const;
+	virtual void material_set_param(
+			RID p_material,
+			const StringName &p_param,
+			const Variant &p_value);
+
+	virtual Variant material_get_param(
+			RID p_material,
+			const StringName &p_param) const;
 
 	virtual void material_set_line_width(RID p_material, float p_width);
 
@@ -477,8 +593,13 @@ public:
 	virtual bool material_is_animated(RID p_material);
 	virtual bool material_casts_shadows(RID p_material);
 
-	virtual void material_add_instance_owner(RID p_material, RasterizerScene::InstanceBase *p_instance);
-	virtual void material_remove_instance_owner(RID p_material, RasterizerScene::InstanceBase *p_instance);
+	virtual void material_add_instance_owner(
+			RID p_material,
+			RasterizerScene::InstanceBase *p_instance);
+
+	virtual void material_remove_instance_owner(
+			RID p_material,
+			RasterizerScene::InstanceBase *p_instance);
 
 	void _update_material(Material *material);
 	void update_dirty_materials();
@@ -1166,7 +1287,9 @@ public:
 		uint32_t width, height;
 
 		vk::Viewport viewport;
-		vk::RenderPass render_pass;
+		vk::Rect2D scissor;
+		vk::PipelineViewportStateCreateInfo viewport_info;
+		//vk::RenderPass render_pass;
 
 		bool flags[RENDER_TARGET_FLAG_MAX];
 

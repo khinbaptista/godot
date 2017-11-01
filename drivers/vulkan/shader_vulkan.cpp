@@ -2,6 +2,7 @@
 
 #include "shader_vulkan.h"
 
+#include <array>
 #include <cstdio>
 #include <fstream>
 #include <string>
@@ -12,14 +13,15 @@
 
 // ##################################################
 
-#define VERT_GLSL_FILE "_shader.vert"
-#define FRAG_GLSL_FILE "_shader.frag"
+#define VERT_GLSL_FILENAME "_shader.vert"
+#define FRAG_GLSL_FILENAME "_shader.frag"
 
-#define VERT_SPIRV_FILE "vert.spv"
-#define FRAG_SPIRV_FILE "frag.spv"
+#define VERT_SPIRV_FILENAME "vert.spv"
+#define FRAG_SPIRV_FILENAME "frag.spv"
 
 // ##################################################
 
+using std::array;
 using std::string;
 using std::vector;
 
@@ -48,8 +50,8 @@ void ShaderVK::Setup() {
 }
 
 void ShaderVK::Compile() {
-	string vertex_file = VERT_GLSL_FILE;
-	string fragment_file = FRAG_GLSL_FILE;
+	string vertex_file = VERT_GLSL_FILENAME;
+	string fragment_file = FRAG_GLSL_FILENAME;
 
 	write_file(vertex_file, vertex_code);
 	write_file(fragment_file, fragment_code);
@@ -59,6 +61,20 @@ void ShaderVK::Compile() {
 
 	remove(vertex_file);
 	remove(fragment_file);
+}
+
+void ShaderVK::DestroyModules() {
+	vk::Device device = InstanceVK::get_singleton()->get_device();
+
+	if (vertex_module) {
+		device.destroyShaderModule(vertex_module);
+		vertex_module = {};
+	}
+
+	if (fragment_module) {
+		device.destroyShaderModule(fragment_module);
+		fragment_module = {};
+	}
 }
 
 // ##################################################
@@ -80,7 +96,7 @@ void ShaderVK::CreatePipelineStages() {
 	vk::Device device = InstanceVK::get_singleton()->get_device();
 
 	// vertex stage
-	vector<char> vert_code = read_file("vert.spv");
+	vector<char> vert_code = read_file(VERT_SPIRV_FILENAME);
 	vertex_module = CreateModule(vert_code);
 	ERR_FAIL_COND(!vertex_module);
 
@@ -90,7 +106,7 @@ void ShaderVK::CreatePipelineStages() {
 	vert_stage_info.pName = "main"; // entry point
 
 	// fragment stage
-	vector<char> frag_code = read_file("frag.spv");
+	vector<char> frag_code = read_file(FRAG_SPIRV_FILENAME);
 	fragment_module = CreateModule(frag_code);
 	ERR_FAIL_COND(!fragment_module);
 
@@ -101,141 +117,9 @@ void ShaderVK::CreatePipelineStages() {
 
 	// shader stages
 	pipeline_stages = { vert_stage_info, frag_stage_info };
-
-	/*
-	// vertex input
-	vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-	vertex_input_info.vertexBindingDescriptionCount = 0;
-
-	// input assembly
-	vk::PipelineInputAssemblyStateCreateInfo input_assembly_info;
-	input_assembly_info.topology = vk::PrimitiveTopology::eTriangleList;
-	input_assembly_info.primitiveRestartEnable = false;
-
-	// viewport D:
-	vk::Extent extent = InstanceVK::get_singleton()->get_swapchain_extent();
-	vk::Viewport viewport;
-	viewport.x = 0;
-	viewport.y = 0;
-	viewport.width = (float)extent.width;
-	viewport.height = (float)extent.height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	vk::Rect2D scissor;
-	scissor.offset = { 0, 0 };
-	scissor.extent = extent;
-
-	vk::PipelineViewportStateCreateInfo viewport_info;
-	viewport_info.viewportCount = 1;
-	viewport_info.pViewports = &viewport;
-	viewport_info.scissorCount = 1;
-	viewport_info.pScissors = &scissor;
-
-	// rasterizer
-	vk::PipelineRasterizationStateCreateInfo raster_info;
-	raster_info.depthClampEnable = raster_opt.depthClampEnable;
-	raster_info.rasterizerDiscardEnable = raster_opt.rasterizerDiscardEnable;
-	raster_info.polygonMode = raster_opt.polygonMode;
-	raster_info.lineWidth = raster_opt.lineWidth;
-	raster_info.cullMode = raster_opt.cullMode;
-	raster_info.frontFace = raster_opt.frontFace;
-
-	// multisampling
-	vk::PipelineMultisampleStateCreateInfo multisample_info;
-	multisample_info.sampleShadingEnable = false;
-	multisample_info.rasterizationSamples = vk::SampleCountFlagBits::e1;
-	// commented lines are optional attributes since we won't use it (for now?)
-	//multisample_info.minSampleShading = 1.0f;
-	//multisample_info.pSampleMask = nullptr;
-	//multisample_info.alphaToCoverageEnable = false;
-	//multisample_info.alphaToOneEnable = false;
-
-	// depth and stencil testing
-	vk::PipelineDepthStencilStateCreateInfo depth_info;
-	depth_info.depthTestEnable = depth_stencil_opt.depthTestEnable;
-	depth_info.depthWriteEnable = depth_stencil_opt.depthWriteEnable;
-	depth_info.depthCompareOp = depth_stencil_opt.depthCompareOp;
-	depth_info.depthBoundsTestEnable = depth_stencil_opt.depthBoundsTestEnable;
-	depth_info.minDepthBounds = depth_stencil_opt.minDepthBounds;
-	depth_info.maxDepthBounds = depth_stencil_opt.maxDepthBounds;
-	depth_info.stencilTestEnable = depth_stencil_opt.stencilTestEnable;
-	dpeth_info.front = depth_stencil_opt.front;
-	depth_info.back = depth_stencil_opt.back;
-
-	// color blending
-	vector<vk::PipelineColorBlendAttachmentState> blend_attachments;
-	for (ColorBlendAttachmentOptions opt : blend_attachment_opt) {
-		vk::PipelineColorBlendAttachmentState blend_attachment;
-		blend_attachment.colorWriteMask = opt.colorWriteMask;
-		blend_attachment.blendEnable = opt.blendEnable;
-		blend_attachment.srcColorBlendFactor = opt.srcColorBlendFactor;
-		blend_attachment.dstColorBlendFactor = opt.dstColorBlendFactor;
-		blend_attachment.colorBlendOp = opt.colorBlendOp;
-		blend_attachment.srcAlphaBlendFactor = opt.srcAlphaBlendFactor;
-		blend_attachment.dstAlphaBlendFactor = opt.dstAlphaBlendFactor;
-		blend_attachment.alphaBlendOp = opt.alphaBlendOp;
-
-		blend_attachments.push_back(blend_attachment);
-	}
-
-	vk::PipelineColorBlendStateCreateInfo blend_info;
-	blend_info.logicOpEnable = blend_opt.logicOpEnable;
-	blend_info.logicOp = blend_opt.logicOp;
-	blend_info.attachmentCount = blend_attachments.size();
-	blend_info.pAttachments = blend_attachments.data();
-	blend_info.blendCostants[0] = blend_opt.blendCostants[0];
-	blend_info.blendCostants[1] = blend_opt.blendCostants[1];
-	blend_info.blendCostants[2] = blend_opt.blendCostants[2];
-	blend_info.blendCostants[3] = blend_opt.blendCostants[3];
-
-	// dynamic state (can we take more advantage of this?)
-	std::array<vk::DynamicState, 2> dynamic_states[] = {
-		vk::DynamicState::eViewport, vk::DynamicState::eLineWidth
-	};
-
-	vk::PipelineDynamicStateCreateInfo dynamic_info;
-	dynamic_info.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
-	dynamic_info.pDynamicStates = dynamic_states.data();
-
-	// pipeline layout
-	vk::PipelineLayoutCreateInfo layout_info;
-	layout_info.setLayoutCount = 0;
-	layout_info.pSetLayouts = nullptr;
-	layout_info.pushConstantRangeCount = 0;
-	layout_info.pPushConstantRanges = nullptr;
-
-	pipeline_layout = device.createPipelineLayout(layout_info);
-
-	// pipeline
-	vk::GraphicsPipelineCreateInfo pipeline_info;
-	pipeline_info.stageCount = 2;
-	pipeline_info.pStages = &shader_stages;
-	pipeline_info.pVertexInputState = &vertex_input_info;
-	pipeline_info.pInputAssemblyState = &input_assembly_info;
-	pipeline_info.pViewportState = &viewport_info;
-	pipeline_info.pRasterizationState = &raster_info;
-	pipeline_info.pMultisampleState = &multisample_info;
-	pipeline_info.pDepthStencilState = &depth_info;
-	pipeline_info.pColorBlendState = &blend_info;
-	pipeline_info.pDynamicState = &dynamic_info;
-	pipeline_info.layout = layout_info;
-	pipeline_info.renderPass = InstanceVK::get_singleton()->get_render_pass();
-	pipeline_info.subpass = 0;
-	pipeline_info.basePipelineHandle = nullptr;
-	pipeline_info.basePipelineIndex = -1;
-
-	pipeline = device.createGraphicsPipeline(nullptr, pipeline_info);
-	ERR_EXPLAIN("Failed to create graphcis pipeline object");
-	ERR_FAIL_COND(!pipeline);
-
-	// cleanup
-	device.destroyShaderModule(vert_module);
-	device.destroyShaderModule(frag_module);
-	*/
 }
 
-void ShaderVK::CreateRenderPass() {
+/*void ShaderVK::CreateRenderPass() {
 	vector<vk::AttachmentDescription> attachments;
 
 	vk::AttachmentDescription color_attachment = {};
@@ -288,6 +172,11 @@ void ShaderVK::CreateRenderPass() {
 
 	render_pass = device.createRenderPass(renderpass_info);
 }
+*/
+
+array<vk::PipelineShaderStageCreateInfo, 2> ShaderVK::get_stages() {
+	return pipeline_stages;
+}
 
 // ##################################################
 
@@ -296,17 +185,18 @@ ShaderVK::ShaderVK() {
 }
 
 ShaderVK::~ShaderVK() {
-	vk::Device device = InstanceVK::get_singleton()->get_device();
+	//vk::Device device = InstanceVK::get_singleton()->get_device();
+	//device.destroyPipeline(pipeline);
+	//device.destroyPipelineLayout(pipeline_layout);
+	//device.destroyRenderPass(render_pass);
 
-	device.destroyPipeline(pipeline);
-	device.destroyPipelineLayout(pipeline_layout);
-	device.destroyRenderPass(render_pass);
+	DestroyModules()
 }
 
 // ##################################################
 
 void ShaderVK::CompileGLSL(const string &filename) {
-	// Rely on std::system because glslang API is poorly documented (aka crap)
+	// Rely on std::system because glslang API is poorly documented
 	string command = string(GLSLANGVALIDATOR) + " -V " + filename;
 	std::system(command.c_str());
 }
