@@ -239,7 +239,7 @@ def configure(env):
 
     env.Append(CPPPATH=['#platform/x11'])
 
-    if (env['vulkan'] == 'yes'):
+    if (env['vulkan']):
         env.Append(CPPFLAGS=['-DX11_ENABLED', '-DUNIX_ENABLED', '-DVULKAN_ENABLED', '-DVK_USE_PLATFORM_XLIB_KHR'])
         env.Append(LIBS=['vulkan', 'pthread'])
     else:

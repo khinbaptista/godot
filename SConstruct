@@ -182,7 +182,7 @@ opts.Add("CCFLAGS", "Custom flags for the C and C++ compilers")
 opts.Add("CFLAGS", "Custom flags for the C compiler")
 opts.Add("LINKFLAGS", "Custom flags for the linker")
 
-opts.Add("vulkan", "Build using vulkan instead of GLES (yes/no)", 'yes')
+opts.Add(BoolVariable('vulkan', "Build using vulkan instead of GLES", False))
 
 
 # add platform specific options

@@ -29,7 +29,13 @@ RID RasterizerStorageVK::render_target_create() {
 	return render_target_owner.make_rid(rt);
 }
 
-void RasterizerStorageVK::render_target_set_size(RID p_render_target, int p_width, int p_height) {}
+void RasterizerStorageVK::render_target_set_size(RID p_render_target, int p_width, int p_height) {
+	RenderTarget *rt = render_target_owner.get(p_render_target);
+	ERR_FAIL_COND(!rt);
+
+	rt->width = p_width;
+	rt->height = p_height;
+}
 
 RID RasterizerStorageVK::render_target_get_texture(RID p_render_target) const {
 	RenderTarget *rt = render_target_owner.getornull(p_render_target);

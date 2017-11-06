@@ -95,6 +95,8 @@ void RasterizerSceneVK::environment_set_background(RID p_env, VS::EnvironmentBG 
 
 void RasterizerSceneVK::environment_set_sky(RID p_env, RID p_sky) {}
 
+void RasterizerSceneVK::environment_set_sky_custom_fov(RID p_env, float p_scale) {}
+
 void RasterizerSceneVK::environment_set_sky_scale(RID p_env, float p_scale) {}
 
 void RasterizerSceneVK::environment_set_bg_color(RID p_env, const Color &p_color) {}
@@ -129,13 +131,20 @@ void RasterizerSceneVK::environment_set_fog(
 
 void RasterizerSceneVK::environment_set_ssr(
 		RID p_env, bool p_enable, int p_max_steps, float p_fade_int,
-		float p_fade_out, float p_depth_tolerance, bool p_roughness) {
-}
+		float p_fade_out, float p_depth_tolerance, bool p_roughness) {}
 
 void RasterizerSceneVK::environment_set_ssao(
-		RID p_env, bool p_enable, float p_radius, float p_intensity, float p_radius2,
-		float p_intensity2, float p_bias, float p_light_affect, const Color &p_color, bool p_blur) {
-}
+		RID p_env, bool p_enable,
+		float p_radius,
+		float p_intensity,
+		float p_radius2,
+		float p_intensity2,
+		float p_bias,
+		float p_light_affect,
+		const Color &p_color,
+		VS::EnvironmentSSAOQuality p_quality,
+		VS::EnvironmentSSAOBlur p_blur,
+		float p_bilateral_sharpness) {}
 
 void RasterizerSceneVK::environment_set_tonemap(
 		RID p_env, VS::EnvironmentToneMapper p_tone_mapper, float p_exposure,

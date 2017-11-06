@@ -38,21 +38,21 @@ Error InstanceVK::setup() {
 	ERR_EXPLAIN("Failed to create depth resources");
 	ERR_FAIL_COND_V(!depth_imageview, ERR_UNCONFIGURED);
 
-	create_render_pass();
-	ERR_EXPLAIN("Failed to create render pass");
-	ERR_FAIL_COND_V(!render_pass, ERR_UNCONFIGURED);
+	//create_render_pass();
+	//ERR_EXPLAIN("Failed to create render pass");
+	//ERR_FAIL_COND_V(!render_pass, ERR_UNCONFIGURED);
 
-	create_framebuffers();
-	ERR_EXPLAIN("Failed to create framebuffers");
-	ERR_FAIL_COND_V(framebuffers.empty(), ERR_UNCONFIGURED);
+	//create_framebuffers();
+	//ERR_EXPLAIN("Failed to create framebuffers");
+	//ERR_FAIL_COND_V(framebuffers.empty(), ERR_UNCONFIGURED);
 
 	create_command_pool();
 	ERR_EXPLAIN("Failed to create command pool");
 	ERR_FAIL_COND_V(!command_pool, ERR_UNCONFIGURED);
 
-	create_command_buffers();
-	ERR_EXPLAIN("Failed to create command buffers");
-	ERR_FAIL_COND_V(command_buffers.empty(), ERR_UNCONFIGURED);
+	//create_command_buffers();
+	//ERR_EXPLAIN("Failed to create command buffers");
+	//ERR_FAIL_COND_V(command_buffers.empty(), ERR_UNCONFIGURED);
 
 	return OK;
 }
@@ -379,7 +379,7 @@ void InstanceVK::create_swapchain() {
 		swapchain_imageviews[i] = vk_CreateImageView(
 				swapchain_images[i],
 				swapchain_image_format,
-				vk::ImageAspectFlagBits::eColor)
+				vk::ImageAspectFlagBits::eColor);
 	}
 }
 
@@ -389,7 +389,8 @@ void InstanceVK::create_swapchain() {
 }*/
 
 void InstanceVK::create_depth_resources() {
-	vk::Format depth_format = FindDepthFormat();
+	vk::Format depth_format = vk_FindDepthFormat();
+	ERR_FAIL_COND(depth_format == vk::Format::eUndefined);
 
 	depth_image = vk_CreateImage(
 			swapchain_extent.width,
@@ -406,7 +407,7 @@ void InstanceVK::create_depth_resources() {
 }
 
 void InstanceVK::create_framebuffers() {
-	framebuffers.resize(swapchain_imageviews.size());
+	/*framebuffers.resize(swapchain_imageviews.size());
 
 	for (size_t i = 0; i < swapchain_imageviews.size(); i++) {
 		std::array<vk::ImageView, 2> attachments = {
@@ -422,7 +423,7 @@ void InstanceVK::create_framebuffers() {
 		framebuffer_info.layers = 1;
 
 		framebuffers[i] = device.createFramebuffer(framebuffer_info);
-	}
+	}*/
 }
 
 // #########################
@@ -432,13 +433,13 @@ void InstanceVK::create_command_pool() {
 
 	vk::CommandPoolCreateInfo pool_info;
 	pool_info.queueFamilyIndex = indices.graphics;
-	pool_info.flags = 0;
+	pool_info.flags = vk::CommandPoolCreateFlagBits::eTransient;
 
 	command_pool = device.createCommandPool(pool_info);
 }
 
 void InstanceVK::create_command_buffers() {
-	command_buffers.resize(framebuffers.size());
+	/*command_buffers.resize(framebuffers.size());
 
 	vk::CommandBufferAllocateInfo alloc_info;
 	alloc_info.commandPool = command_pool;
@@ -476,7 +477,7 @@ void InstanceVK::create_command_buffers() {
 		);
 		command_buffers[i].endRenderPass();
 		command_buffers[i].end();
-	}
+	}*/
 }
 
 // ##################################################
@@ -519,14 +520,6 @@ vk::Extent2D InstanceVK::get_swapchain_extent() {
 
 vk::Format InstanceVK::get_swapchain_format() {
 	return swapchain_image_format;
-}
-
-vk::RenderPass InstanceVK::get_render_pass() {
-	return render_pass;
-}
-
-vk::Framebuffer InstanceVK::get_framebuffer() {
-	return framebuffer;
 }
 
 // ##################################################

@@ -44,4 +44,4 @@ public:
 	void DestroyModules();
 
 	std::array<vk::PipelineShaderStageCreateInfo, 2> get_stages();
-}
+};

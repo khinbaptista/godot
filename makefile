@@ -1,2 +1,3 @@
 all:
-	scons platform=x11 builtin_openssl=yes vulkan=yes module_mono_enabled=no
+	clear
+	scons platform=x11 vulkan=True module_mobile_vr_enabled=False

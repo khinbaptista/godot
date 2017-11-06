@@ -1,9 +1,18 @@
 #include "vk_helper.h"
 
+#include "error_macros.h"
+#include "instance_vk.h"
+#include "ustring.h"
+
+using std::vector;
+
 vk::Format vk_FindSupportedFormat(
 		const vector<vk::Format> &candidates,
 		vk::ImageTiling tiling,
 		vk::FormatFeatureFlags features) {
+
+	vk::PhysicalDevice physical_device;
+	physical_device = InstanceVK::get_singleton()->get_physical_device();
 
 	for (vk::Format format : candidates) {
 		vk::FormatProperties props;
@@ -11,21 +20,21 @@ vk::Format vk_FindSupportedFormat(
 
 		if (
 				tiling == vk::ImageTiling::eLinear &&
-				props.optimalTilingFeatures == features) {
+				props.optimalTilingFeatures & features) {
 			return format;
 		} else if (
 				tiling == vk::ImageTiling::eOptimal &&
-				props.optimalTilingFeatures == features) {
+				props.optimalTilingFeatures & features) {
 			return format;
 		}
 	}
 
 	ERR_EXPLAIN("Failed to find supported depth format");
-	ERR_FAIL();
+	ERR_FAIL_V(vk::Format::eUndefined);
 }
 
 vk::Format vk_FindDepthFormat() {
-	return FindSupportedFormat(
+	return vk_FindSupportedFormat(
 			{ vk::Format::eD32Sfloat,
 					vk::Format::eD32SfloatS8Uint,
 					vk::Format::eD24UnormS8Uint },
@@ -60,7 +69,8 @@ vk::Image vk_CreateImage(
 		vk::ImageTiling tiling,
 		vk::ImageUsageFlags usage,
 		vk::MemoryPropertyFlags properties,
-		vk::DeviceMemory &memory) {
+		vk::DeviceMemory &memory,
+		vk::DeviceSize offset) {
 
 	vk::Device device = InstanceVK::get_singleton()->get_device();
 
@@ -88,7 +98,7 @@ vk::Image vk_CreateImage(
 	alloc_info.memoryTypeIndex = vk_FindMemoryType(memreq.memoryTypeBits, properties);
 
 	memory = device.allocateMemory(alloc_info);
-	device.bindImageMemory(image, memory);
+	device.bindImageMemory(image, memory, offset);
 
 	return image;
 }

@@ -3,6 +3,7 @@
 #include "self_list.h"
 #include "servers/visual/rasterizer.h"
 #include "servers/visual/shader_language.h"
+#include "shader_vulkan.h"
 
 class RasterizerCanvasVK;
 class RasterizerSceneVK;
@@ -442,6 +443,7 @@ public:
 			bool depthTestEnable;
 			bool depthWriteEnable; // useful for transparent materials
 			vk::CompareOp depthCompareOp;
+
 			bool depthBoundsTestEnable;
 			float minDepthBounds;
 			float maxDepthBounds;
@@ -459,8 +461,8 @@ public:
 				maxDepthBounds = 1.0f;
 
 				stencilTestEnable = false;
-				front = {};
-				back = {};
+				//front = {};
+				//back = {};
 			}
 		};
 		DepthStencilOptions depth_stencil_opt;
@@ -497,24 +499,22 @@ public:
 		struct ColorBlendOptions {
 			bool logicOpEnable;
 			vk::LogicOp logicOp;
-			float blendCostants[4];
+			float blendConstants[4];
 
 			ColorBlendOptions() {
 				logicOpEnable = false;
 				logicOp = vk::LogicOp::eCopy;
-				blendCostants[0] = 0.0f;
-				blendCostants[1] = 0.0f;
-				blendCostants[2] = 0.0f;
-				blendCostants[3] = 0.0f;
+				blendConstants[0] = 0.0f;
+				blendConstants[1] = 0.0f;
+				blendConstants[2] = 0.0f;
+				blendConstants[3] = 0.0f;
 			}
 		};
 		ColorBlendOptions blend_opt;
 
-		vk::PrimitiveTopology topology; // input assembly
-
-		vk::Viewport *viewport_ref;
+		vk::PrimitiveTopology topology; // input assembly info
 		vk::PipelineLayout pipeline_layout;
-		vk::Pipeline graphics_pipeline;
+		vk::Pipeline pipeline; // graphics pipeline
 		vk::RenderPass render_pass;
 
 		Shader *shader;
@@ -557,7 +557,6 @@ public:
 	void _material_make_dirty(Material *p_material) const;
 	//void _material_add_geometry(RID p_material, Geometry *p_geometry);
 	//void _material_remove_geometry(RID p_material, Geometry *p_geometry);
-	void _material_setup(Material*);
 
 	mutable RID_Owner<Material> material_owner;
 
@@ -601,6 +600,7 @@ public:
 			RID p_material,
 			RasterizerScene::InstanceBase *p_instance);
 
+	void _material_setup(Material*);
 	void _update_material(Material *material);
 	void update_dirty_materials();
 
@@ -1285,11 +1285,6 @@ public:
 
 		uint32_t offset_x, offset_y;
 		uint32_t width, height;
-
-		vk::Viewport viewport;
-		vk::Rect2D scissor;
-		vk::PipelineViewportStateCreateInfo viewport_info;
-		//vk::RenderPass render_pass;
 
 		bool flags[RENDER_TARGET_FLAG_MAX];
 

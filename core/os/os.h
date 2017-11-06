@@ -290,6 +290,10 @@ public:
 	virtual void disable_crash_handler() {}
 	virtual bool is_disable_crash_handler() const { return false; }
 
+#ifdef CursorShape
+#undef CursorShape
+#endif
+
 	enum CursorShape {
 		CURSOR_ARROW,
 		CURSOR_IBEAM,

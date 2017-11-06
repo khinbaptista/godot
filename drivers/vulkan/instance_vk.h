@@ -108,7 +108,7 @@ protected:
 	void create_logical_device();
 	void create_swapchain();
 	void create_depth_resources();
-	void create_render_pass();
+	//void create_render_pass();
 	void create_framebuffers();
 	void create_command_pool();
 	void create_command_buffers();
@@ -124,8 +124,8 @@ public:
 	vk::SwapchainKHR get_swapchain();
 	vk::Extent2D get_swapchain_extent();
 	vk::Format get_swapchain_format();
-	vk::RenderPass get_render_pass();
-	vk::Framebuffer get_framebuffer();
+	//vk::RenderPass get_render_pass();
+	//vk::Framebuffer get_framebuffer();
 
 	virtual int get_window_width() = 0;
 	virtual int get_window_height() = 0;
