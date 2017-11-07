@@ -544,6 +544,10 @@ InstanceVK::~InstanceVK() {
 		device.destroyImageView(swapchain_imageviews[i]);
 	}
 
+	device.destroyImageView(depth_imageview);
+	device.destroyImage(depth_image);
+	device.freeMemory(depth_memory);
+
 	device.destroySwapchainKHR(swapchain);
 	device.destroy();
 
