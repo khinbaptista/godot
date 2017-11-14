@@ -34,9 +34,14 @@ Error InstanceVK::setup() {
 	ERR_EXPLAIN("Failed to create swapchain");
 	ERR_FAIL_COND_V(!swapchain, ERR_UNCONFIGURED);
 
-	create_depth_resources();
-	ERR_EXPLAIN("Failed to create depth resources");
-	ERR_FAIL_COND_V(!depth_imageview, ERR_UNCONFIGURED);
+	VmaAllocatorCreateInfo alloc_info;
+	alloc_info.physicalDevice = phisical_device;
+	alloc_info.device = device;
+	vmaCreateAllocator(&alloc_info, nullptr);
+
+	//create_depth_resources();
+	//ERR_EXPLAIN("Failed to create depth resources");
+	//ERR_FAIL_COND_V(!depth_imageview, ERR_UNCONFIGURED);
 
 	//create_render_pass();
 	//ERR_EXPLAIN("Failed to create render pass");
@@ -235,6 +240,7 @@ void InstanceVK::pick_physical_device() {
 	for (const auto &device : devices) {
 		if (is_device_suitable(device)) {
 			physical_device = device;
+			device_limits = physical_device.getProperties().limits;
 			break; // select the first suitable device
 		}
 	}
@@ -303,11 +309,18 @@ void InstanceVK::create_swapchain() {
 		swapchain_image_format = surface_format.format;
 	}
 
+	/*
+	eImmediate:	single buffer
+	eFifo:		double buffer; only mode guaranteed to be available
+	eFifoRelaxed:	double buffer, but new images replace current one (tearing)
+	eMailbox:	triple buffer, new images replace the last image in queue (no tearing)
+	*/
+	vk::PresentModeKHR preferred = use_vsync ? vk::PresentModeKHR::eMailbox : vk::PresentModeKHR::eImmediate;
+
 	vk::PresentModeKHR present_mode = vk::PresentModeKHR::eFifo;
 	{ // choose swapchain present mode
-
 		for (const auto &available_mode : swapchain_support.present_modes) {
-			if (available_mode == preferred_present_mode) {
+			if (available_mode == preferred) {
 				present_mode = available_mode;
 				break;
 			}
@@ -498,8 +511,16 @@ vk::PhysicalDevice InstanceVK::get_physical_device() {
 	return physical_device;
 }
 
+vk::PhysicalDeviceLimits InstanceVK::get_device_limits() {
+	return device_limits;
+}
+
 vk::Device InstanceVK::get_device() {
 	return device;
+}
+
+VmaAllocator *InstanceVK::get_allocator() {
+	return &allocator;
 }
 
 vk::Queue InstanceVK::get_queue_graphics() {
@@ -524,12 +545,22 @@ vk::Format InstanceVK::get_swapchain_format() {
 
 // ##################################################
 
+void InstanceVK::set_use_vsync(bool use) {
+	use_vsync = use;
+}
+bool InstanceVK::is_using_vsync() const {
+	return use_vsync;
+}
+
+// ##################################################
+
 InstanceVK::InstanceVK() {
+	ERR_FAIL_COND(singleton != nullptr);
+
 	if (enable_validation_layers) {
 		instance_extensions.push_back("VK_EXT_debug_report");
 	}
 
-	ERR_FAIL_COND(singleton);
 	singleton = this;
 }
 
@@ -544,11 +575,13 @@ InstanceVK::~InstanceVK() {
 		device.destroyImageView(swapchain_imageviews[i]);
 	}
 
-	device.destroyImageView(depth_imageview);
-	device.destroyImage(depth_image);
-	device.freeMemory(depth_memory);
+	//device.destroyImageView(depth_imageview);
+	//device.destroyImage(depth_image);
+	//device.freeMemory(depth_memory);
 
 	device.destroySwapchainKHR(swapchain);
+
+	vmaDestroyAllocator(allocator);
 	device.destroy();
 
 	destroy_debug_callback();

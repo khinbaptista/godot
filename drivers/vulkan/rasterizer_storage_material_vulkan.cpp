@@ -16,7 +16,7 @@ void RasterizerStorageVK::_material_make_dirty(RasterizerStorageVK::Material *p_
 RID RasterizerStorageVK::material_create() {
 	Material *material = memnew(Material);
 	material->topology = vk::PrimitiveTopology::eTriangleList;
-	
+
 	return material_owner.make_rid(material);
 }
 
@@ -41,167 +41,32 @@ void RasterizerStorageVK::_material_setup(RasterizerStorageVK::Material *materia
 	input_assembly_info.topology = material->topology;
 	input_assembly_info.primitiveRestartEnable = false;
 
-	// viewport (is dynamic state)
-	vk::PipelineViewportStateCreateInfo viewport_info;
-	viewport_info.viewportCount = 0;
-	viewport_info.pViewports = nullptr;
-	viewport_info.scissorCount = 0;
-	viewport_info.pScissors = nullptr;
-
-	// rasterizer
+	// rasterizer (create with pipeline)
 	vk::PipelineRasterizationStateCreateInfo raster_info;
-	raster_info.depthClampEnable = material->raster_opt.depthClampEnable;
-	raster_info.rasterizerDiscardEnable = material->raster_opt.rasterizerDiscardEnable;
-	raster_info.polygonMode = material->raster_opt.polygonMode;
-	raster_info.lineWidth = material->raster_opt.lineWidth;
-	raster_info.cullMode = material->raster_opt.cullMode;
-	raster_info.frontFace = material->raster_opt.frontFace;
+	{
+		Material::RasterizerOptions opt = material->raster_opt;
 
-	// multisampling
-	vk::PipelineMultisampleStateCreateInfo multisample_info;
-	multisample_info.sampleShadingEnable = false;
-	multisample_info.rasterizationSamples = vk::SampleCountFlagBits::e1;
-	// commented lines are optional attributes since we won't use it (for now?)
-	//multisample_info.minSampleShading = 1.0f;
-	//multisample_info.pSampleMask = nullptr;
-	//multisample_info.alphaToCoverageEnable = false;
-	//multisample_info.alphaToOneEnable = false;
-
-	// depth and stencil testing
-	vk::PipelineDepthStencilStateCreateInfo depth_info;
-	depth_info.depthTestEnable = material->depth_stencil_opt.depthTestEnable;
-	depth_info.depthWriteEnable = material->depth_stencil_opt.depthWriteEnable;
-	depth_info.depthCompareOp = material->depth_stencil_opt.depthCompareOp;
-	depth_info.depthBoundsTestEnable = material->depth_stencil_opt.depthBoundsTestEnable;
-	depth_info.minDepthBounds = material->depth_stencil_opt.minDepthBounds;
-	depth_info.maxDepthBounds = material->depth_stencil_opt.maxDepthBounds;
-	depth_info.stencilTestEnable = material->depth_stencil_opt.stencilTestEnable;
-	depth_info.front = material->depth_stencil_opt.front;
-	depth_info.back = material->depth_stencil_opt.back;
-
-	// color blending
-	vector<vk::PipelineColorBlendAttachmentState> blend_attachments;
-	for (Material::ColorBlendAttachmentOptions opt : material->attachment_opt) {
-		vk::PipelineColorBlendAttachmentState blend_attachment;
-		blend_attachment.colorWriteMask = opt.colorWriteMask;
-		blend_attachment.blendEnable = opt.blendEnable;
-		blend_attachment.srcColorBlendFactor = opt.srcColorBlendFactor;
-		blend_attachment.dstColorBlendFactor = opt.dstColorBlendFactor;
-		blend_attachment.colorBlendOp = opt.colorBlendOp;
-		blend_attachment.srcAlphaBlendFactor = opt.srcAlphaBlendFactor;
-		blend_attachment.dstAlphaBlendFactor = opt.dstAlphaBlendFactor;
-		blend_attachment.alphaBlendOp = opt.alphaBlendOp;
-
-		blend_attachments.push_back(blend_attachment);
-	};
-
-	vk::PipelineColorBlendStateCreateInfo blend_info;
-	blend_info.logicOpEnable = material->blend_opt.logicOpEnable;
-	blend_info.logicOp = material->blend_opt.logicOp;
-	blend_info.attachmentCount = blend_attachments.size();
-	blend_info.pAttachments = blend_attachments.data();
-	blend_info.blendConstants[0] = material->blend_opt.blendConstants[0];
-	blend_info.blendConstants[1] = material->blend_opt.blendConstants[1];
-	blend_info.blendConstants[2] = material->blend_opt.blendConstants[2];
-	blend_info.blendConstants[3] = material->blend_opt.blendConstants[3];
-
-	{ // create renderpass
-		Material::DepthStencilOptions opt = material->depth_stencil_opt;
-
-		vector<vk::AttachmentDescription> attachments;
-
-		vk::AttachmentDescription color_attachment = {};
-		color_attachment.format = InstanceVK::get_singleton()->get_swapchain_format();
-		color_attachment.samples = vk::SampleCountFlagBits::e1; // not using multisampling
-		color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-		color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-		color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare; // not using stencil
-		color_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-		color_attachment.initialLayout = vk::ImageLayout::eUndefined;
-		color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
-		attachments.push_back(color_attachment);
-
-		vk::AttachmentReference color_ref = {};
-		color_ref.attachment = 0;
-		color_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-		vk::AttachmentDescription depth_attachment;
-		vk::AttachmentReference *depth_reference = nullptr;
-		if (opt.depthTestEnable) {
-			depth_attachment.format = vk_FindDepthFormat();
-			depth_attachment.samples = vk::SampleCountFlagBits::e1; // not using multisampling
-			depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-			depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
-			depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare; // not using stencil
-			depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-			depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
-			depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-			attachments.push_back(depth_attachment);
-
-			vk::AttachmentReference depth_ref = {};
-			depth_ref.attachment = 1;
-			depth_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-			depth_reference = &depth_ref;
-		}
-
-		vk::SubpassDescription subpass = {};
-		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &color_ref;
-		subpass.pDepthStencilAttachment = depth_reference;
-
-		vk::RenderPassCreateInfo renderpass_info = {};
-		renderpass_info.attachmentCount = (uint32_t)attachments.size();
-		renderpass_info.pAttachments = attachments.data();
-		renderpass_info.subpassCount = 1;
-		renderpass_info.pSubpasses = &subpass;
-		//renderpass_info.dependencyCount = 1;
-		//renderpass_info.pDependencies = &dependency;
-
-		material->render_pass = device.createRenderPass(renderpass_info);
+		raster_info.depthClampEnable = opt.depthClampEnable;
+		raster_info.rasterizerDiscardEnable = opt.rasterizerDiscardEnable;
+		raster_info.polygonMode = opt.polygonMode;
+		raster_info.lineWidth = opt.lineWidth;
+		raster_info.cullMode = opt.cullMode;
+		raster_info.frontFace = opt.frontFace;
 	}
 
-	// dynamic state
-	std::vector<vk::DynamicState> dynamic_states = {
-		vk::DynamicState::eViewport,
-		vk::DynamicState::eScissor,
-		vk::DynamicState::eLineWidth
-	};
+	vk::AttachmentReference *depth_reference = nullptr;
 
-	vk::PipelineDynamicStateCreateInfo dynamic_info;
-	dynamic_info.dynamicStateCount = (uint32_t)dynamic_states.size();
-	dynamic_info.pDynamicStates = dynamic_states.data();
+	vk::AttachmentReference depth_ref;
+	if (frame.current_rt && frame.current_rt->depth_stencil_opt.depthTestEnable) {
+		depth_ref.attachment = 1;
+		depth_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+		depth_reference = &depth_ref;
+	}
 
-	// pipeline layout
-	vk::PipelineLayoutCreateInfo layout_info;
-	layout_info.setLayoutCount = 0;
-	layout_info.pSetLayouts = nullptr;
-	layout_info.pushConstantRangeCount = 0;
-	layout_info.pPushConstantRanges = nullptr;
-
-	material->pipeline_layout = device.createPipelineLayout(layout_info);
-
-	// pipeline
-	vk::GraphicsPipelineCreateInfo pipeline_info;
-	pipeline_info.stageCount = material->shader->shader->get_stages().size();
-	pipeline_info.pStages = material->shader->shader->get_stages().data();
-	pipeline_info.pVertexInputState = &vertex_input_info;
-	pipeline_info.pInputAssemblyState = &input_assembly_info;
-	pipeline_info.pViewportState = &viewport_info;
-	pipeline_info.pRasterizationState = &raster_info;
-	pipeline_info.pMultisampleState = &multisample_info;
-	pipeline_info.pDepthStencilState = &depth_info;
-	pipeline_info.pColorBlendState = &blend_info;
-	pipeline_info.pDynamicState = &dynamic_info;
-	pipeline_info.layout = material->pipeline_layout;
-	pipeline_info.renderPass = material->render_pass;
-	pipeline_info.subpass = 0;
-	pipeline_info.basePipelineHandle = nullptr;
-	pipeline_info.basePipelineIndex = -1;
-
-	material->pipeline = device.createGraphicsPipeline(nullptr, pipeline_info);
-	ERR_EXPLAIN("Failed to create graphcis pipeline object");
-	ERR_FAIL_COND(!material->pipeline);
+	subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &color_ref;
+	subpass.pDepthStencilAttachment = depth_reference;
 }
 
 RasterizerStorageVK::Material::RasterizerOptions

@@ -439,84 +439,6 @@ public:
 		};
 		RasterizerOptions raster_opt;
 
-		struct DepthStencilOptions {
-			bool depthTestEnable;
-			bool depthWriteEnable; // useful for transparent materials
-			vk::CompareOp depthCompareOp;
-
-			bool depthBoundsTestEnable;
-			float minDepthBounds;
-			float maxDepthBounds;
-
-			bool stencilTestEnable;
-			vk::StencilOpState front;
-			vk::StencilOpState back;
-
-			DepthStencilOptions() {
-				depthTestEnable = true;
-				depthWriteEnable = true;
-				depthCompareOp = vk::CompareOp::eLess;
-				depthBoundsTestEnable = false;
-				minDepthBounds = 0.0f;
-				maxDepthBounds = 1.0f;
-
-				stencilTestEnable = false;
-				//front = {};
-				//back = {};
-			}
-		};
-		DepthStencilOptions depth_stencil_opt;
-
-		struct ColorBlendAttachmentOptions {
-			bool blendEnable;
-			vk::ColorComponentFlags colorWriteMask;
-
-			vk::BlendFactor srcColorBlendFactor;
-			vk::BlendFactor dstColorBlendFactor;
-			vk::BlendOp colorBlendOp;
-
-			vk::BlendFactor srcAlphaBlendFactor;
-			vk::BlendFactor dstAlphaBlendFactor;
-			vk::BlendOp alphaBlendOp;
-
-			ColorBlendAttachmentOptions() {
-				blendEnable = false;
-				colorWriteMask =
-						vk::ColorComponentFlagBits::eR |
-						vk::ColorComponentFlagBits::eG |
-						vk::ColorComponentFlagBits::eB |
-						vk::ColorComponentFlagBits::eA;
-				srcColorBlendFactor = vk::BlendFactor::eOne;
-				dstColorBlendFactor = vk::BlendFactor::eZero;
-				colorBlendOp = vk::BlendOp::eAdd;
-				srcAlphaBlendFactor = vk::BlendFactor::eOne;
-				dstAlphaBlendFactor = vk::BlendFactor::eZero;
-				alphaBlendOp = vk::BlendOp::eAdd;
-			}
-		};
-		std::vector<ColorBlendAttachmentOptions> attachment_opt;
-
-		struct ColorBlendOptions {
-			bool logicOpEnable;
-			vk::LogicOp logicOp;
-			float blendConstants[4];
-
-			ColorBlendOptions() {
-				logicOpEnable = false;
-				logicOp = vk::LogicOp::eCopy;
-				blendConstants[0] = 0.0f;
-				blendConstants[1] = 0.0f;
-				blendConstants[2] = 0.0f;
-				blendConstants[3] = 0.0f;
-			}
-		};
-		ColorBlendOptions blend_opt;
-
-		vk::PrimitiveTopology topology; // input assembly info
-		vk::PipelineLayout pipeline_layout;
-		vk::Pipeline pipeline; // graphics pipeline
-		vk::RenderPass render_pass;
-
 		Shader *shader;
 		//GLuint ubo_id;
 		uint32_t ubo_size;
@@ -527,6 +449,7 @@ public:
 		float line_width;
 		int render_priority;
 
+		vk::SubpassDescription subpass;
 		RID next_pass;
 
 		uint32_t index;
@@ -1210,9 +1133,83 @@ public:
 
 	struct RenderTarget : public RID_Data {
 
-		//GLuint fbo;
-		//GLuint color;
-		//GLuint depth;
+		struct DepthStencilOptions {
+			bool depthTestEnable;
+			bool depthWriteEnable; // useful for transparent materials
+			vk::CompareOp depthCompareOp;
+
+			bool depthBoundsTestEnable;
+			float minDepthBounds;
+			float maxDepthBounds;
+
+			bool stencilTestEnable;
+			vk::StencilOpState front;
+			vk::StencilOpState back;
+
+			DepthStencilOptions() {
+				depthTestEnable = true;
+				depthWriteEnable = true;
+				depthCompareOp = vk::CompareOp::eLess;
+				depthBoundsTestEnable = false;
+				minDepthBounds = 0.0f;
+				maxDepthBounds = 1.0f;
+
+				stencilTestEnable = false;
+				//front = {};
+				//back = {};
+			}
+		};
+		DepthStencilOptions depth_stencil_opt;
+
+		struct ColorBlendAttachmentOptions {
+			bool blendEnable;
+			vk::ColorComponentFlags colorWriteMask;
+
+			vk::BlendFactor srcColorBlendFactor;
+			vk::BlendFactor dstColorBlendFactor;
+			vk::BlendOp colorBlendOp;
+
+			vk::BlendFactor srcAlphaBlendFactor;
+			vk::BlendFactor dstAlphaBlendFactor;
+			vk::BlendOp alphaBlendOp;
+
+			ColorBlendAttachmentOptions() {
+				blendEnable = false;
+				colorWriteMask =
+						vk::ColorComponentFlagBits::eR |
+						vk::ColorComponentFlagBits::eG |
+						vk::ColorComponentFlagBits::eB |
+						vk::ColorComponentFlagBits::eA;
+				srcColorBlendFactor = vk::BlendFactor::eOne;
+				dstColorBlendFactor = vk::BlendFactor::eZero;
+				colorBlendOp = vk::BlendOp::eAdd;
+				srcAlphaBlendFactor = vk::BlendFactor::eOne;
+				dstAlphaBlendFactor = vk::BlendFactor::eZero;
+				alphaBlendOp = vk::BlendOp::eAdd;
+			}
+		};
+		std::vector<ColorBlendAttachmentOptions> attachment_opt;
+
+		struct ColorBlendOptions {
+			bool logicOpEnable;
+			vk::LogicOp logicOp;
+			float blendConstants[4];
+
+			ColorBlendOptions() {
+				logicOpEnable = false;
+				logicOp = vk::LogicOp::eCopy;
+				blendConstants[0] = 0.0f;
+				blendConstants[1] = 0.0f;
+				blendConstants[2] = 0.0f;
+				blendConstants[3] = 0.0f;
+			}
+		};
+		ColorBlendOptions blend_opt;
+
+		vk::PrimitiveTopology topology; // input assembly info
+		vk::PipelineLayout pipeline_layout;
+		vk::Pipeline pipeline; // graphics pipeline
+		vk::RenderPass render_pass;
 
 		struct Buffers {
 
@@ -1291,6 +1288,9 @@ public:
 		bool used_in_frame;
 		VS::ViewportMSAA msaa;
 
+		vk::Image depth_image;
+		vk::ImageView depth_imageview;
+
 		RID texture;
 
 		RenderTarget() {
@@ -1315,6 +1315,8 @@ public:
 	};
 
 	mutable RID_Owner<RenderTarget> render_target_owner;
+
+	void _render_target_allocate(RenderTarget*);
 
 	virtual RID render_target_create();
 	virtual void render_target_set_size(RID p_render_target, int p_width, int p_height);

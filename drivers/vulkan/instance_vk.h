@@ -2,6 +2,10 @@
 
 #include "typedefs.h"
 #include "version.h"
+
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 #include <algorithm>
 #include <vector>
 #include <vulkan/vulkan.hpp>
@@ -47,14 +51,6 @@ protected:
 			VK_MAKE_VERSION(VERSION_MAJOR, VERSION_MINOR, 0);
 #endif
 
-	/*
-	eImmediate:	single buffer
-	eFifo:		double buffer; only mode guaranteed to be available
-	eFifoRelaxed:	double buffer, but new images replace current one (tearing)
-	eMailbox:	triple buffer, new images replace the last image in queue (no tearing)
-	*/
-	vk::PresentModeKHR preferred_present_mode = vk::PresentModeKHR::eMailbox;
-
 #ifdef DEBUG_ENABLED
 	const bool enable_validation_layers = true;
 #else
@@ -64,26 +60,27 @@ protected:
 	bool is_device_suitable(vk::PhysicalDevice);
 	bool check_device_extensions(vk::PhysicalDevice);
 
+	bool use_vsync;
+
 	vk::Instance instance;
 	vk::DebugReportCallbackEXT debug_callback;
 	vk::SurfaceKHR surface;
 	// @TODO: look into fullscreen surface (display surface)
 	// It's platform-independent, interface directly to the display (no OS)
 
+	VmaAllocator allocator;
+
 	vk::PhysicalDevice physical_device;
+	vk::PhysicalDeviceLimits device_limits;
 	vk::Device device;
 	vk::Queue graphics_queue;
 	vk::Queue present_queue;
 
 	vk::SwapchainKHR swapchain;
-	std::vector<vk::Image> swapchain_images;
-	std::vector<vk::ImageView> swapchain_imageviews;
 	vk::Extent2D swapchain_extent;
 	vk::Format swapchain_image_format;
-
-	vk::Image depth_image;
-	vk::ImageView depth_imageview;
-	vk::DeviceMemory depth_memory;
+	std::vector<vk::Image> swapchain_images;
+	std::vector<vk::ImageView> swapchain_imageviews;
 
 	//vk::RenderPass render_pass;
 	std::vector<vk::Framebuffer> framebuffers;
@@ -115,17 +112,26 @@ protected:
 
 public:
 	static InstanceVK *get_singleton();
+
 	vk::Instance vk(); // get vulkan instance object
 	vk::SurfaceKHR get_surface();
+
 	vk::PhysicalDevice get_physical_device();
+	vk::PhysicalDeviceLimits get_device_limits();
 	vk::Device get_device();
+	VmaAllocator *get_allocator();
+
 	vk::Queue get_queue_graphics();
 	vk::Queue get_queue_present();
+
 	vk::SwapchainKHR get_swapchain();
 	vk::Extent2D get_swapchain_extent();
 	vk::Format get_swapchain_format();
 	//vk::RenderPass get_render_pass();
 	//vk::Framebuffer get_framebuffer();
+
+	void set_use_vsync(bool);
+	bool is_using_vsync() const;
 
 	virtual int get_window_width() = 0;
 	virtual int get_window_height() = 0;
