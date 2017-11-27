@@ -5,6 +5,9 @@
 #include "servers/visual/shader_language.h"
 #include "shader_vulkan.h"
 
+#include <map>
+#include <vector>
+
 class RasterizerCanvasVK;
 class RasterizerSceneVK;
 
@@ -439,6 +442,14 @@ public:
 		};
 		RasterizerOptions raster_opt;
 
+		vk::PrimitiveTopology topology; // input assembly info
+		vk::PipelineRasterizationStateCreateInfo raster_info;
+
+		vk::PipelineLayout pipeline_layout;
+
+		// associates one pipeline per render target
+		std::map<RenderTarget *, vk::Pipeline> rt_pipelines;
+
 		Shader *shader;
 		//GLuint ubo_id;
 		uint32_t ubo_size;
@@ -476,6 +487,8 @@ public:
 		}
 	};
 
+	void _material_create_pipeline(Material*, RenderTarget*);
+
 	mutable SelfList<Material>::List _material_dirty_list;
 	void _material_make_dirty(Material *p_material) const;
 	//void _material_add_geometry(RID p_material, Geometry *p_geometry);
@@ -484,16 +497,6 @@ public:
 	mutable RID_Owner<Material> material_owner;
 
 	virtual RID material_create();
-	Material::RasterizerOptions material_get_rasterizer_opt(RID) const;
-	Material::DepthStencilOptions material_get_depth_opt(RID) const;
-	std::vector<Material::ColorBlendAttachmentOptions>
-			material_get_attachment_opt(RID) const;
-	Material::ColorBlendOptions material_get_blend_opt(RID) const;
-	void material_set_rasterizer_opt(RID, Material::RasterizerOptions);
-	void material_set_depth_opt(RID, Material::DepthStencilOptions);
-	void material_set_attachment_opt(
-		RID, std::vector<Material::ColorBlendAttachmentOptions>);
-	void material_set_blend_opt(RID, Material::ColorBlendOptions);
 
 	virtual void material_set_render_priority(RID p_material, int priority);
 	virtual void material_set_shader(RID p_shader_material, RID p_shader);
@@ -523,7 +526,7 @@ public:
 			RID p_material,
 			RasterizerScene::InstanceBase *p_instance);
 
-	void _material_setup(Material*);
+	void _material_setup(Material *);
 	void _update_material(Material *material);
 	void update_dirty_materials();
 
@@ -1155,8 +1158,6 @@ public:
 				maxDepthBounds = 1.0f;
 
 				stencilTestEnable = false;
-				//front = {};
-				//back = {};
 			}
 		};
 		DepthStencilOptions depth_stencil_opt;
@@ -1206,10 +1207,14 @@ public:
 		};
 		ColorBlendOptions blend_opt;
 
-		vk::PrimitiveTopology topology; // input assembly info
-		vk::PipelineLayout pipeline_layout;
-		vk::Pipeline pipeline; // graphics pipeline
+		vk::PipelineMultisampleStateCreateInfo multisample_info;
+		vk::PipelineDepthStencilStateCreateInfo depth_info;
+		std::vector<vk::PipelineColorBlendAttachmentState> blend_attachments;
+		vk::PipelineColorBlendStateCreateInfo blend_info;
 		vk::RenderPass render_pass;
+
+		vk::Image depth_image;
+		vk::ImageView depth_imageview;
 
 		struct Buffers {
 
@@ -1288,9 +1293,6 @@ public:
 		bool used_in_frame;
 		VS::ViewportMSAA msaa;
 
-		vk::Image depth_image;
-		vk::ImageView depth_imageview;
-
 		RID texture;
 
 		RenderTarget() {
@@ -1316,7 +1318,9 @@ public:
 
 	mutable RID_Owner<RenderTarget> render_target_owner;
 
-	void _render_target_allocate(RenderTarget*);
+	void _render_target_clear(RenderTarget *);
+	void _render_target_allocate(RenderTarget *);
+	bool _render_target_use_msaa(RenderTarget *);
 
 	virtual RID render_target_create();
 	virtual void render_target_set_size(RID p_render_target, int p_width, int p_height);

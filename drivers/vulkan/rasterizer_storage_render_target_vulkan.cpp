@@ -1,104 +1,115 @@
 #include "rasterizer_storage_vulkan.h"
 
-inline bool _use_msaa(RasterizerStorageVK::RenderTarget *rt) {
+#include "instance_vk.h"
+#include "vk_helper.h"
+
+using std::vector;
+
+bool RasterizerStorageVK::_render_target_use_msaa(RasterizerStorageVK::RenderTarget *rt) {
 	return !rt->flags[RENDER_TARGET_NO_3D] &&
 		   (!rt->flags[RENDER_TARGET_NO_3D_EFFECTS] ||
 				   rt->msaa != VS::VIEWPORT_MSAA_DISABLED);
+}
+
+void RasterizerStorageVK::_render_target_clear(RasterizerStorageVK::RenderTarget *rt) {
 }
 
 void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTarget *rt) {
 	if (rt->width <= 0 || rt->height <= 0)
 		return;
 
-	// multisampling
-	vk::PipelineMultisampleStateCreateInfo multisample_info;
-	multisample_info.sampleShadingEnable = false;
-	multisample_info.rasterizationSamples = vk::SampleCountFlagBits::e1;
+	vk::Device device = InstanceVK::get_singleton()->get_device();
 
-	if (_use_msaa(rt)) {
-		static const vk::SampleCountFlagBits msaa_value[] = {
-			vk::SampleCountFlagBits::e1,
-			vk::SampleCountFlagBits::e2,
-			vk::SampleCountFlagBits::e4,
-			vk::SampleCountFlagBits::e8,
-			vk::SampleCountFlagBits::e16
+	{ // multisampling (rt->multisample_info)
+		if (_render_target_use_msaa(rt)) {
+			static const vk::SampleCountFlagBits msaa_value[] = {
+				vk::SampleCountFlagBits::e1,
+				vk::SampleCountFlagBits::e2,
+				vk::SampleCountFlagBits::e4,
+				vk::SampleCountFlagBits::e8,
+				vk::SampleCountFlagBits::e16
+			};
+
+			rt->multisample_info.sampleShadingEnable = true;
+			rt->multisample_info.rasterizationSamples = msaa_value[rt->msaa];
+			rt->multisample_info.minSampleShading = 1.0f;
+			rt->multisample_info.pSampleMask = nullptr;
+			rt->multisample_info.alphaToCoverageEnable = false;
+			rt->multisample_info.alphaToOneEnable = false;
+		} else {
+			rt->multisample_info.sampleShadingEnable = false;
+			rt->multisample_info.rasterizationSamples = vk::SampleCountFlagBits::e1;
 		}
-
-		vk::SampleCountFlagBits msaa = msaa_value[rt->msaa];
-
-		multisample_info.sampleShadingEnable = true;
-		multisample_info.rasterizationSamples = msaa;
-		multisample_info.minSampleShading = 1.0f;
-		multisample_info.pSampleMask = nullptr;
-		multisample_info.alphaToCoverageEnable = false;
-		multisample_info.alphaToOneEnable = false;
 	}
 
-	// depth and stencil testing
-	vk::PipelineDepthStencilStateCreateInfo depth_info;
-	{
+	{ // depth and stencil testing (rt->depth_info)
 		RenderTarget::DepthStencilOptions opt = rt->depth_stencil_opt;
 
-		depth_info.depthTestEnable = opt.depthTestEnable;
-		depth_info.depthWriteEnable = opt.depthWriteEnable;
-		depth_info.depthCompareOp = opt.depthCompareOp;
-		depth_info.depthBoundsTestEnable = opt.depthBoundsTestEnable;
-		depth_info.minDepthBounds = opt.minDepthBounds;
-		depth_info.maxDepthBounds = opt.maxDepthBounds;
-		depth_info.stencilTestEnable = opt.stencilTestEnable;
-		depth_info.front = opt.front;
-		depth_info.back = opt.back;
+		rt->depth_info.depthTestEnable = opt.depthTestEnable;
+		rt->depth_info.depthWriteEnable = opt.depthWriteEnable;
+		rt->depth_info.depthCompareOp = opt.depthCompareOp;
+		rt->depth_info.depthBoundsTestEnable = opt.depthBoundsTestEnable;
+		rt->depth_info.minDepthBounds = opt.minDepthBounds;
+		rt->depth_info.maxDepthBounds = opt.maxDepthBounds;
+		rt->depth_info.stencilTestEnable = opt.stencilTestEnable;
+		rt->depth_info.front = opt.front;
+		rt->depth_info.back = opt.back;
 	}
 
-	// color blending
-	vector<vk::PipelineColorBlendAttachmentState> blend_attachments;
-	for (RenderTarget::ColorBlendAttachmentOptions opt : rt->attachment_opt) {
-		vk::PipelineColorBlendAttachmentState blend_attachment;
-		blend_attachment.colorWriteMask = opt.colorWriteMask;
-		blend_attachment.blendEnable = opt.blendEnable;
-		blend_attachment.srcColorBlendFactor = opt.srcColorBlendFactor;
-		blend_attachment.dstColorBlendFactor = opt.dstColorBlendFactor;
-		blend_attachment.colorBlendOp = opt.colorBlendOp;
-		blend_attachment.srcAlphaBlendFactor = opt.srcAlphaBlendFactor;
-		blend_attachment.dstAlphaBlendFactor = opt.dstAlphaBlendFactor;
-		blend_attachment.alphaBlendOp = opt.alphaBlendOp;
+	{ // color blend attachments (rt->blend_attachments)
+		for (RenderTarget::ColorBlendAttachmentOptions opt : rt->attachment_opt) {
+			vk::PipelineColorBlendAttachmentState blend_attachment;
+			blend_attachment.colorWriteMask = opt.colorWriteMask;
+			blend_attachment.blendEnable = opt.blendEnable;
+			blend_attachment.srcColorBlendFactor = opt.srcColorBlendFactor;
+			blend_attachment.dstColorBlendFactor = opt.dstColorBlendFactor;
+			blend_attachment.colorBlendOp = opt.colorBlendOp;
+			blend_attachment.srcAlphaBlendFactor = opt.srcAlphaBlendFactor;
+			blend_attachment.dstAlphaBlendFactor = opt.dstAlphaBlendFactor;
+			blend_attachment.alphaBlendOp = opt.alphaBlendOp;
 
-		blend_attachments.push_back(blend_attachment);
-	};
-
-	vk::PipelineColorBlendStateCreateInfo blend_info;
-	{
-		ColorBlendOptions opt = rt->blend_opt;
-
-		blend_info.logicOpEnable = opt.logicOpEnable;
-		blend_info.logicOp = opt.logicOp;
-		blend_info.attachmentCount = blend_attachments.size();
-		blend_info.pAttachments = blend_attachments.data();
-		blend_info.blendConstants[0] = opt.blendConstants[0];
-		blend_info.blendConstants[1] = opt.blendConstants[1];
-		blend_info.blendConstants[2] = opt.blendConstants[2];
-		blend_info.blendConstants[3] = opt.blendConstants[3];
+			rt->blend_attachments.push_back(blend_attachment);
+		};
 	}
 
-	{ // create renderpass (only right before creating pipeline)
-		vector<vk::AttachmentDescription> attachments;
+	{ // color blend options (rt->blend_info)
+		RenderTarget::ColorBlendOptions opt = rt->blend_opt;
 
-		vk::AttachmentDescription color_attachment = {};
-		color_attachment.format = InstanceVK::get_singleton()->get_swapchain_format();
-		color_attachment.samples = vk::SampleCountFlagBits::e1; // not using multisampling
-		color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
-		color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-		color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare; // not using stencil
-		color_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-		color_attachment.initialLayout = vk::ImageLayout::eUndefined;
-		color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
-		attachments.push_back(color_attachment);
+		rt->blend_info.logicOpEnable = opt.logicOpEnable;
+		rt->blend_info.logicOp = opt.logicOp;
+		rt->blend_info.attachmentCount = rt->blend_attachments.size();
+		rt->blend_info.pAttachments = rt->blend_attachments.data();
+		rt->blend_info.blendConstants[0] = opt.blendConstants[0];
+		rt->blend_info.blendConstants[1] = opt.blendConstants[1];
+		rt->blend_info.blendConstants[2] = opt.blendConstants[2];
+		rt->blend_info.blendConstants[3] = opt.blendConstants[3];
+	}
 
-		vk::AttachmentReference color_ref = {};
-		color_ref.attachment = 0;
-		color_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+	{ // create render_pass
+		std::vector<vk::AttachmentDescription> color_attachments;
+		std::vector<vk::AttachmentReference> color_attachment_references;
 
 		vk::AttachmentDescription depth_attachment;
+		vk::AttachmentReference depth_attachment_reference;
+
+		for (int i = 0; i < rt->blend_attachments.size(); i++) {
+			vk::AttachmentDescription color_attachment;
+			color_attachment.format = InstanceVK::get_singleton()->get_swapchain_format();
+			color_attachment.samples = vk::SampleCountFlagBits::e1; // not using multisampling
+			color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+			color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
+			color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare; // not using stencil
+			color_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+			color_attachment.initialLayout = vk::ImageLayout::eUndefined;
+			color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+
+			vk::AttachmentReference color_ref;
+			color_ref.attachment = i;
+			color_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+			color_attachments.push_back(color_attachment);
+			color_attachment_references.push_back(color_ref);
+		}
 
 		if (rt->depth_stencil_opt.depthTestEnable) {
 			depth_attachment.format = vk_FindDepthFormat();
@@ -109,9 +120,19 @@ void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTar
 			depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
 			depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
 			depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-			attachments.push_back(depth_attachment);
+
+			depth_attachment_reference.attachment = color_attachments.size();
+			depth_attachment_reference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 		}
 
+		vk::SubpassDescription subpass;
+		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+		subpass.colorAttachmentCount = (uint32_t)color_attachment_references.size();
+		subpass.pColorAttachments = color_attachment_references.data();
+		subpass.pDepthStencilAttachment = &depth_attachment_reference;
+
+		vector<vk::AttachmentDescription> attachments(color_attachments.begin(), color_attachments.end());
+		attachments.push_back(depth_attachment);
 
 		vk::RenderPassCreateInfo renderpass_info = {};
 		renderpass_info.attachmentCount = (uint32_t)attachments.size();
@@ -121,56 +142,8 @@ void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTar
 		//renderpass_info.dependencyCount = 1;
 		//renderpass_info.pDependencies = &dependency;
 
-		material->render_pass = device.createRenderPass(renderpass_info);
+		rt->render_pass = device.createRenderPass(renderpass_info);
 	}
-
-	/*// viewport (is dynamic state)
-	vk::PipelineViewportStateCreateInfo viewport_info;
-	viewport_info.viewportCount = 0;
-	viewport_info.pViewports = nullptr;
-	viewport_info.scissorCount = 0;
-	viewport_info.pScissors = nullptr;*/
-
-	// dynamic state
-	std::vector<vk::DynamicState> dynamic_states = {
-		vk::DynamicState::eViewport,
-		vk::DynamicState::eScissor
-	};
-
-	vk::PipelineDynamicStateCreateInfo dynamic_info;
-	dynamic_info.dynamicStateCount = (uint32_t)dynamic_states.size();
-	dynamic_info.pDynamicStates = dynamic_states.data();
-
-	// pipeline layout
-	vk::PipelineLayoutCreateInfo layout_info;
-	layout_info.setLayoutCount = 0;
-	layout_info.pSetLayouts = nullptr;
-	layout_info.pushConstantRangeCount = 0;
-	layout_info.pPushConstantRanges = nullptr;
-
-	material->pipeline_layout = device.createPipelineLayout(layout_info);
-
-	// pipeline
-	vk::GraphicsPipelineCreateInfo pipeline_info;
-	pipeline_info.stageCount = material->shader->shader->get_stages().size();
-	pipeline_info.pStages = material->shader->shader->get_stages().data();
-	pipeline_info.pVertexInputState = &vertex_input_info;
-	pipeline_info.pInputAssemblyState = &input_assembly_info;
-	pipeline_info.pViewportState = &viewport_info;
-	pipeline_info.pRasterizationState = &raster_info;
-	pipeline_info.pMultisampleState = &multisample_info;
-	pipeline_info.pDepthStencilState = &depth_info;
-	pipeline_info.pColorBlendState = &blend_info;
-	pipeline_info.pDynamicState = &dynamic_info;
-	pipeline_info.layout = material->pipeline_layout;
-	pipeline_info.renderPass = material->render_pass;
-	pipeline_info.subpass = 0;
-	pipeline_info.basePipelineHandle = nullptr;
-	pipeline_info.basePipelineIndex = -1;
-
-	material->pipeline = device.createGraphicsPipeline(nullptr, pipeline_info);
-	ERR_EXPLAIN("Failed to create graphcis pipeline object");
-	ERR_FAIL_COND(!material->pipeline);
 }
 
 RID RasterizerStorageVK::render_target_create() {
@@ -231,6 +204,21 @@ bool RasterizerStorageVK::render_target_was_used(RID p_render_target) {
 	return rt->used_in_frame;
 }
 
-void RasterizerStorageVK::render_target_clear_used(RID p_render_target) {}
+void RasterizerStorageVK::render_target_clear_used(RID p_render_target) {
+	RenderTarget *rt = render_target_owner.getornull(p_render_target);
+	ERR_FAIL_COND(!rt);
 
-void RasterizerStorageVK::render_target_set_msaa(RID p_render_target, VS::ViewportMSAA p_msaa) {}
+	rt->used_in_frame = false;
+}
+
+void RasterizerStorageVK::render_target_set_msaa(RID p_render_target, VS::ViewportMSAA p_msaa) {
+	RenderTarget *rt = render_target_owner.getornull(p_render_target);
+	ERR_FAIL_COND(!rt);
+
+	if (rt->msaa == p_msaa)
+		return;
+
+	_render_target_clear(rt);
+	rt->msaa = p_msaa;
+	_render_target_allocate(rt);
+}

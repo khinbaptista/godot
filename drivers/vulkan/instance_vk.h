@@ -3,8 +3,8 @@
 #include "typedefs.h"
 #include "version.h"
 
-#define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h"
+//#define VMA_IMPLEMENTATION
+//#include "vk_mem_alloc.h"
 
 #include <algorithm>
 #include <vector>
@@ -68,7 +68,7 @@ protected:
 	// @TODO: look into fullscreen surface (display surface)
 	// It's platform-independent, interface directly to the display (no OS)
 
-	VmaAllocator allocator;
+	//VmaAllocator allocator;
 
 	vk::PhysicalDevice physical_device;
 	vk::PhysicalDeviceLimits device_limits;
@@ -89,6 +89,8 @@ protected:
 	//std::vector<vk::CommandBuffer> command_buffers;
 
 	const std::vector<const char *> validation_layers = {
+		"VK_LAYER_LUNARG_api_dump",
+		"VK_LAYER_LUNARG_monitor",
 		"VK_LAYER_LUNARG_standard_validation"
 	};
 
@@ -104,7 +106,7 @@ protected:
 	void pick_physical_device();
 	void create_logical_device();
 	void create_swapchain();
-	void create_depth_resources();
+	//void create_depth_resources();
 	//void create_render_pass();
 	void create_framebuffers();
 	void create_command_pool();
@@ -119,7 +121,7 @@ public:
 	vk::PhysicalDevice get_physical_device();
 	vk::PhysicalDeviceLimits get_device_limits();
 	vk::Device get_device();
-	VmaAllocator *get_allocator();
+	//VmaAllocator *get_allocator();
 
 	vk::Queue get_queue_graphics();
 	vk::Queue get_queue_present();

@@ -4,6 +4,8 @@
 #include "vk_helper.h"
 
 using std::vector;
+using std::array;
+using std::map;
 
 void RasterizerStorageVK::_material_make_dirty(RasterizerStorageVK::Material *p_material) const {
 
@@ -21,118 +23,113 @@ RID RasterizerStorageVK::material_create() {
 }
 
 void RasterizerStorageVK::_update_material(RasterizerStorageVK::Material *material) {
-	if (material->pipeline) {
-		vk::Device device = InstanceVK::get_singleton()->get_device();
-		device.destroyPipeline(material->pipeline);
+	ERR_FAIL_COND(material == nullptr);
+
+	vk::Device device = InstanceVK::get_singleton()->get_device();
+	for (auto it : material->rt_pipelines) {
+		device.destroyPipeline(it.second);
 	}
+	material->rt_pipelines.clear();
 
 	_material_setup(material);
 }
 
 void RasterizerStorageVK::_material_setup(RasterizerStorageVK::Material *material) {
+	ERR_FAIL_COND(material == nullptr);
+
 	vk::Device device = InstanceVK::get_singleton()->get_device();
 
-	// vertex input
+	vk::PipelineLayoutCreateInfo layout_info;
+	{ // @TODO: pipeline layout
+		layout_info.setLayoutCount = 0;
+		layout_info.pSetLayouts = nullptr;
+		layout_info.pushConstantRangeCount = 0;
+		layout_info.pPushConstantRanges = nullptr;
+
+		material->pipeline_layout = device.createPipelineLayout(layout_info);
+	}
+
+	{ // fill 'raster_info' based on 'material->raster_opt'
+		auto opt = material->raster_opt;
+		material->raster_info.depthClampEnable = opt.depthClampEnable;
+		material->raster_info.rasterizerDiscardEnable = opt.rasterizerDiscardEnable;
+		material->raster_info.polygonMode = opt.polygonMode;
+		material->raster_info.lineWidth = opt.lineWidth;
+		material->raster_info.cullMode = opt.cullMode;
+		material->raster_info.frontFace = opt.frontFace;
+	}
+
+
+	_material_create_pipeline(material, frame.current_rt);
+}
+
+void RasterizerStorageVK::_material_create_pipeline(RasterizerStorageVK::Material *material, RasterizerStorageVK::RenderTarget *rt) {
+	ERR_FAIL_COND(rt == nullptr);
+	ERR_FAIL_COND(material == nullptr);
+
+	vk::Device device = InstanceVK::get_singleton()->get_device();
+
+	if (material->rt_pipelines.count(rt) > 0) {
+		if (material->rt_pipelines[rt])
+			device.destroyPipeline(material->rt_pipelines[rt]);
+
+		material->rt_pipelines.erase(rt);
+	}
+
+	// @TODO: vertex input from material
 	vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 	vertex_input_info.vertexBindingDescriptionCount = 0;
+	vertex_input_info.pVertexBindingDescriptions = nullptr;
+	vertex_input_info.vertexAttributeDescriptionCount = 0;
+	vertex_input_info.pVertexAttributeDescriptions = nullptr;
 
 	// input assembly
 	vk::PipelineInputAssemblyStateCreateInfo input_assembly_info;
 	input_assembly_info.topology = material->topology;
 	input_assembly_info.primitiveRestartEnable = false;
 
-	// rasterizer (create with pipeline)
-	vk::PipelineRasterizationStateCreateInfo raster_info;
+	// get shader stages from material shader
+	std::array<vk::PipelineShaderStageCreateInfo, 2> shader_stages = material->shader->shader->get_stages();
+
+	// dynamic state
+	std::vector<vk::DynamicState> dynamic_states = {
+		vk::DynamicState::eViewport,
+		vk::DynamicState::eScissor
+	};
+
+	vk::PipelineDynamicStateCreateInfo dynamic_info;
+	dynamic_info.dynamicStateCount = (uint32_t)dynamic_states.size();
+	dynamic_info.pDynamicStates = dynamic_states.data();
+
+	// viewport (is dynamic state)
+	vk::PipelineViewportStateCreateInfo viewport_info;
+	viewport_info.viewportCount = 0;
+	viewport_info.pViewports = nullptr;
+	viewport_info.scissorCount = 0;
+	viewport_info.pScissors = nullptr;
+
+	vk::GraphicsPipelineCreateInfo pipeline_info;
 	{
-		Material::RasterizerOptions opt = material->raster_opt;
-
-		raster_info.depthClampEnable = opt.depthClampEnable;
-		raster_info.rasterizerDiscardEnable = opt.rasterizerDiscardEnable;
-		raster_info.polygonMode = opt.polygonMode;
-		raster_info.lineWidth = opt.lineWidth;
-		raster_info.cullMode = opt.cullMode;
-		raster_info.frontFace = opt.frontFace;
+		pipeline_info.stageCount = (uint32_t)shader_stages.size();
+		pipeline_info.pStages = shader_stages.data();
+		pipeline_info.pVertexInputState = &vertex_input_info;
+		pipeline_info.pInputAssemblyState = &input_assembly_info;
+		pipeline_info.pViewportState = &viewport_info;
+		pipeline_info.pRasterizationState = &material->raster_info;
+		pipeline_info.pMultisampleState = &rt->multisample_info;
+		pipeline_info.pDepthStencilState = &rt->depth_info;
+		pipeline_info.pColorBlendState = &rt->blend_info;
+		pipeline_info.pDynamicState = &dynamic_info;
+		pipeline_info.layout = material->pipeline_layout;
+		pipeline_info.renderPass = rt->render_pass;
+		pipeline_info.subpass = 0;
+		pipeline_info.basePipelineHandle = nullptr;
+		pipeline_info.basePipelineIndex = -1;
 	}
 
-	vk::AttachmentReference *depth_reference = nullptr;
-
-	vk::AttachmentReference depth_ref;
-	if (frame.current_rt && frame.current_rt->depth_stencil_opt.depthTestEnable) {
-		depth_ref.attachment = 1;
-		depth_ref.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-		depth_reference = &depth_ref;
-	}
-
-	subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &color_ref;
-	subpass.pDepthStencilAttachment = depth_reference;
-}
-
-RasterizerStorageVK::Material::RasterizerOptions
-RasterizerStorageVK::material_get_rasterizer_opt(RID rid) const {
-	const Material *material = material_owner.get(rid);
-	ERR_FAIL_COND_V(!material, {});
-
-	return material->raster_opt;
-}
-
-RasterizerStorageVK::Material::DepthStencilOptions
-RasterizerStorageVK::material_get_depth_opt(RID rid) const {
-	const Material *material = material_owner.get(rid);
-	ERR_FAIL_COND_V(!material, {});
-
-	return material->depth_stencil_opt;
-}
-
-std::vector<RasterizerStorageVK::Material::ColorBlendAttachmentOptions>
-RasterizerStorageVK::material_get_attachment_opt(RID rid) const {
-	const Material *material = material_owner.get(rid);
-	ERR_FAIL_COND_V(!material, {});
-
-	return material->attachment_opt;
-}
-
-RasterizerStorageVK::Material::ColorBlendOptions
-RasterizerStorageVK::material_get_blend_opt(RID rid) const {
-	const Material *material = material_owner.get(rid);
-	ERR_FAIL_COND_V(!material, {});
-
-	return material->blend_opt;
-}
-
-void RasterizerStorageVK::material_set_rasterizer_opt(RID rid, Material::RasterizerOptions opt) {
-	Material *material = material_owner.get(rid);
-	ERR_FAIL_COND(!material);
-
-	material->raster_opt = opt;
-	_material_make_dirty(material);
-}
-
-void RasterizerStorageVK::material_set_attachment_opt(
-		RID rid,
-		std::vector<Material::ColorBlendAttachmentOptions> opt) {
-	Material *material = material_owner.get(rid);
-	ERR_FAIL_COND(!material);
-
-	material->attachment_opt = opt;
-	_material_make_dirty(material);
-}
-
-void RasterizerStorageVK::material_set_depth_opt(RID rid, Material::DepthStencilOptions opt) {
-	Material *material = material_owner.get(rid);
-	ERR_FAIL_COND(!material);
-
-	material->depth_stencil_opt = opt;
-	_material_make_dirty(material);
-}
-
-void RasterizerStorageVK::material_set_blend_opt(RID rid, RasterizerStorageVK::Material::ColorBlendOptions opt) {
-	Material *material = material_owner.get(rid);
-	ERR_FAIL_COND(!material);
-
-	material->blend_opt = opt;
-	_material_make_dirty(material);
+	material->rt_pipelines[rt] = device.createGraphicsPipeline(nullptr, pipeline_info);
+	ERR_EXPLAIN("Failed to create graphcis pipeline object");
+	ERR_FAIL_COND(!material->rt_pipelines[rt]);
 }
 
 void RasterizerStorageVK::material_set_render_priority(RID p_material, int priority) {}

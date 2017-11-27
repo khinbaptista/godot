@@ -34,10 +34,10 @@ Error InstanceVK::setup() {
 	ERR_EXPLAIN("Failed to create swapchain");
 	ERR_FAIL_COND_V(!swapchain, ERR_UNCONFIGURED);
 
-	VmaAllocatorCreateInfo alloc_info;
-	alloc_info.physicalDevice = phisical_device;
+	/*VmaAllocatorCreateInfo alloc_info;
+	alloc_info.physicalDevice = physical_device;
 	alloc_info.device = device;
-	vmaCreateAllocator(&alloc_info, nullptr);
+	vmaCreateAllocator(&alloc_info, nullptr);*/
 
 	//create_depth_resources();
 	//ERR_EXPLAIN("Failed to create depth resources");
@@ -401,7 +401,7 @@ void InstanceVK::create_swapchain() {
 		format == vk::Format::eD24UnormS8Uint;
 }*/
 
-void InstanceVK::create_depth_resources() {
+/*void InstanceVK::create_depth_resources() {
 	vk::Format depth_format = vk_FindDepthFormat();
 	ERR_FAIL_COND(depth_format == vk::Format::eUndefined);
 
@@ -417,7 +417,7 @@ void InstanceVK::create_depth_resources() {
 	depth_imageview = vk_CreateImageView(
 			depth_image, depth_format,
 			vk::ImageAspectFlagBits::eDepth);
-}
+}*/
 
 void InstanceVK::create_framebuffers() {
 	/*framebuffers.resize(swapchain_imageviews.size());
@@ -519,9 +519,9 @@ vk::Device InstanceVK::get_device() {
 	return device;
 }
 
-VmaAllocator *InstanceVK::get_allocator() {
+/*VmaAllocator *InstanceVK::get_allocator() {
 	return &allocator;
-}
+}*/
 
 vk::Queue InstanceVK::get_queue_graphics() {
 	return graphics_queue;
@@ -581,7 +581,7 @@ InstanceVK::~InstanceVK() {
 
 	device.destroySwapchainKHR(swapchain);
 
-	vmaDestroyAllocator(allocator);
+	//vmaDestroyAllocator(allocator);
 	device.destroy();
 
 	destroy_debug_callback();
