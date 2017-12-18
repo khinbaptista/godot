@@ -240,7 +240,6 @@ void InstanceVK::pick_physical_device() {
 	for (const auto &device : devices) {
 		if (is_device_suitable(device)) {
 			physical_device = device;
-			device_limits = physical_device.getProperties().limits;
 			break; // select the first suitable device
 		}
 	}
@@ -396,29 +395,6 @@ void InstanceVK::create_swapchain() {
 	}
 }
 
-/*inline bool has_stencil_component(vk::Format format) {
-	return	format == vk::Format::eD32SfloatS8Uint ||
-		format == vk::Format::eD24UnormS8Uint;
-}*/
-
-/*void InstanceVK::create_depth_resources() {
-	vk::Format depth_format = vk_FindDepthFormat();
-	ERR_FAIL_COND(depth_format == vk::Format::eUndefined);
-
-	depth_image = vk_CreateImage(
-			swapchain_extent.width,
-			swapchain_extent.height,
-			depth_format,
-			vk::ImageTiling::eOptimal,
-			vk::ImageUsageFlagBits::eDepthStencilAttachment,
-			vk::MemoryPropertyFlagBits::eDeviceLocal,
-			depth_memory);
-
-	depth_imageview = vk_CreateImageView(
-			depth_image, depth_format,
-			vk::ImageAspectFlagBits::eDepth);
-}*/
-
 void InstanceVK::create_framebuffers() {
 	/*framebuffers.resize(swapchain_imageviews.size());
 
@@ -512,7 +488,7 @@ vk::PhysicalDevice InstanceVK::get_physical_device() {
 }
 
 vk::PhysicalDeviceLimits InstanceVK::get_device_limits() {
-	return device_limits;
+	return physical_device.getProperties().limits;
 }
 
 vk::Device InstanceVK::get_device() {
@@ -582,6 +558,7 @@ InstanceVK::~InstanceVK() {
 	device.destroySwapchainKHR(swapchain);
 
 	//vmaDestroyAllocator(allocator);
+	device.waitIdle();
 	device.destroy();
 
 	destroy_debug_callback();

@@ -71,7 +71,6 @@ protected:
 	//VmaAllocator allocator;
 
 	vk::PhysicalDevice physical_device;
-	vk::PhysicalDeviceLimits device_limits;
 	vk::Device device;
 	vk::Queue graphics_queue;
 	vk::Queue present_queue;
@@ -82,7 +81,7 @@ protected:
 	std::vector<vk::Image> swapchain_images;
 	std::vector<vk::ImageView> swapchain_imageviews;
 
-	//vk::RenderPass render_pass;
+	vk::RenderPass renderpass;
 	std::vector<vk::Framebuffer> framebuffers;
 
 	vk::CommandPool command_pool;
@@ -106,8 +105,7 @@ protected:
 	void pick_physical_device();
 	void create_logical_device();
 	void create_swapchain();
-	//void create_depth_resources();
-	//void create_render_pass();
+	//void create_renderpass();
 	void create_framebuffers();
 	void create_command_pool();
 	void create_command_buffers();

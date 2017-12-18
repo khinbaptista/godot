@@ -37,14 +37,7 @@ void ShaderVK::Setup() {
 	// change anything in shader code
 
 	Compile();
-
-	//if (blend_attachment_opt.empty())
-	//	blend_attachment_opt.push_back(ColorBlendAttachmentOptions());
-
 	CreatePipelineStages();
-
-	// create attachments, subpasses and renderpasses
-	// ...
 
 	delete_spirv();
 }
@@ -128,11 +121,6 @@ array<vk::PipelineShaderStageCreateInfo, 2> ShaderVK::get_stages() {
 ShaderVK::ShaderVK() {}
 
 ShaderVK::~ShaderVK() {
-	//vk::Device device = InstanceVK::get_singleton()->get_device();
-	//device.destroyPipeline(pipeline);
-	//device.destroyPipelineLayout(pipeline_layout);
-	//device.destroyRenderPass(render_pass);
-
 	DestroyModules();
 }
 

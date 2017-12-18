@@ -1211,7 +1211,7 @@ public:
 		vk::PipelineDepthStencilStateCreateInfo depth_info;
 		std::vector<vk::PipelineColorBlendAttachmentState> blend_attachments;
 		vk::PipelineColorBlendStateCreateInfo blend_info;
-		vk::RenderPass render_pass;
+		vk::RenderPass renderpass;
 
 		vk::Image depth_image;
 		vk::ImageView depth_imageview;
@@ -1380,15 +1380,13 @@ public:
 	void finalize();
 
 	virtual bool has_os_feature(const String &p_feature) const;
+	virtual void set_debug_generate_wireframes(bool p_generate);
 
 	virtual void update_dirty_resources();
-
-	virtual void set_debug_generate_wireframes(bool p_generate);
 
 	virtual void render_info_begin_capture();
 	virtual void render_info_end_capture();
 	virtual int get_captured_render_info(VS::RenderInfo p_info);
-
 	virtual int get_render_info(VS::RenderInfo p_info);
 
 	RasterizerStorageVK();

@@ -3,9 +3,9 @@
 #include "instance_vk.h"
 #include "vk_helper.h"
 
-using std::vector;
 using std::array;
 using std::map;
+using std::vector;
 
 void RasterizerStorageVK::_material_make_dirty(RasterizerStorageVK::Material *p_material) const {
 
@@ -59,7 +59,6 @@ void RasterizerStorageVK::_material_setup(RasterizerStorageVK::Material *materia
 		material->raster_info.frontFace = opt.frontFace;
 	}
 
-
 	_material_create_pipeline(material, frame.current_rt);
 }
 
@@ -89,12 +88,14 @@ void RasterizerStorageVK::_material_create_pipeline(RasterizerStorageVK::Materia
 	input_assembly_info.primitiveRestartEnable = false;
 
 	// get shader stages from material shader
-	std::array<vk::PipelineShaderStageCreateInfo, 2> shader_stages = material->shader->shader->get_stages();
+	std::array<vk::PipelineShaderStageCreateInfo, 2>
+			shader_stages = material->shader->shader->get_stages();
 
 	// dynamic state
 	std::vector<vk::DynamicState> dynamic_states = {
 		vk::DynamicState::eViewport,
-		vk::DynamicState::eScissor
+		vk::DynamicState::eScissor,
+		vk::DynamicState::eLineWidth
 	};
 
 	vk::PipelineDynamicStateCreateInfo dynamic_info;

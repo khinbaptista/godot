@@ -20,6 +20,7 @@ void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTar
 
 	vk::Device device = InstanceVK::get_singleton()->get_device();
 
+	vk::SampleCountFlagBits msaa_samples = vk::SampleCountFlagBits::e1;
 	{ // multisampling (rt->multisample_info)
 		if (_render_target_use_msaa(rt)) {
 			static const vk::SampleCountFlagBits msaa_value[] = {
@@ -30,8 +31,9 @@ void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTar
 				vk::SampleCountFlagBits::e16
 			};
 
+			msaa_samples = msaa_value[rt->msaa];
 			rt->multisample_info.sampleShadingEnable = true;
-			rt->multisample_info.rasterizationSamples = msaa_value[rt->msaa];
+			rt->multisample_info.rasterizationSamples = msaa_samples;
 			rt->multisample_info.minSampleShading = 1.0f;
 			rt->multisample_info.pSampleMask = nullptr;
 			rt->multisample_info.alphaToCoverageEnable = false;
@@ -85,7 +87,7 @@ void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTar
 		rt->blend_info.blendConstants[3] = opt.blendConstants[3];
 	}
 
-	{ // create render_pass
+	{ // create renderpass
 		std::vector<vk::AttachmentDescription> color_attachments;
 		std::vector<vk::AttachmentReference> color_attachment_references;
 
@@ -95,7 +97,7 @@ void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTar
 		for (int i = 0; i < rt->blend_attachments.size(); i++) {
 			vk::AttachmentDescription color_attachment;
 			color_attachment.format = InstanceVK::get_singleton()->get_swapchain_format();
-			color_attachment.samples = vk::SampleCountFlagBits::e1; // not using multisampling
+			color_attachment.samples = msaa_samples;
 			color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
 			color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
 			color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare; // not using stencil
@@ -111,9 +113,11 @@ void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTar
 			color_attachment_references.push_back(color_ref);
 		}
 
+		vector<vk::AttachmentDescription> attachments(color_attachments.begin(), color_attachments.end());
+
 		if (rt->depth_stencil_opt.depthTestEnable) {
 			depth_attachment.format = vk_FindDepthFormat();
-			depth_attachment.samples = vk::SampleCountFlagBits::e1; // not using multisampling
+			depth_attachment.samples = msaa_samples;
 			depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
 			depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
 			depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare; // not using stencil
@@ -123,6 +127,8 @@ void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTar
 
 			depth_attachment_reference.attachment = color_attachments.size();
 			depth_attachment_reference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+			attachments.push_back(depth_attachment);
 		}
 
 		vk::SubpassDescription subpass;
@@ -131,18 +137,23 @@ void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTar
 		subpass.pColorAttachments = color_attachment_references.data();
 		subpass.pDepthStencilAttachment = &depth_attachment_reference;
 
-		vector<vk::AttachmentDescription> attachments(color_attachments.begin(), color_attachments.end());
-		attachments.push_back(depth_attachment);
+		vk::SubpassDependency dependency;
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency.srcAccessMask = 0;
+		dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
 
 		vk::RenderPassCreateInfo renderpass_info = {};
 		renderpass_info.attachmentCount = (uint32_t)attachments.size();
 		renderpass_info.pAttachments = attachments.data();
 		renderpass_info.subpassCount = 1;
 		renderpass_info.pSubpasses = &subpass;
-		//renderpass_info.dependencyCount = 1;
-		//renderpass_info.pDependencies = &dependency;
+		renderpass_info.dependencyCount = 1;
+		renderpass_info.pDependencies = &dependency;
 
-		rt->render_pass = device.createRenderPass(renderpass_info);
+		rt->renderpass = device.createRenderPass(renderpass_info);
 	}
 }
 

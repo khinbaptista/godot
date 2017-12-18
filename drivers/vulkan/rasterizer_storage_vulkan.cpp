@@ -19,7 +19,6 @@ void RasterizerStorageVK::texture_set_data(
 }
 
 Ref<Image> RasterizerStorageVK::texture_get_data(RID p_texture, VS::CubeMapSide p_cube_side) const {
-	ERR_EXPLAIN("Sorry, It's not posible to obtain images back in not implemented");
 	return Ref<Image>();
 }
 
@@ -62,9 +61,20 @@ uint32_t RasterizerStorageVK::texture_get_height(RID p_texture) const {
 	return texture->height;
 }
 
-void RasterizerStorageVK::texture_set_size_override(RID p_texture, int p_width, int p_height) {}
+void RasterizerStorageVK::texture_set_size_override(RID p_texture, int p_width, int p_height) {
+	Texture *texture = texture_owner.get(p_texture);
+	ERR_FAIL_COND(!texture);
 
-void RasterizerStorageVK::texture_set_path(RID p_texture, const String &p_path) {}
+	texture->width = p_width;
+	texture->height = p_height;
+}
+
+void RasterizerStorageVK::texture_set_path(RID p_texture, const String &p_path) {
+	Texture *texture = texture_owner.get(p_texture);
+
+	ERR_FAIL_COND(!texture);
+	texture->path = p_path;
+}
 
 String RasterizerStorageVK::texture_get_path(RID p_texture) const {
 	Texture *texture = texture_owner.get(p_texture);
@@ -82,155 +92,23 @@ RID RasterizerStorageVK::texture_create_radiance_cubemap(RID p_source, int p_res
 	ERR_FAIL_COND_V(!texture, RID());
 	ERR_FAIL_COND_V(!(texture->flags & VS::TEXTURE_FLAG_CUBEMAP), RID());
 
-	bool use_float = config.hdr_supported;
-
-	if (p_resolution < 0) {
-		p_resolution = texture->width;
-	}
-
-	/*glBindVertexArray(0);
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_SCISSOR_TEST);
-	glDisable(GL_BLEND);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(texture->target, texture->tex_id);*/
-
-	if (config.srgb_decode_supported && texture->srgb && !texture->using_srgb) {
-
-		//glTexParameteri(texture->target, _TEXTURE_SRGB_DECODE_EXT, _DECODE_EXT);
-		texture->using_srgb = true;
-#ifdef TOOLS_ENABLED
-		if (!(texture->flags & VS::TEXTURE_FLAG_CONVERT_TO_LINEAR)) {
-			texture->flags |= VS::TEXTURE_FLAG_CONVERT_TO_LINEAR;
-			//notify that texture must be set to linear beforehand, so it works in other platforms when exported
-		}
-#endif
-	}
-
-	/*glActiveTexture(GL_TEXTURE1);
-	GLuint new_cubemap;
-	glGenTextures(1, &new_cubemap);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, new_cubemap);
-
-	GLuint tmp_fb;
-
-	glGenFramebuffers(1, &tmp_fb);
-	glBindFramebuffer(GL_FRAMEBUFFER, tmp_fb);*/
-
-	int size = p_resolution;
-
-	int lod = 0;
-
-	//shaders.cubemap_filter.bind();
-
-	int mipmaps = 6;
-
-	int mm_level = mipmaps;
-
-	/*GLenum internal_format = use_float ? GL_RGBA16F : GL_RGB10_A2;
-	GLenum format = GL_RGBA;
-	GLenum type = use_float ? GL_HALF_FLOAT : GL_UNSIGNED_INT_2_10_10_10_REV;
-
-	while (mm_level) {
-
-		for (int i = 0; i < 6; i++) {
-			glTexImage2D(_cube_side_enum[i], lod, internal_format, size, size, 0, format, type, NULL);
-		}
-
-		lod++;
-		mm_level--;
-
-		if (size > 1)
-			size >>= 1;
-	}
-
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, lod - 1);
-
-	lod = 0;
-	mm_level = mipmaps;
-
-	size = p_resolution;
-
-	shaders.cubemap_filter.set_conditional(CubemapFilterShaderGLES3::USE_DUAL_PARABOLOID, false);
-
-	while (mm_level) {
-
-		for (int i = 0; i < 6; i++) {
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, _cube_side_enum[i], new_cubemap, lod);
-
-			glViewport(0, 0, size, size);
-			glBindVertexArray(resources.quadie_array);
-
-			shaders.cubemap_filter.set_uniform(CubemapFilterShaderGLES3::FACE_ID, i);
-			shaders.cubemap_filter.set_uniform(CubemapFilterShaderGLES3::ROUGHNESS, lod / float(mipmaps - 1));
-
-			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-			glBindVertexArray(0);
-			#ifdef DEBUG_ENABLED
-			GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-			ERR_CONTINUE(status != GL_FRAMEBUFFER_COMPLETE);
-			#endif
-			}
-
-		if (size > 1)
-			size >>= 1;
-		lod++;
-		mm_level--;
-	}
-
-	//restore ranges
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, lod - 1);
-
-	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, RasterizerStorageGLES3::system_fbo);
-	glDeleteFramebuffers(1, &tmp_fb);*/
-
-	Texture *ctex = memnew(Texture);
-
-	ctex->flags = VS::TEXTURE_FLAG_CUBEMAP | VS::TEXTURE_FLAG_MIPMAPS | VS::TEXTURE_FLAG_FILTER;
-	ctex->width = p_resolution;
-	ctex->height = p_resolution;
-	ctex->alloc_width = p_resolution;
-	ctex->alloc_height = p_resolution;
-	ctex->format = use_float ? Image::FORMAT_RGBAH : Image::FORMAT_RGBA8;
-	//ctex->target = GL_TEXTURE_CUBE_MAP;
-	//ctex->gl_format_cache = format;
-	//ctex->gl_internal_format_cache = internal_format;
-	//ctex->gl_type_cache = type;
-	ctex->data_size = 0;
-	ctex->compressed = false;
-	ctex->srgb = false;
-	ctex->total_data_size = 0;
-	ctex->ignore_mipmaps = false;
-	ctex->mipmaps = mipmaps;
-	ctex->active = true;
-	//ctex->tex_id = new_cubemap;
-	ctex->stored_cube_sides = (1 << 6) - 1;
-	ctex->render_target = NULL;
-
-	return texture_owner.make_rid(ctex);
+	return RID();
 }
 
 void RasterizerStorageVK::texture_set_detect_3d_callback(
-		RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata) {
-}
+		RID p_texture,
+		VisualServer::TextureDetectCallback p_callback,
+		void *p_userdata) {}
 
 void RasterizerStorageVK::texture_set_detect_srgb_callback(
-		RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata) {
-}
+		RID p_texture,
+		VisualServer::TextureDetectCallback p_callback,
+		void *p_userdata) {}
 
 void RasterizerStorageVK::texture_set_detect_normal_callback(
-		RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata) {
-}
+		RID p_texture,
+		VisualServer::TextureDetectCallback p_callback,
+		void *p_userdata) {}
 
 void RasterizerStorageVK::textures_keep_original(bool p_enable) {}
 
@@ -1133,7 +1011,6 @@ void RasterizerStorageVK::instance_add_dependency(
 void RasterizerStorageVK::instance_remove_dependency(
 		RID p_base, RasterizerScene::InstanceBase *p_instance) {
 }
-
 
 /* CANVAS SHADOW */
 

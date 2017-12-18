@@ -14,10 +14,6 @@
 #define GLSLANGVALIDATOR "glslangValidator"
 #endif
 
-/*
-	This class is more a graphics pipeline / material than a shader
-*/
-
 class ShaderVK {
 private:
 	virtual String get_shader_name() const = 0;
