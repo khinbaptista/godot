@@ -67,6 +67,7 @@ protected:
 	vk::SurfaceKHR surface;
 	// @TODO: look into fullscreen surface (display surface)
 	// It's platform-independent, interface directly to the display (no OS)
+	// (ref: 'Vulkan Programming Guide' book, p. 139)
 
 	//VmaAllocator allocator;
 
@@ -127,7 +128,8 @@ public:
 	vk::SwapchainKHR get_swapchain();
 	vk::Extent2D get_swapchain_extent();
 	vk::Format get_swapchain_format();
-	//vk::RenderPass get_render_pass();
+
+	//vk::RenderPass get_renderpass();
 	//vk::Framebuffer get_framebuffer();
 
 	void set_use_vsync(bool);
