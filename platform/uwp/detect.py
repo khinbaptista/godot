@@ -84,7 +84,7 @@ def configure(env):
     ## Architecture
 
     arch = ""
-    if os.getenv('Platform') == "ARM":
+    if str(os.getenv('Platform')).lower() == "arm":
 
         print("Compiled program architecture will be an ARM executable. (forcing bits=32).")
 
@@ -136,7 +136,7 @@ def configure(env):
 
     env.Append(CPPPATH=['#platform/uwp', '#drivers/windows'])
     env.Append(CCFLAGS=['/DUWP_ENABLED', '/DWINDOWS_ENABLED', '/DTYPED_METHOD_BIND'])
-    env.Append(CCFLAGS=['/DGLES2_ENABLED', '/DGL_GLEXT_PROTOTYPES', '/DEGL_EGLEXT_PROTOTYPES', '/DANGLE_ENABLED'])
+    env.Append(CCFLAGS=['/DGLES_ENABLED', '/DGL_GLEXT_PROTOTYPES', '/DEGL_EGLEXT_PROTOTYPES', '/DANGLE_ENABLED'])
     winver = "0x0602" # Windows 8 is the minimum target for UWP build
     env.Append(CCFLAGS=['/DWINVER=%s' % winver, '/D_WIN32_WINNT=%s' % winver])
 

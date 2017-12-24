@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="JSON" inherits="Object" category="Core" version="3.0.alpha.custom_build">
+<class name="JSON" inherits="Object" category="Core" version="3.0-beta">
 	<brief_description>
 		Helper class for parsing JSON data.
 	</brief_description>
 	<description>
-		Helper class for parsing JSON data.
+		Helper class for parsing JSON data. For usage example, see [JSONParseResult].
 	</description>
 	<tutorials>
 	</tutorials>
@@ -24,6 +24,10 @@
 			<return type="String">
 			</return>
 			<argument index="0" name="value" type="Variant">
+			</argument>
+			<argument index="1" name="indent" type="String" default="&quot;&quot;">
+			</argument>
+			<argument index="2" name="sort_keys" type="bool" default="false">
 			</argument>
 			<description>
 				Converts a Variant var to JSON text and returns the result. Useful for serializing data to store or send over the network.

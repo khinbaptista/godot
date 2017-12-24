@@ -83,10 +83,10 @@
 #include "scene/gui/link_button.h"
 #include "scene/gui/margin_container.h"
 #include "scene/gui/menu_button.h"
+#include "scene/gui/nine_patch_rect.h"
 #include "scene/gui/option_button.h"
 #include "scene/gui/panel.h"
 #include "scene/gui/panel_container.h"
-#include "scene/gui/nine_patch_rect.h"
 #include "scene/gui/popup_menu.h"
 #include "scene/gui/progress_bar.h"
 #include "scene/gui/reference_rect.h"
@@ -160,6 +160,7 @@
 #include "scene/3d/area.h"
 #include "scene/3d/arvr_nodes.h"
 #include "scene/3d/audio_stream_player_3d.h"
+#include "scene/3d/baked_lightmap.h"
 #include "scene/3d/bone_attachment.h"
 #include "scene/3d/camera.h"
 #include "scene/3d/collision_polygon.h"
@@ -267,11 +268,11 @@ void register_scene_types() {
 	ClassDB::register_class<Control>();
 	ClassDB::register_class<Button>();
 	ClassDB::register_class<Label>();
-	ClassDB::register_class<ScrollBar>();
+	ClassDB::register_virtual_class<ScrollBar>();
 	ClassDB::register_class<HScrollBar>();
 	ClassDB::register_class<VScrollBar>();
 	ClassDB::register_class<ProgressBar>();
-	ClassDB::register_class<Slider>();
+	ClassDB::register_virtual_class<Slider>();
 	ClassDB::register_class<HSlider>();
 	ClassDB::register_class<VSlider>();
 	ClassDB::register_class<Popup>();
@@ -282,7 +283,7 @@ void register_scene_types() {
 	ClassDB::register_class<ToolButton>();
 	ClassDB::register_class<LinkButton>();
 	ClassDB::register_class<Panel>();
-	ClassDB::register_class<Range>();
+	ClassDB::register_virtual_class<Range>();
 
 	OS::get_singleton()->yield(); //may take time to init
 
@@ -375,6 +376,8 @@ void register_scene_types() {
 	ClassDB::register_class<ReflectionProbe>();
 	ClassDB::register_class<GIProbe>();
 	ClassDB::register_class<GIProbeData>();
+	ClassDB::register_class<BakedLightmap>();
+	ClassDB::register_class<BakedLightmapData>();
 	ClassDB::register_class<AnimationTreePlayer>();
 	ClassDB::register_class<Particles>();
 	ClassDB::register_class<Position3D>();
@@ -529,6 +532,7 @@ void register_scene_types() {
 	ClassDB::register_class<LargeTexture>();
 	ClassDB::register_class<CurveTexture>();
 	ClassDB::register_class<GradientTexture>();
+	ClassDB::register_class<ProxyTexture>();
 	ClassDB::register_class<CubeMap>();
 	ClassDB::register_class<Animation>();
 	ClassDB::register_virtual_class<Font>();
@@ -537,6 +541,8 @@ void register_scene_types() {
 
 	ClassDB::register_class<DynamicFontData>();
 	ClassDB::register_class<DynamicFont>();
+
+	DynamicFont::initialize_dynamic_fonts();
 
 	ClassDB::register_virtual_class<StyleBox>();
 	ClassDB::register_class<StyleBoxEmpty>();
@@ -616,6 +622,8 @@ void unregister_scene_types() {
 	memdelete(resource_loader_dynamic_font);
 	memdelete(resource_loader_stream_texture);
 	memdelete(resource_loader_theme);
+
+	DynamicFont::finish_dynamic_fonts();
 
 	if (resource_saver_text) {
 		memdelete(resource_saver_text);

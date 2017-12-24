@@ -74,6 +74,7 @@ private:
 	String ime_text;
 	Point2 ime_selection;
 
+	bool context_menu_enabled;
 	PopupMenu *menu;
 
 	int cursor_pos;
@@ -118,7 +119,6 @@ private:
 	void shift_selection_check_pre(bool);
 	void shift_selection_check_post(bool);
 
-	void selection_clear();
 	void selection_fill_at_cursor();
 	void selection_delete();
 	void set_window_pos(int p_pos);
@@ -150,9 +150,13 @@ public:
 	virtual void drop_data(const Point2 &p_point, const Variant &p_data);
 
 	void menu_option(int p_option);
+	void set_context_menu_enabled(bool p_enable);
+	bool is_context_menu_enabled();
 	PopupMenu *get_menu() const;
 
+	void select(int p_from = 0, int p_to = -1);
 	void select_all();
+	void deselect();
 
 	void delete_char();
 	void delete_text(int p_from_column, int p_to_column);
@@ -186,8 +190,6 @@ public:
 
 	void set_secret(bool p_secret);
 	bool is_secret() const;
-
-	void select(int p_from = 0, int p_to = -1);
 
 	virtual Size2 get_minimum_size() const;
 

@@ -46,10 +46,35 @@ class AbstractPolygon2DEditor : public HBoxContainer {
 
 	ToolButton *button_create;
 	ToolButton *button_edit;
+	ToolButton *button_delete;
 
-	int edited_polygon;
-	int edited_point;
-	Vector2 edited_point_pos;
+	struct Vertex {
+		Vertex();
+		Vertex(int p_vertex);
+		Vertex(int p_polygon, int p_vertex);
+
+		bool operator==(const Vertex &p_vertex) const;
+		bool operator!=(const Vertex &p_vertex) const;
+
+		bool valid() const;
+
+		int polygon;
+		int vertex;
+	};
+
+	struct PosVertex : public Vertex {
+		PosVertex();
+		PosVertex(const Vertex &p_vertex, const Vector2 &p_pos);
+		PosVertex(int p_polygon, int p_vertex, const Vector2 &p_pos);
+
+		Vector2 pos;
+	};
+
+	PosVertex edited_point;
+	Vertex hover_point; // point under mouse cursor
+	Vertex selected_point; // currently selected
+	PosVertex edge_point; // adding an edge point?
+
 	Vector<Vector2> pre_move_edit;
 	Vector<Vector2> wip;
 	bool wip_active;
@@ -65,6 +90,7 @@ protected:
 
 		MODE_CREATE,
 		MODE_EDIT,
+		MODE_DELETE,
 		MODE_CONT,
 
 	};
@@ -74,11 +100,18 @@ protected:
 	UndoRedo *undo_redo;
 
 	virtual void _menu_option(int p_option);
+	void _wip_changed();
 	void _wip_close();
+	bool _delete_point(const Vector2 &p_gpoint);
 
 	void _notification(int p_what);
 	void _node_removed(Node *p_node);
 	static void _bind_methods();
+
+	void remove_point(const Vertex &p_vertex);
+	Vertex get_active_point() const;
+	PosVertex closest_point(const Vector2 &p_pos) const;
+	PosVertex closest_edge_point(const Vector2 &p_pos) const;
 
 	bool _is_empty() const;
 	void _commit_action();
@@ -87,6 +120,7 @@ protected:
 	virtual Node2D *_get_node() const = 0;
 	virtual void _set_node(Node *p_polygon) = 0;
 
+	virtual bool _is_line() const;
 	virtual int _get_polygon_count() const;
 	virtual Vector2 _get_offset(int p_idx) const;
 	virtual Variant _get_polygon(int p_idx) const;
@@ -102,7 +136,7 @@ protected:
 
 public:
 	bool forward_gui_input(const Ref<InputEvent> &p_event);
-	void forward_draw_over_canvas(Control *p_canvas);
+	void forward_draw_over_viewport(Control *p_overlay);
 
 	void edit(Node *p_polygon);
 	AbstractPolygon2DEditor(EditorNode *p_editor, bool p_wip_destructive = true);
@@ -118,7 +152,7 @@ class AbstractPolygon2DEditorPlugin : public EditorPlugin {
 
 public:
 	virtual bool forward_canvas_gui_input(const Ref<InputEvent> &p_event) { return polygon_editor->forward_gui_input(p_event); }
-	virtual void forward_draw_over_canvas(Control *p_canvas) { polygon_editor->forward_draw_over_canvas(p_canvas); }
+	virtual void forward_draw_over_viewport(Control *p_overlay) { polygon_editor->forward_draw_over_viewport(p_overlay); }
 
 	bool has_main_screen() const { return false; }
 	virtual String get_name() const { return klass; }

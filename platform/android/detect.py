@@ -2,6 +2,7 @@ import os
 import sys
 import string
 import platform
+from distutils.version import LooseVersion
 
 
 def is_active():
@@ -25,7 +26,7 @@ def get_opts():
         ('ndk_platform', 'Target platform (android-<api>, e.g. "android-18")', "android-18"),
         EnumVariable('android_arch', 'Target architecture', "armv7", ('armv7', 'armv6', 'arm64v8', 'x86')),
         BoolVariable('android_neon', 'Enable NEON support (armv7 only)', True),
-        BoolVariable('android_stl', 'Enable Android STL support (for modules)', False),
+        BoolVariable('android_stl', 'Enable Android STL support (for modules)', True)
     ]
 
 
@@ -172,20 +173,39 @@ def configure(env):
     # For Clang to find NDK tools in preference of those system-wide
     env.PrependENVPath('PATH', tools_path)
 
-    env['CC'] = compiler_path + '/clang'
-    env['CXX'] = compiler_path + '/clang++'
+    ccache_path = os.environ.get("CCACHE")
+    if ccache_path == None:
+        env['CC'] = compiler_path + '/clang'
+        env['CXX'] = compiler_path + '/clang++'
+    else:
+        # there aren't any ccache wrappers available for Android,
+        # to enable caching we need to prepend the path to the ccache binary
+        env['CC'] = ccache_path + ' ' + compiler_path + '/clang'
+        env['CXX'] = ccache_path + ' ' + compiler_path + '/clang++'
     env['AR'] = tools_path + "/ar"
     env['RANLIB'] = tools_path + "/ranlib"
     env['AS'] = tools_path + "/as"
 
-    sysroot = env["ANDROID_NDK_ROOT"] + "/platforms/" + env['ndk_platform'] + "/" + env['ARCH']
     common_opts = ['-fno-integrated-as', '-gcc-toolchain', gcc_toolchain_path]
+
+    lib_sysroot = env["ANDROID_NDK_ROOT"] + "/platforms/" + env['ndk_platform'] + "/" + env['ARCH']
 
     ## Compile flags
 
-    env.Append(CPPFLAGS=["-isystem", sysroot + "/usr/include"])
+    ndk_version = get_ndk_version(env["ANDROID_NDK_ROOT"])
+    if ndk_version != None and LooseVersion(ndk_version) >= LooseVersion("15.0.4075724"):
+        print("Using NDK unified headers")
+        sysroot = env["ANDROID_NDK_ROOT"] + "/sysroot"
+        env.Append(CPPFLAGS=["-isystem", sysroot + "/usr/include"])
+        env.Append(CPPFLAGS=["-isystem", sysroot + "/usr/include/" + abi_subpath])
+        # For unified headers this define has to be set manually
+        env.Append(CPPFLAGS=["-D__ANDROID_API__=" + str(int(env['ndk_platform'].split("-")[1]))])
+    else:
+        print("Using NDK deprecated headers")
+        env.Append(CPPFLAGS=["-isystem", lib_sysroot + "/usr/include"])
+
     env.Append(CPPFLAGS='-fpic -ffunction-sections -funwind-tables -fstack-protector-strong -fvisibility=hidden -fno-strict-aliasing'.split())
-    env.Append(CPPFLAGS='-DNO_STATVFS -DGLES2_ENABLED'.split())
+    env.Append(CPPFLAGS='-DNO_STATVFS -DGLES_ENABLED'.split())
 
     env['neon_enabled'] = False
     if env['android_arch'] == 'x86':
@@ -224,7 +244,7 @@ def configure(env):
 
     ## Link flags
 
-    env['LINKFLAGS'] = ['-shared', '--sysroot=' + sysroot, '-Wl,--warn-shared-textrel']
+    env['LINKFLAGS'] = ['-shared', '--sysroot=' + lib_sysroot, '-Wl,--warn-shared-textrel']
     if env["android_arch"] == "armv7":
         env.Append(LINKFLAGS='-Wl,--fix-cortex-a8'.split())
     env.Append(LINKFLAGS='-Wl,--no-undefined -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now'.split())
@@ -248,3 +268,18 @@ def configure(env):
         if (env["android_arch"] == "armv6" or env["android_arch"] == "armv7"):
             env.Append(CFLAGS=["-DOPUS_ARM_OPT"])
         env.opus_fixed_point = "yes"
+
+# Return NDK version string in source.properties (adapted from the Chromium project).
+def get_ndk_version(path):
+    if path == None:
+        return None
+    prop_file_path = os.path.join(path, "source.properties")
+    try:
+        with open(prop_file_path) as prop_file:
+            for line in prop_file:
+                key_value = list(map(lambda x: x.strip(), line.split("=")))
+                if key_value[0] == "Pkg.Revision":
+                    return key_value[1]
+    except:
+        print("Could not read source prop file '%s'" % prop_file_path)
+    return None

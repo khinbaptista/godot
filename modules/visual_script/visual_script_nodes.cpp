@@ -29,6 +29,7 @@
 /*************************************************************************/
 #include "visual_script_nodes.h"
 
+#include "engine.h"
 #include "global_constants.h"
 #include "os/input.h"
 #include "os/os.h"
@@ -389,7 +390,7 @@ PropertyInfo VisualScriptOperator::get_input_value_port_info(int p_idx) const {
 		{ Variant::NIL, Variant::NIL }, //OP_GREATER_EQUAL,
 		//mathematic
 		{ Variant::NIL, Variant::NIL }, //OP_ADD,
-		{ Variant::NIL, Variant::NIL }, //OP_SUBSTRACT,
+		{ Variant::NIL, Variant::NIL }, //OP_SUBTRACT,
 		{ Variant::NIL, Variant::NIL }, //OP_MULTIPLY,
 		{ Variant::NIL, Variant::NIL }, //OP_DIVIDE,
 		{ Variant::NIL, Variant::NIL }, //OP_NEGATE,
@@ -432,7 +433,7 @@ PropertyInfo VisualScriptOperator::get_output_value_port_info(int p_idx) const {
 		Variant::BOOL, //OP_GREATER_EQUAL,
 		//mathematic
 		Variant::NIL, //OP_ADD,
-		Variant::NIL, //OP_SUBSTRACT,
+		Variant::NIL, //OP_SUBTRACT,
 		Variant::NIL, //OP_MULTIPLY,
 		Variant::NIL, //OP_DIVIDE,
 		Variant::NIL, //OP_NEGATE,
@@ -473,7 +474,7 @@ static const char *op_names[] = {
 	"GreaterEq", //OP_GREATER_EQUAL,
 	//mathematic
 	"Add", //OP_ADD,
-	"Subtract", //OP_SUBSTRACT,
+	"Subtract", //OP_SUBTRACT,
 	"Multiply", //OP_MULTIPLY,
 	"Divide", //OP_DIVIDE,
 	"Negate", //OP_NEGATE,
@@ -513,7 +514,7 @@ String VisualScriptOperator::get_text() const {
 		L"A \u2265 B", //OP_GREATER_EQUAL,
 		//mathematic
 		L"A + B", //OP_ADD,
-		L"A - B", //OP_SUBSTRACT,
+		L"A - B", //OP_SUBTRACT,
 		L"A x B", //OP_MULTIPLY,
 		L"A \u00F7 B", //OP_DIVIDE,
 		L"\u00AC A", //OP_NEGATE,
@@ -1063,9 +1064,9 @@ void VisualScriptConstant::set_constant_type(Variant::Type p_type) {
 		return;
 
 	type = p_type;
-	ports_changed_notify();
 	Variant::CallError ce;
 	value = Variant::construct(type, NULL, 0, ce);
+	ports_changed_notify();
 	_change_notify();
 }
 
@@ -1110,7 +1111,7 @@ void VisualScriptConstant::_bind_methods() {
 	}
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "type", PROPERTY_HINT_ENUM, argt), "set_constant_type", "get_constant_type");
-	ADD_PROPERTY(PropertyInfo(Variant::NIL, "value", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NIL_IS_VARIANT), "set_constant_value", "get_constant_value");
+	ADD_PROPERTY(PropertyInfo(Variant::NIL, "value", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NIL_IS_VARIANT | PROPERTY_USAGE_DEFAULT), "set_constant_value", "get_constant_value");
 }
 
 class VisualScriptNodeInstanceConstant : public VisualScriptNodeInstance {
@@ -1776,8 +1777,8 @@ VisualScriptBasicTypeConstant::VisualScriptBasicTypeConstant() {
 const char *VisualScriptMathConstant::const_name[MATH_CONSTANT_MAX] = {
 	"One",
 	"PI",
-	"PIx2",
 	"PI/2",
+	"TAU",
 	"E",
 	"Sqrt2",
 	"INF",
@@ -1787,8 +1788,8 @@ const char *VisualScriptMathConstant::const_name[MATH_CONSTANT_MAX] = {
 double VisualScriptMathConstant::const_value[MATH_CONSTANT_MAX] = {
 	1.0,
 	Math_PI,
-	Math_PI * 2,
 	Math_PI * 0.5,
+	Math_TAU,
 	2.71828182845904523536,
 	Math::sqrt(2.0),
 	Math_INF,
@@ -1886,8 +1887,8 @@ void VisualScriptMathConstant::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(MATH_CONSTANT_ONE);
 	BIND_ENUM_CONSTANT(MATH_CONSTANT_PI);
-	BIND_ENUM_CONSTANT(MATH_CONSTANT_2PI);
 	BIND_ENUM_CONSTANT(MATH_CONSTANT_HALF_PI);
+	BIND_ENUM_CONSTANT(MATH_CONSTANT_TAU);
 	BIND_ENUM_CONSTANT(MATH_CONSTANT_E);
 	BIND_ENUM_CONSTANT(MATH_CONSTANT_SQRT2);
 	BIND_ENUM_CONSTANT(MATH_CONSTANT_INF);
@@ -1976,13 +1977,13 @@ public:
 VisualScriptNodeInstance *VisualScriptEngineSingleton::instance(VisualScriptInstance *p_instance) {
 
 	VisualScriptNodeInstanceEngineSingleton *instance = memnew(VisualScriptNodeInstanceEngineSingleton);
-	instance->singleton = ProjectSettings::get_singleton()->get_singleton_object(singleton);
+	instance->singleton = Engine::get_singleton()->get_singleton_object(singleton);
 	return instance;
 }
 
 VisualScriptEngineSingleton::TypeGuess VisualScriptEngineSingleton::guess_output_type(TypeGuess *p_inputs, int p_output) const {
 
-	Object *obj = ProjectSettings::get_singleton()->get_singleton_object(singleton);
+	Object *obj = Engine::get_singleton()->get_singleton_object(singleton);
 	TypeGuess tg;
 	tg.type = Variant::OBJECT;
 	if (obj) {
@@ -2000,11 +2001,11 @@ void VisualScriptEngineSingleton::_bind_methods() {
 
 	String cc;
 
-	List<ProjectSettings::Singleton> singletons;
+	List<Engine::Singleton> singletons;
 
-	ProjectSettings::get_singleton()->get_singletons(&singletons);
+	Engine::get_singleton()->get_singletons(&singletons);
 
-	for (List<ProjectSettings::Singleton>::Element *E = singletons.front(); E; E = E->next()) {
+	for (List<Engine::Singleton>::Element *E = singletons.front(); E; E = E->next()) {
 		if (E->get().name == "VS" || E->get().name == "PS" || E->get().name == "PS2D" || E->get().name == "AS" || E->get().name == "TS" || E->get().name == "SS" || E->get().name == "SS2D")
 			continue; //skip these, too simple named
 

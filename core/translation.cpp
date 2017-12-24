@@ -333,6 +333,7 @@ static const char *locale_list[] = {
 	"sq_KV", //  Albanian (Kosovo)
 	"sq_MK", //  Albanian (Macedonia)
 	"sr", //  Serbian
+	"sr_Cyrl", //  Serbian (Cyrillic)
 	"sr_ME", //  Serbian (Montenegro)
 	"sr_RS", //  Serbian (Serbia)
 	"ss_ZA", //  Swati (South Africa)
@@ -693,6 +694,7 @@ static const char *locale_names[] = {
 	"Albanian (Kosovo)",
 	"Albanian (Macedonia)",
 	"Serbian",
+	"Serbian (Cyrillic)",
 	"Serbian (Montenegro)",
 	"Serbian (Serbia)",
 	"Swati (South Africa)",
@@ -874,8 +876,8 @@ void Translation::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "locale"), "set_locale", "get_locale");
 }
 
-Translation::Translation()
-	: locale("en") {
+Translation::Translation() :
+		locale("en") {
 }
 
 ///////////////////////////////////////////////
@@ -966,7 +968,7 @@ Vector<String> TranslationServer::get_all_locale_names() {
 	const char **ptr = locale_names;
 
 	while (*ptr) {
-		locales.push_back(*ptr);
+		locales.push_back(String::utf8(*ptr));
 		ptr++;
 	}
 
@@ -1161,13 +1163,13 @@ void TranslationServer::load_translations() {
 	}
 }
 
-TranslationServer::TranslationServer()
-	: locale("en"),
-	  enabled(true) {
+TranslationServer::TranslationServer() :
+		locale("en"),
+		enabled(true) {
 	singleton = this;
 
 	for (int i = 0; locale_list[i]; ++i) {
 
-		locale_name_map.insert(locale_list[i], locale_names[i]);
+		locale_name_map.insert(locale_list[i], String::utf8(locale_names[i]));
 	}
 }

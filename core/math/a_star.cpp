@@ -159,6 +159,21 @@ Array AStar::get_points() {
 	return point_list;
 }
 
+PoolVector<int> AStar::get_point_connections(int p_id) {
+
+	ERR_FAIL_COND_V(!points.has(p_id), PoolVector<int>());
+
+	PoolVector<int> point_list;
+
+	Point *p = points[p_id];
+
+	for (int i = 0; i < p->neighbours.size(); i++) {
+		point_list.push_back(p->neighbours[i]->id);
+	}
+
+	return point_list;
+}
+
 bool AStar::are_points_connected(int p_id, int p_with_id) const {
 
 	Segment s(p_id, p_with_id);
@@ -444,6 +459,8 @@ void AStar::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("has_point", "id"), &AStar::has_point);
 	ClassDB::bind_method(D_METHOD("get_points"), &AStar::get_points);
 
+	ClassDB::bind_method(D_METHOD("get_point_connections"), &AStar::get_point_connections);
+
 	ClassDB::bind_method(D_METHOD("connect_points", "id", "to_id", "bidirectional"), &AStar::connect_points, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("disconnect_points", "id", "to_id"), &AStar::disconnect_points);
 	ClassDB::bind_method(D_METHOD("are_points_connected", "id", "to_id"), &AStar::are_points_connected);
@@ -456,8 +473,8 @@ void AStar::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_point_path", "from_id", "to_id"), &AStar::get_point_path);
 	ClassDB::bind_method(D_METHOD("get_id_path", "from_id", "to_id"), &AStar::get_id_path);
 
-	BIND_VMETHOD(MethodInfo("_estimate_cost", PropertyInfo(Variant::INT, "from_id"), PropertyInfo(Variant::INT, "to_id")));
-	BIND_VMETHOD(MethodInfo("_compute_cost", PropertyInfo(Variant::INT, "from_id"), PropertyInfo(Variant::INT, "to_id")));
+	BIND_VMETHOD(MethodInfo(Variant::REAL, "_estimate_cost", PropertyInfo(Variant::INT, "from_id"), PropertyInfo(Variant::INT, "to_id")));
+	BIND_VMETHOD(MethodInfo(Variant::REAL, "_compute_cost", PropertyInfo(Variant::INT, "from_id"), PropertyInfo(Variant::INT, "to_id")));
 }
 
 AStar::AStar() {

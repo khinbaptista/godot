@@ -28,13 +28,19 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 #include "tree.h"
+#include <limits.h>
 
+#include "math_funcs.h"
 #include "os/input.h"
 #include "os/keyboard.h"
 #include "os/os.h"
 #include "print_string.h"
 #include "project_settings.h"
 #include "scene/main/viewport.h"
+
+#ifdef TOOLS_ENABLED
+#include "editor/editor_node.h"
+#endif
 
 void TreeItem::move_to_top() {
 
@@ -154,8 +160,17 @@ void TreeItem::set_text(int p_column, String p_text) {
 
 	if (cells[p_column].mode == TreeItem::CELL_MODE_RANGE || cells[p_column].mode == TreeItem::CELL_MODE_RANGE_EXPRESSION) {
 
-		cells[p_column].min = 0;
-		cells[p_column].max = p_text.get_slice_count(",");
+		Vector<String> strings = p_text.split(",");
+		cells[p_column].min = INT_MAX;
+		cells[p_column].max = INT_MIN;
+		for (int i = 0; i < strings.size(); i++) {
+			int value = i;
+			if (!strings[i].get_slicec(':', 1).empty()) {
+				value = strings[i].get_slicec(':', 1).to_int();
+			}
+			cells[p_column].min = MIN(cells[p_column].min, value);
+			cells[p_column].max = MAX(cells[p_column].max, value);
+		}
 		cells[p_column].step = 0;
 	}
 	_changed_notify(p_column);
@@ -1231,8 +1246,18 @@ int Tree::draw_item(const Point2i &p_pos, const Point2 &p_draw_ofs, const Size2 
 
 						int option = (int)p_item->cells[i].val;
 
-						String s = p_item->cells[i].text;
-						s = s.get_slicec(',', option);
+						String s = RTR("(Other)");
+						Vector<String> strings = p_item->cells[i].text.split(",");
+						for (int i = 0; i < strings.size(); i++) {
+							int value = i;
+							if (!strings[i].get_slicec(':', 1).empty()) {
+								value = strings[i].get_slicec(':', 1).to_int();
+							}
+							if (option == value) {
+								s = strings[i].get_slicec(':', 0);
+								break;
+							}
+						}
 
 						if (p_item->cells[i].suffix != String())
 							s += " " + p_item->cells[i].suffix;
@@ -1392,9 +1417,14 @@ int Tree::draw_item(const Point2i &p_pos, const Point2 &p_draw_ofs, const Size2 
 				if (c->get_children() != NULL)
 					root_pos -= Point2i(cache.arrow->get_width(), 0);
 
+				float line_width = 1.0;
+#ifdef TOOLS_ENABLED
+				line_width *= EDSCALE;
+#endif
+
 				Point2i parent_pos = Point2i(parent_ofs - cache.arrow->get_width() / 2, p_pos.y + label_h / 2 + cache.arrow->get_height() / 2) - cache.offset + p_draw_ofs;
-				VisualServer::get_singleton()->canvas_item_add_line(ci, root_pos, Point2i(parent_pos.x, root_pos.y), cache.relationship_line_color);
-				VisualServer::get_singleton()->canvas_item_add_line(ci, Point2i(parent_pos.x, root_pos.y), parent_pos, cache.relationship_line_color);
+				VisualServer::get_singleton()->canvas_item_add_line(ci, root_pos, Point2i(parent_pos.x - Math::floor(line_width / 2), root_pos.y), cache.relationship_line_color, line_width);
+				VisualServer::get_singleton()->canvas_item_add_line(ci, Point2i(parent_pos.x, root_pos.y), parent_pos, cache.relationship_line_color, line_width);
 			}
 
 			int child_h = draw_item(children_pos, p_draw_ofs, p_draw_size, c);
@@ -1776,7 +1806,7 @@ int Tree::propagate_mouse_event(const Point2i &p_pos, int x_ofs, int y_ofs, bool
 					for (int i = 0; i < c.text.get_slice_count(","); i++) {
 
 						String s = c.text.get_slicec(',', i);
-						popup_menu->add_item(s, i);
+						popup_menu->add_item(s.get_slicec(':', 0), s.get_slicec(':', 1).empty() ? i : s.get_slicec(':', 1).to_int());
 					}
 
 					popup_menu->set_size(Size2(col_width, 0));
@@ -2579,6 +2609,11 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 					if (drag_touching) {
 						set_physics_process(true);
 					}
+
+					if (b->get_button_index() == BUTTON_LEFT) {
+						if (get_item_at_position(b->get_position()) == NULL && !b->get_shift() && !b->get_control() && !b->get_command())
+							emit_signal("nothing_selected");
+					}
 				}
 
 			} break;
@@ -2591,6 +2626,12 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 				v_scroll->set_value(v_scroll->get_value() + v_scroll->get_page() * b->get_factor() / 8);
 			} break;
 		}
+	}
+
+	Ref<InputEventPanGesture> pan_gesture = p_event;
+	if (pan_gesture.is_valid()) {
+
+		v_scroll->set_value(v_scroll->get_value() + v_scroll->get_page() * pan_gesture->get_delta().y / 8);
 	}
 }
 
@@ -2634,7 +2675,7 @@ bool Tree::edit_selected() {
 		for (int i = 0; i < c.text.get_slice_count(","); i++) {
 
 			String s = c.text.get_slicec(',', i);
-			popup_menu->add_item(s, i);
+			popup_menu->add_item(s.get_slicec(':', 0), s.get_slicec(':', 1).empty() ? i : s.get_slicec(':', 1).to_int());
 		}
 
 		popup_menu->set_size(Size2(rect.size.width, 0));
@@ -3017,6 +3058,25 @@ void Tree::set_select_mode(SelectMode p_mode) {
 	select_mode = p_mode;
 }
 
+void Tree::deselect_all() {
+
+	TreeItem *item = get_next_selected(get_root());
+	while (item) {
+		item->deselect(selected_col);
+		item = get_next_selected(get_root());
+	}
+
+	selected_item = NULL;
+	selected_col = -1;
+
+	update();
+}
+
+bool Tree::is_anything_selected() {
+
+	return (selected_item != NULL);
+}
+
 void Tree::clear() {
 
 	if (blocked > 0) {
@@ -3330,6 +3390,26 @@ Point2 Tree::get_scroll() const {
 	if (v_scroll->is_visible_in_tree())
 		ofs.y = v_scroll->get_value();
 	return ofs;
+}
+
+void Tree::scroll_to_item(TreeItem *p_item) {
+
+	if (!is_visible_in_tree()) {
+
+		// hack to work around crash in get_item_rect() if Tree is not in tree.
+		return;
+	}
+
+	// make sure the scrollbar min and max are up to date with latest changes.
+	update_scrollbars();
+
+	const Rect2 r = get_item_rect(p_item);
+
+	if (r.position.y < v_scroll->get_value()) {
+		v_scroll->set_value(r.position.y);
+	} else if (r.position.y + r.size.y + 2 * cache.vseparation > v_scroll->get_value() + get_size().y) {
+		v_scroll->set_value(r.position.y + r.size.y + 2 * cache.vseparation - get_size().y);
+	}
 }
 
 TreeItem *Tree::_search_item_text(TreeItem *p_at, const String &p_find, int *r_col, bool p_selectable, bool p_backwards) {
@@ -3704,6 +3784,7 @@ void Tree::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("custom_popup_edited", PropertyInfo(Variant::BOOL, "arrow_clicked")));
 	ADD_SIGNAL(MethodInfo("item_activated"));
 	ADD_SIGNAL(MethodInfo("column_title_pressed", PropertyInfo(Variant::INT, "column")));
+	ADD_SIGNAL(MethodInfo("nothing_selected"));
 
 	BIND_ENUM_CONSTANT(SELECT_SINGLE);
 	BIND_ENUM_CONSTANT(SELECT_ROW);

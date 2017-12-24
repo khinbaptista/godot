@@ -4,9 +4,6 @@ Import('env')
 
 files = [
     'thread_uwp.cpp',
-    '#platform/windows/tcp_server_winsock.cpp',
-    '#platform/windows/packet_peer_udp_winsock.cpp',
-    '#platform/windows/stream_peer_winsock.cpp',
     '#platform/windows/key_mapping_win.cpp',
     '#platform/windows/windows_terminal_logger.cpp',
     'joypad_uwp.cpp',
@@ -19,7 +16,7 @@ files = [
 if "build_angle" in env and env["build_angle"]:
     cmd = env.AlwaysBuild(env.ANGLE('libANGLE.lib', None))
 
-prog = env.Program('#bin/godot', files)
+prog = env.add_program('#bin/godot', files)
 
 if "build_angle" in env and env["build_angle"]:
     env.Depends(prog, [cmd])

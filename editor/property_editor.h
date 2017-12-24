@@ -1,4 +1,4 @@
-﻿/*************************************************************************/
+/*************************************************************************/
 /*  property_editor.h                                                    */
 /*************************************************************************/
 /*                       This file is part of:                           */
@@ -203,9 +203,9 @@ class PropertyEditor : public Control {
 	bool hide_script;
 	bool use_folding;
 	bool property_selectable;
-
 	bool updating_folding;
 
+	List<String> foldable_property_cache;
 	HashMap<String, String> pending;
 	String selected_property;
 
@@ -244,6 +244,7 @@ class PropertyEditor : public Control {
 	bool _might_be_in_instance();
 	bool _get_instanced_node_original_property(const StringName &p_prop, Variant &value);
 	bool _is_property_different(const Variant &p_current, const Variant &p_orig, int p_usage = 0);
+	bool _is_instanced_node_with_original_property_different(const String &p_name, TreeItem *item);
 
 	void _refresh_item(TreeItem *p_item);
 	void _set_range_def(Object *p_item, String prop, float p_frame);
@@ -304,15 +305,18 @@ public:
 	void set_property_selectable(bool p_selectable);
 
 	void set_use_folding(bool p_enable);
+
+	void collapse_all_folding();
+	void expand_all_folding();
 	PropertyEditor();
 	~PropertyEditor();
 };
 
 class SectionedPropertyEditorFilter;
 
-class SectionedPropertyEditor : public HBoxContainer {
+class SectionedPropertyEditor : public HSplitContainer {
 
-	GDCLASS(SectionedPropertyEditor, HBoxContainer);
+	GDCLASS(SectionedPropertyEditor, HSplitContainer);
 
 	ObjectID obj;
 

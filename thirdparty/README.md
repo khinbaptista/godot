@@ -57,13 +57,13 @@ Files extracted from upstream source:
 - Version: 1.06
 - License: OFL-1.1
 
-Use UI font if exists, because it has tight vertial metrix and good for UI.
+Use UI font if exists, because it has tight vertical metrics and good for UI.
 
 ### Hack Regular
 
 - Upstream: https://github.com/source-foundry/Hack
-- Version: 2.020
-- License: Hack Open Font License v2.0
+- Version: 3.000
+- License: MIT + Bitstream Vera License
 
 ### DroidSans*.ttf
 
@@ -86,7 +86,7 @@ Files extracted from upstream source:
 ## glad
 
 - Upstream: https://github.com/Dav1dde/glad
-- Version: 0.1.14a0
+- Version: 0.1.16a0
 - License: MIT
 
 The files we package are automatically generated.
@@ -179,11 +179,14 @@ Files extracted from upstream source:
 
 TODO.
 
+Important: File `libvpx/vpx_dsp/x86/vpx_subpixel_8t_intrin_avx2.c` has
+Godot-made change marked with `// -- GODOT --` comments.
+
 
 ## libwebp
 
 - Upstream: https://chromium.googlesource.com/webm/libwebp/
-- Version: 0.6.0
+- Version: 0.6.1
 - License: BSD-3-Clause
 
 Files extracted from upstream source:
@@ -239,7 +242,7 @@ Collection of single-file libraries used in Godot components.
   * License: RSA Message-Digest License
 - `pcg.{cpp,h}`
   * Upstream: http://www.pcg-random.org
-  * Version: minimal C implemention, http://www.pcg-random.org/download.html
+  * Version: minimal C implementation, http://www.pcg-random.org/download.html
   * License: Apache 2.0
 - `sha256.{c,h}`
   * Upstream: https://github.com/ilvn/SHA256
@@ -266,6 +269,19 @@ Collection of single-file libraries used in Godot components.
   * Version: ?
   * License: BSD
 
+### poshlib
+
+- Upstream: http://poshlib.hookatooka.com/poshlib/trac.cgi (username guest, password guest123)
+- Version: 1.3.002
+- License: MIT
+
+Files extracted from the upstream source:
+
+- posh.c
+- posh.h
+
+(no license file was included with the upstream distribution)
+
 ### scene
 
 - `mikktspace.{c,h}`
@@ -280,6 +296,20 @@ Collection of single-file libraries used in Godot components.
   * Upstream: https://github.com/nothings/stb
   * Version: 1.11
   * License: Public Domain (Unlicense) or MIT
+
+## thekla_atlas
+
+- Upstream: https://github.com/Thekla/thekla_atlas
+- Version: 80a1430 (git)
+- License: zlib
+
+Files extracted from the upstream source:
+
+- Relevant sources from src/
+- License.txt
+
+Important: Some files have Godot-made changes, those
+changes are marked with `// -- GODOT --` comments.
 
 
 ## nanosvg
@@ -335,6 +365,7 @@ Files extracted from upstream source:
 - celt/ and silk/ subfolders
 - COPYING
 
+
 ## pcre2
 
 - Upstream: http://www.pcre.org/
@@ -348,6 +379,7 @@ Files extracted from upstream source:
 - src/pcre2_jit_*.c and src/sljit/*
 - AUTHORS and COPYING
 
+
 ## pvrtccompressor
 
 - Upstream: https://bitbucket.org/jthlim/pvrtccompressor
@@ -359,11 +391,13 @@ Files extracted from upstream source:
 - all .cpp and .h files apart from `main.cpp`
 - LICENSE.TXT
 
+
 ## recastnavigation
 
 - Upstream: https://github.com/recastnavigation/recastnavigation
 - version: git commit ef3ea40f - 2016-02-06
 - License: zlib
+
 
 ## rtaudio
 
@@ -386,20 +420,20 @@ Files extracted from upstream source:
 
 - all .cpp, .h and .inl files
 
+Important: Some files have Godot-made changes.
+They are marked with `// -- GODOT start --` and `// -- GODOT end --`
+comments and a patch is provided in the squish/ folder.
+
 
 ## tinyexr
 
 - Upstream: https://github.com/syoyo/tinyexr
-- Version: 0.9.5+ (git a145d69)
+- Version: 0.9.5+ (git 9f784ca - 24 October 2017)
 - License: BSD-3-Clause
 
 Files extracted from upstream source:
 
 - `tinyexr.{cc,h}`
-
-Important: Some changes were made to get TinyEXR to build on the ancient
-MinGW-w64 toolchain of Travis CI.
-https://github.com/godotengine/godot/commit/37f5e1dcd94611dd5b670f013abf0323e8b47def
 
 
 ## zlib

@@ -64,7 +64,10 @@ def get_opts():
     return [
         ('mingw_prefix_32', 'MinGW prefix (Win32)', mingw32),
         ('mingw_prefix_64', 'MinGW prefix (Win64)', mingw64),
-        BoolVariable('use_lto', 'Use link time optimization (when using MingW)', False),
+        # Targeted Windows version: 7 (and later), minimum supported version
+        # XP support dropped after EOL due to missing API for IPv6 and other issues
+        # Vista support dropped after EOL due to GH-10243
+        ('target_win_version', 'Targeted Windows version, >= 0x0601 (Windows 7)', '0x0601'),
         EnumVariable('debug_symbols', 'Add debug symbols to release version', 'yes', ('yes', 'no', 'full')),
     ]
 
@@ -97,11 +100,6 @@ def build_res_file(target, source, env):
 def configure(env):
 
     env.Append(CPPPATH=['#platform/windows'])
-
-    # Targeted Windows version: 7 (and later), minimum supported version
-    # XP support dropped after EOL due to missing API for IPv6 and other issues
-    # Vista support dropped after EOL due to GH-10243
-    winver = "0x0601"
 
     if (os.name == "nt" and os.getenv("VCINSTALLDIR")): # MSVC
 
@@ -176,7 +174,7 @@ def configure(env):
         env.Append(CCFLAGS=['/DWASAPI_ENABLED'])
         env.Append(CCFLAGS=['/DTYPED_METHOD_BIND'])
         env.Append(CCFLAGS=['/DWIN32'])
-        env.Append(CCFLAGS=['/DWINVER=%s' % winver, '/D_WIN32_WINNT=%s' % winver])
+        env.Append(CCFLAGS=['/DWINVER=%s' % env['target_win_version'], '/D_WIN32_WINNT=%s' % env['target_win_version']])
         if env["bits"] == "64":
             env.Append(CCFLAGS=['/D_WIN64'])
 
@@ -189,6 +187,12 @@ def configure(env):
             VC_PATH = os.getenv("VCINSTALLDIR")
         else:
             VC_PATH = ""
+
+        if (env["use_lto"]):
+            env.Append(CCFLAGS=['/GL'])
+            env.Append(LINKFLAGS=['/LTCG'])
+        if env['tools'] and env['openmp']:
+            env.Append(CPPFLAGS=['/openmp'])
 
         env.Append(CCFLAGS=["/I" + p for p in os.getenv("INCLUDE").split(";")])
         env.Append(LIBPATH=[p for p in os.getenv("LIB").split(";")])
@@ -266,13 +270,17 @@ def configure(env):
             env.Append(CCFLAGS=['-flto'])
             env.Append(LINKFLAGS=['-flto=' + str(env.GetOption("num_jobs"))])
 
+        if env['tools'] and env['openmp']:
+            env.Append(CPPFLAGS=['-fopenmp'])
+            env.Append(LINKFLAGS=['-fopenmp'])
+
         ## Compile flags
 
         env.Append(CCFLAGS=['-DWINDOWS_ENABLED', '-mwindows'])
         env.Append(CCFLAGS=['-DOPENGL_ENABLED'])
         env.Append(CCFLAGS=['-DRTAUDIO_ENABLED'])
         env.Append(CCFLAGS=['-DWASAPI_ENABLED'])
-        env.Append(CCFLAGS=['-DWINVER=%s' % winver, '-D_WIN32_WINNT=%s' % winver])
+        env.Append(CCFLAGS=['-DWINVER=%s' % env['target_win_version'], '-D_WIN32_WINNT=%s' % env['target_win_version']])
         env.Append(LIBS=['mingw32', 'opengl32', 'dsound', 'ole32', 'd3d9', 'winmm', 'gdi32', 'iphlpapi', 'shlwapi', 'wsock32', 'ws2_32', 'kernel32', 'oleaut32', 'dinput8', 'dxguid', 'ksuser'])
 
         env.Append(CPPFLAGS=['-DMINGW_ENABLED'])

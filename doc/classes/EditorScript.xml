@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="EditorScript" inherits="Reference" category="Core" version="3.0.alpha.custom_build">
+<class name="EditorScript" inherits="Reference" category="Core" version="3.0-beta">
 	<brief_description>
 		Base script that can be used to add extension functions to the editor.
 	</brief_description>
@@ -9,7 +9,7 @@
 		[codeblock]
 		tool
 		extends EditorScript
-		
+
 		func _run():
 		    print("Hello from the Godot Editor!")
 		[/codeblock]
@@ -33,6 +33,8 @@
 			<argument index="0" name="node" type="Node">
 			</argument>
 			<description>
+				Adds [code]node[/code] as a child of the root node in the editor context.
+				WARNING: The implementation of this method is currently disabled.
 			</description>
 		</method>
 		<method name="get_editor_interface">

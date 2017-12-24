@@ -32,6 +32,7 @@
 
 #include "editor/plugins/spatial_editor_plugin.h"
 #include "scene/3d/audio_stream_player_3d.h"
+#include "scene/3d/baked_lightmap.h"
 #include "scene/3d/camera.h"
 #include "scene/3d/collision_polygon.h"
 #include "scene/3d/collision_shape.h"
@@ -78,7 +79,7 @@ class EditorSpatialGizmo : public SpatialEditorGizmo {
 
 	Vector<Vector3> collision_segments;
 	Ref<TriangleMesh> collision_mesh;
-	Rect3 collision_mesh_bounds;
+	AABB collision_mesh_bounds;
 
 	struct Handle {
 		Vector3 pos;
@@ -100,7 +101,7 @@ protected:
 	void add_lines(const Vector<Vector3> &p_lines, const Ref<Material> &p_material, bool p_billboard = false);
 	void add_mesh(const Ref<ArrayMesh> &p_mesh, bool p_billboard = false, const RID &p_skeleton = RID());
 	void add_collision_segments(const Vector<Vector3> &p_lines);
-	void add_collision_triangles(const Ref<TriangleMesh> &p_tmesh, const Rect3 &p_bounds = Rect3());
+	void add_collision_triangles(const Ref<TriangleMesh> &p_tmesh, const AABB &p_bounds = AABB());
 	void add_unscaled_billboard(const Ref<Material> &p_material, float p_scale = 1);
 	void add_handles(const Vector<Vector3> &p_handles, bool p_billboard = false, bool p_secondary = false);
 	void add_solid_box(Ref<Material> &p_material, Vector3 size);
@@ -286,6 +287,22 @@ public:
 
 	void redraw();
 	GIProbeGizmo(GIProbe *p_probe = NULL);
+};
+
+class BakedIndirectLightGizmo : public EditorSpatialGizmo {
+
+	GDCLASS(BakedIndirectLightGizmo, EditorSpatialGizmo);
+
+	BakedLightmap *baker;
+
+public:
+	virtual String get_handle_name(int p_idx) const;
+	virtual Variant get_handle_value(int p_idx) const;
+	virtual void set_handle(int p_idx, Camera *p_camera, const Point2 &p_point);
+	virtual void commit_handle(int p_idx, const Variant &p_restore, bool p_cancel = false);
+
+	void redraw();
+	BakedIndirectLightGizmo(BakedLightmap *p_baker = NULL);
 };
 
 class CollisionShapeSpatialGizmo : public EditorSpatialGizmo {

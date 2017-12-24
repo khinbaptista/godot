@@ -35,11 +35,16 @@ if env['tools']:
     SConscript("convex_decomp/SCsub")
 
 if env['vsproj']:
+    import os
+    path = os.getcwd()
+    # Change directory so the path resolves correctly in the function call.
+    os.chdir("..")
     env.AddToVSProject(env.drivers_sources)
+    os.chdir(path)
 
 if env.split_drivers:
     env.split_lib("drivers")
 else:
     env.add_source_files(env.drivers_sources, "*.cpp")
-    lib = env.Library("drivers", env.drivers_sources)
+    lib = env.add_library("drivers", env.drivers_sources)
     env.Prepend(LIBS=[lib])

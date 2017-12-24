@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="Curve2D" inherits="Resource" category="Core" version="3.0.alpha.custom_build">
+<class name="Curve2D" inherits="Resource" category="Core" version="3.0-beta">
 	<brief_description>
 		Describes a Bezier curve in 2D space.
 	</brief_description>
@@ -33,13 +33,6 @@
 			</return>
 			<description>
 				Removes all points from the curve.
-			</description>
-		</method>
-		<method name="get_bake_interval" qualifiers="const">
-			<return type="float">
-			</return>
-			<description>
-				Returns the distance between two adjacent cached points.
 			</description>
 		</method>
 		<method name="get_baked_length" qualifiers="const">
@@ -133,15 +126,6 @@
 				Deletes the point "idx" from the curve. Sends an error to the console if "idx" is out of bounds.
 			</description>
 		</method>
-		<method name="set_bake_interval">
-			<return type="void">
-			</return>
-			<argument index="0" name="distance" type="float">
-			</argument>
-			<description>
-				Sets the distance in pixels between two adjacent cached points. Changing it forces the cache to be recomputed the next time a xxx_baked_xxx function is called. The less distance, the more points the cache will have, and the more memory it will consume, so use with care.
-			</description>
-		</method>
 		<method name="set_point_in">
 			<return type="void">
 			</return>
@@ -191,9 +175,6 @@
 		</method>
 	</methods>
 	<members>
-		<member name="_data" type="Dictionary" setter="_set_data" getter="_get_data">
-			The points describing the curve. Value is a [Dictionary] with the keys [code]in[/code], [code]out[/code], and [code]pos[/code]. The key pos is the position of a vertex of the curve, the key in is the vector from that position to the control point before this vertex, the key out is the vector from that position to the controlpoint after this vertex.
-		</member>
 		<member name="bake_interval" type="float" setter="set_bake_interval" getter="get_bake_interval">
 			The distance in pixels between two adjacent cached points. Changing it forces the cache to be recomputed the next time the [method get_baked_points] or [method get_baked_length] function is called. The smaller the distance, the more points in the cache and the more memory it will consume, so use with care.
 		</member>

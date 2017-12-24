@@ -53,6 +53,10 @@ String _find_build_engine_on_unix(const String &p_name) {
 	if (ret.length())
 		return ret;
 
+	String ret_fallback = path_which(p_name + ".exe");
+	if (ret_fallback.length())
+		return ret_fallback;
+
 	const char *locations[] = {
 #ifdef OSX_ENABLED
 		"/Library/Frameworks/Mono.framework/Versions/Current/bin/",
@@ -361,16 +365,14 @@ GodotSharpBuilds::GodotSharpBuilds() {
 
 	// Build tool settings
 	EditorSettings *ed_settings = EditorSettings::get_singleton();
-	if (!ed_settings->has_setting("mono/builds/build_tool")) {
-		ed_settings->set_setting("mono/builds/build_tool",
+
 #ifdef WINDOWS_ENABLED
-				// TODO: Default to MSBUILD_MONO if its csc.exe issue is fixed in the installed mono version
-				MSBUILD
+	// TODO: Default to MSBUILD_MONO if its csc.exe issue is fixed in the installed mono version
+	EDITOR_DEF("mono/builds/build_tool", MSBUILD);
 #else
-				MSBUILD_MONO
+	EDITOR_DEF("mono/builds/build_tool", MSBUILD_MONO);
 #endif
-				);
-	}
+
 	ed_settings->add_property_hint(PropertyInfo(Variant::INT, "mono/builds/build_tool", PROPERTY_HINT_ENUM,
 #ifdef WINDOWS_ENABLED
 			"MSBuild (Mono),MSBuild (System)"

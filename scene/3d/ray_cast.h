@@ -48,7 +48,7 @@ class RayCast : public Spatial {
 	Set<RID> exclude;
 
 	uint32_t collision_mask;
-	uint32_t type_mask;
+	bool exclude_parent_body;
 
 	Node *debug_shape;
 	Ref<Material> debug_material;
@@ -75,8 +75,8 @@ public:
 	void set_collision_mask_bit(int p_bit, bool p_value);
 	bool get_collision_mask_bit(int p_bit) const;
 
-	void set_type_mask(uint32_t p_mask);
-	uint32_t get_type_mask() const;
+	void set_exclude_parent_body(bool p_exclude_parent_body);
+	bool get_exclude_parent_body() const;
 
 	void force_raycast_update();
 	bool is_colliding() const;

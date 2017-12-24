@@ -12,46 +12,56 @@ generous deed immortalized in the next stable release of Godot Engine.
 
 ## Platinum sponsors
 
-None so far, but your company could be the first! :)
+    Enjin Coin <https://enjincoin.io>
 
 ## Gold sponsors
 
     Gamblify <https://www.gamblify.com>
+    GameDev.TV <https://www.gamedev.tv>
 
 ## Mini sponsors
 
     Andreas
-    Andreas Hirschauer
+    Brandon Lamb
     Christian Uldall Pedersen
+    Christoph Woinke
     E Hewert
     Hein-Pieter van Braam
+    Jamal Alyafei
+    Jordan M Lucas
     Matthieu Huvé
     Nathan Warden
     Neal Gompa (Conan Kudo)
-    Olimpiu Metiu
+    Pascal Julien
     Ruslan Mustakov
     Slobodan Milnovic
 
 ## Gold donors
 
+    3Dexplorer
     Alexander Otto
+    Andy Meier
     Asdf
-    Blair Allen
     cheese65536
     Jake Bo
     Javier
     Manuele Finocchiaro
     Officine Pixel S.n.c.
-    Ranoller
     Rémi Verschelde
     Stephan Lanfermann
+    Zaven Muradyan
 
     Andreas Schüle
     Austen McRae
     Bernhard Liebl
+    Cody Brocious
     Gerald E Butler
-    Jordan M Lucas
+    Jahn Johansen
+    Johannes Wuensch
     Kris Michael
+    Libre-Dépanne
+    Ranoller
+    Svenne Krap
 
     BanjoNode2D
     Chris Serino
@@ -63,7 +73,6 @@ None so far, but your company could be the first! :)
     Henrique Alves
     Laurence Bannister
     Leo
-    mhilbrunner
     Przemysław Gołąb (n-pigeon)
     Robert Willes
     Robin Arys
@@ -72,53 +81,81 @@ None so far, but your company could be the first! :)
     Testus Maximus
     Thomas Bjarnelöf
     Xavier Tan
+    Zaq Poi
 
     Amanda Haldy
     Andreas Haas
-    Bryanna M
+    Arnaud Verstuyf
     Chris Brown
     Cody Parker
     D
+    Daniel Eliasinski
+    Daniel Langegger
+    Eric Monson
     Ezra Theunissen
     flesk
     François Cantin
-    Hendrik Mans
+    Giovanni Solimeno
     Jeppe Zapp
     Justin Arnold
     Justo Delgado Baudí
     Leandro Voltolino
     Lucien Boudy
-    Myles
     Noah
+    Patrick Schnorbus
+    Pete Goodwin
+    Ryan Estes
+    Ted
+    Travis Womack
     Trent McPheron
-    x1212
 
 ## Silver donors
 
     1D_Inc
+    Abe Pazos
+    Alder Stefano
     Alessandro Senese
     Alex Barsukov
+    Andres Cuevas
     Anthony Bongiovanni
     Avencherus
     Bastian Böhm
     Ben Vercammen
+    Blair Allen
     Bryan Stevenson
+    Casey Foote
     Christian Baune
     Christian Winter
     Collin Shooltz
+    Daniel Egger
+    Daniel Kaplan
+    David Cravens
+    David May
+    Diego Moreira Guimarães
     Dominik Wetzel
+    Eric Martini
     Fabian Becker
     fengjiongmax
+    Francesco Lisi
+    Frank C. Simmons
     Fredy Romero Sam
+    G3Dev sàrl
     Geequlim
     Gerrit Großkopf
     Guldoman
+    HardRound
     hatniX
     HeartBeast
     Heribert Hirth
     Hunter Jones
+    Jaime Ruiz-Borau Vizárraga
+    Jeff Hungerford
+    Jerry Chen
+    Jesse Liles
+    joe513
     Jonathon
     Josh 'Cheeseness' Bush
+    Juan Negrier
     JuDelCo
     Julian Murgia
     Juraj Móza
@@ -126,15 +163,18 @@ None so far, but your company could be the first! :)
     Kevin Boyer
     Kevin Kamper Meejach Petersen
     Klavdij Voncina
-    Kobi Malul
+    Linus Lind Lundgren
     Lisandro Lorea
     magodev
+    Markus Wiesner
     Martin Novák
     Matthew Fitzpatrick
-    Matthew Valancy
     Matthias Hölzl
     Max R.R. Collada
+    memoryruins
+    mhilbrunner
     Michael Gringauz
+    Michael Tintiuc
     Mikael Olsson
     MoM
     Moritz Laass
@@ -142,28 +182,28 @@ None so far, but your company could be the first! :)
     Neil Blakey-Milner
     Nik Lee
     Niko Leopold
-    nvgrod
+    Oleg Tyshchenko
     Pablo Seibelt
     Pan Ip
+    Pat LaBine
     Patrick Nafarrete
     Paul Mason
     Paweł Kowal
-    Pete Goodwin
+    Pierre-Igor Berthet
     Pietro Vertechi
     rayos
     Richman Stewart
+    Rodolfo Baeza
+    Roger Burgess
     Roger Smith
-    Ryan Estes
+    Roman Tinkov
     Sam Van Campenhout
-    Sam Vila
     Sasori Olkof
     Scott D. Yelich
     Sootstone
-    Tavo Tell
-    TheHappieCat
     Theo Cranmore
+    Thomas Norman
     Tom Larrow
-    Troy Bonneau
     UltyX
     Wout Standaert
     Xananax & karroffel

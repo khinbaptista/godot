@@ -348,10 +348,11 @@ uint64_t ClassDB::get_api_hash(APIType p_api) {
 				hash = hash_djb2_one_64(mb->get_argument_type(-1), hash); //return
 
 				for (int i = 0; i < mb->get_argument_count(); i++) {
-					hash = hash_djb2_one_64(mb->get_argument_info(i).type, hash);
-					hash = hash_djb2_one_64(mb->get_argument_info(i).name.hash(), hash);
-					hash = hash_djb2_one_64(mb->get_argument_info(i).hint, hash);
-					hash = hash_djb2_one_64(mb->get_argument_info(i).hint_string.hash(), hash);
+					const PropertyInfo info = mb->get_argument_info(i);
+					hash = hash_djb2_one_64(info.type, hash);
+					hash = hash_djb2_one_64(info.name.hash(), hash);
+					hash = hash_djb2_one_64(info.hint, hash);
+					hash = hash_djb2_one_64(info.hint_string.hash(), hash);
 				}
 
 				hash = hash_djb2_one_64(mb->get_default_argument_count(), hash);
@@ -1036,7 +1037,6 @@ bool ClassDB::get_property(Object *p_object, const StringName &p_property, Varia
 			r_value = *c;
 			return true;
 		}
-		//if (check->constant_map.fin)
 
 		check = check->inherits_ptr;
 	}
@@ -1157,24 +1157,6 @@ bool ClassDB::has_method(StringName p_class, StringName p_method, bool p_no_inhe
 			return true;
 		if (p_no_inheritance)
 			return false;
-		check = check->inherits_ptr;
-	}
-
-	return false;
-}
-
-bool ClassDB::get_setter_and_type_for_property(const StringName &p_class, const StringName &p_prop, StringName &r_class, StringName &r_setter) {
-
-	ClassInfo *type = classes.getptr(p_class);
-	ClassInfo *check = type;
-	while (check) {
-
-		if (check->property_setget.has(p_prop)) {
-			r_class = check->name;
-			r_setter = check->property_setget[p_prop].setter;
-			return true;
-		}
-
 		check = check->inherits_ptr;
 	}
 

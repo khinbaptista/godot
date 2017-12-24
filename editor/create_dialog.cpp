@@ -41,7 +41,7 @@ void CreateDialog::popup_create(bool p_dontclear) {
 
 	recent->clear();
 
-	FileAccess *f = FileAccess::open(EditorSettings::get_singleton()->get_project_settings_path().plus_file("create_recent." + base_type), FileAccess::READ);
+	FileAccess *f = FileAccess::open(EditorSettings::get_singleton()->get_project_settings_dir().plus_file("create_recent." + base_type), FileAccess::READ);
 
 	if (f) {
 
@@ -63,7 +63,7 @@ void CreateDialog::popup_create(bool p_dontclear) {
 
 	favorites->clear();
 
-	f = FileAccess::open(EditorSettings::get_singleton()->get_project_settings_path().plus_file("favorites." + base_type), FileAccess::READ);
+	f = FileAccess::open(EditorSettings::get_singleton()->get_project_settings_dir().plus_file("favorites." + base_type), FileAccess::READ);
 
 	favorite_list.clear();
 
@@ -97,6 +97,15 @@ void CreateDialog::popup_create(bool p_dontclear) {
 	search_box->grab_focus();
 
 	_update_search();
+
+	bool enable_rl = EditorSettings::get_singleton()->get("docks/scene_tree/draw_relationship_lines");
+	Color rl_color = EditorSettings::get_singleton()->get("docks/scene_tree/relationship_line_color");
+
+	if (enable_rl) {
+		search_options->add_constant_override("draw_relationship_lines", 1);
+		search_options->add_color_override("relationship_line_color", rl_color);
+	} else
+		search_options->add_constant_override("draw_relationship_lines", 0);
 }
 
 void CreateDialog::_text_changed(const String &p_newtext) {
@@ -171,6 +180,9 @@ void CreateDialog::add_type(const String &p_type, HashMap<String, TreeItem *> &p
 		bool is_search_subsequence = search_box->get_text().is_subsequence_ofi(p_type);
 		String to_select_type = *to_select ? (*to_select)->get_text(0) : "";
 		bool current_item_is_preffered = ClassDB::is_parent_class(p_type, preferred_search_result_type) && !ClassDB::is_parent_class(to_select_type, preferred_search_result_type);
+		if (*to_select && p_type.length() < (*to_select)->get_text(0).length()) {
+			current_item_is_preffered = true;
+		}
 
 		if (((!*to_select || current_item_is_preffered) && is_search_subsequence) || search_box->get_text() == p_type) {
 			*to_select = item;
@@ -210,9 +222,6 @@ void CreateDialog::_update_search() {
 	TreeItem *root = search_options->create_item();
 	_parse_fs(EditorFileSystem::get_singleton()->get_filesystem());
 */
-
-	List<StringName> type_list;
-	ClassDB::get_class_list(&type_list);
 
 	HashMap<String, TreeItem *> types;
 
@@ -293,6 +302,7 @@ void CreateDialog::_update_search() {
 
 	if (to_select) {
 		to_select->select(0);
+		search_options->scroll_to_item(to_select);
 		favorite->set_disabled(false);
 		favorite->set_pressed(favorite_list.find(to_select->get_text(0)) != -1);
 	}
@@ -306,7 +316,7 @@ void CreateDialog::_confirmed() {
 	if (!ti)
 		return;
 
-	FileAccess *f = FileAccess::open(EditorSettings::get_singleton()->get_project_settings_path().plus_file("create_recent." + base_type), FileAccess::WRITE);
+	FileAccess *f = FileAccess::open(EditorSettings::get_singleton()->get_project_settings_dir().plus_file("create_recent." + base_type), FileAccess::WRITE);
 
 	if (f) {
 		f->store_line(get_selected_type());
@@ -360,7 +370,7 @@ void CreateDialog::_notification(int p_what) {
 void CreateDialog::set_base_type(const String &p_base) {
 
 	base_type = p_base;
-	set_title(TTR("Create New") + " " + p_base);
+	set_title(vformat(TTR("Create New %s"), p_base));
 	_update_search();
 }
 
@@ -466,7 +476,7 @@ void CreateDialog::_favorite_toggled() {
 
 void CreateDialog::_save_favorite_list() {
 
-	FileAccess *f = FileAccess::open(EditorSettings::get_singleton()->get_project_settings_path().plus_file("favorites." + base_type), FileAccess::WRITE);
+	FileAccess *f = FileAccess::open(EditorSettings::get_singleton()->get_project_settings_dir().plus_file("favorites." + base_type), FileAccess::WRITE);
 
 	if (f) {
 
@@ -614,6 +624,9 @@ void CreateDialog::_bind_methods() {
 }
 
 CreateDialog::CreateDialog() {
+
+	ClassDB::get_class_list(&type_list);
+	type_list.sort_custom<StringName::AlphCompare>();
 
 	set_resizable(true);
 

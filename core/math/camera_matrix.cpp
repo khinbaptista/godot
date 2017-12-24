@@ -140,6 +140,7 @@ void CameraMatrix::set_for_hmd(int p_eye, real_t p_aspect, real_t p_intraocular_
 	real_t add = ((f1 + f2) * (p_oversample - 1.0)) / 2.0;
 	f1 += add;
 	f2 += add;
+	f3 *= p_oversample;
 
 	// always apply KEEP_WIDTH aspect ratio
 	f3 *= p_aspect;
@@ -596,7 +597,7 @@ void CameraMatrix::make_scale(const Vector3 &p_scale) {
 	matrix[2][2] = p_scale.z;
 }
 
-void CameraMatrix::scale_translate_to_fit(const Rect3 &p_aabb) {
+void CameraMatrix::scale_translate_to_fit(const AABB &p_aabb) {
 
 	Vector3 min = p_aabb.position;
 	Vector3 max = p_aabb.position + p_aabb.size;

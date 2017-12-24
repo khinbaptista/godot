@@ -68,8 +68,10 @@ public:
 		}
 
 	public:
-		_FORCE_INLINE_ Element()
-			: list_element(NULL), prev_element(NULL), next_element(NULL) {
+		_FORCE_INLINE_ Element() :
+				list_element(NULL),
+				prev_element(NULL),
+				next_element(NULL) {
 		}
 
 		Element next() const {
@@ -80,10 +82,10 @@ public:
 			return Element(prev_element);
 		}
 
-		Element(const Element &other)
-			: list_element(other.list_element),
-			  prev_element(other.prev_element),
-			  next_element(other.next_element) {
+		Element(const Element &other) :
+				list_element(other.list_element),
+				prev_element(other.prev_element),
+				next_element(other.next_element) {
 		}
 
 		Element &operator=(const Element &other) {
@@ -93,8 +95,12 @@ public:
 			return *this;
 		}
 
-		friend bool operator==(const Element &, const Element &);
-		friend bool operator!=(const Element &, const Element &);
+		_FORCE_INLINE_ bool operator==(const Element &p_other) const {
+			return this->list_element == p_other.list_element;
+		}
+		_FORCE_INLINE_ bool operator!=(const Element &p_other) const {
+			return this->list_element != p_other.list_element;
+		}
 
 		operator bool() const {
 			return (list_element != NULL);
@@ -131,17 +137,17 @@ public:
 
 		const typename InternalList::Element *list_element;
 
-		ConstElement(const typename InternalList::Element *p_element)
-			: list_element(p_element) {
+		ConstElement(const typename InternalList::Element *p_element) :
+				list_element(p_element) {
 		}
 
 	public:
-		_FORCE_INLINE_ ConstElement()
-			: list_element(NULL) {
+		_FORCE_INLINE_ ConstElement() :
+				list_element(NULL) {
 		}
 
-		ConstElement(const ConstElement &other)
-			: list_element(other.list_element) {
+		ConstElement(const ConstElement &other) :
+				list_element(other.list_element) {
 		}
 
 		ConstElement &operator=(const ConstElement &other) {
@@ -157,8 +163,12 @@ public:
 			return ConstElement(list_element ? list_element->prev() : NULL);
 		}
 
-		friend bool operator==(const ConstElement &, const ConstElement &);
-		friend bool operator!=(const ConstElement &, const ConstElement &);
+		_FORCE_INLINE_ bool operator==(const ConstElement &p_other) const {
+			return this->list_element == p_other.list_element;
+		}
+		_FORCE_INLINE_ bool operator!=(const ConstElement &p_other) const {
+			return this->list_element != p_other.list_element;
+		}
 
 		operator bool() const {
 			return (list_element != NULL);
@@ -181,7 +191,7 @@ public:
 	};
 
 	ConstElement find(const K &p_key) const {
-		typename InternalList::Element **list_element = map.getptr(p_key);
+		typename InternalList::Element *const *list_element = map.getptr(p_key);
 		if (list_element) {
 			return ConstElement(*list_element);
 		}
@@ -287,29 +297,5 @@ public:
 	_FORCE_INLINE_ OrderedHashMap() {
 	}
 };
-
-template <class K, class V, class Hasher, class Comparator, uint8_t MIN_HASH_TABLE_POWER, uint8_t RELATIONSHIP>
-bool operator==(const typename OrderedHashMap<K, V, Hasher, Comparator, MIN_HASH_TABLE_POWER, RELATIONSHIP>::Element &first,
-		const typename OrderedHashMap<K, V, Hasher, Comparator, MIN_HASH_TABLE_POWER, RELATIONSHIP>::Element &second) {
-	return (first.list_element == second.list_element);
-}
-
-template <class K, class V, class Hasher, class Comparator, uint8_t MIN_HASH_TABLE_POWER, uint8_t RELATIONSHIP>
-bool operator!=(const typename OrderedHashMap<K, V, Hasher, Comparator, MIN_HASH_TABLE_POWER, RELATIONSHIP>::Element &first,
-		const typename OrderedHashMap<K, V, Hasher, Comparator, MIN_HASH_TABLE_POWER, RELATIONSHIP>::Element &second) {
-	return (first.list_element != second.list_element);
-}
-
-template <class K, class V, class Hasher, class Comparator, uint8_t MIN_HASH_TABLE_POWER, uint8_t RELATIONSHIP>
-bool operator==(const typename OrderedHashMap<K, V, Hasher, Comparator, MIN_HASH_TABLE_POWER, RELATIONSHIP>::ConstElement &first,
-		const typename OrderedHashMap<K, V, Hasher, Comparator, MIN_HASH_TABLE_POWER, RELATIONSHIP>::ConstElement &second) {
-	return (first.list_element == second.list_element);
-}
-
-template <class K, class V, class Hasher, class Comparator, uint8_t MIN_HASH_TABLE_POWER, uint8_t RELATIONSHIP>
-bool operator!=(const typename OrderedHashMap<K, V, Hasher, Comparator, MIN_HASH_TABLE_POWER, RELATIONSHIP>::ConstElement &first,
-		const typename OrderedHashMap<K, V, Hasher, Comparator, MIN_HASH_TABLE_POWER, RELATIONSHIP>::ConstElement &second) {
-	return (first.list_element != second.list_element);
-}
 
 #endif // ORDERED_HASH_MAP_H

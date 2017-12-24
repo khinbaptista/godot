@@ -83,6 +83,9 @@ static void GLAPIENTRY _gl_debug_print(GLenum source, GLenum type, GLuint id, GL
 	if (type == _EXT_DEBUG_TYPE_OTHER_ARB)
 		return;
 
+	if (type == _EXT_DEBUG_TYPE_PERFORMANCE_ARB)
+		return; //these are ultimately annoying, so removing for now
+
 	char debSource[256], debType[256], debSev[256];
 	if (source == _EXT_DEBUG_SOURCE_API_ARB)
 		strcpy(debSource, "OpenGL");
@@ -138,53 +141,48 @@ void RasterizerGLES3::initialize() {
 		print_line("Using GLES3 video driver");
 	}
 
-#ifdef GLEW_ENABLED
-	GLuint res = glewInit();
-	ERR_FAIL_COND(res != GLEW_OK);
-	if (OS::get_singleton()->is_stdout_verbose()) {
-		print_line(String("GLES2: Using GLEW ") + (const char *)glewGetString(GLEW_VERSION));
-	}
-
-	// Check for GL 2.1 compatibility, if not bail out
-	if (!glewIsSupported("GL_VERSION_3_0")) {
-		ERR_PRINT("Your system's graphic drivers seem not to support OpenGL 3.0+ / GLES 3.0, sorry :(\n"
-				  "Try a drivers update, buy a new GPU or try software rendering on Linux; Godot will now crash with a segmentation fault.");
-		OS::get_singleton()->alert("Your system's graphic drivers seem not to support OpenGL 3.0+ / GLES 3.0, sorry :(\n"
-								   "Godot Engine will self-destruct as soon as you acknowledge this error message.",
-				"Fatal error: Insufficient OpenGL / GLES drivers");
-		// TODO: If it's even possible, we should stop the execution without segfault and memory leaks :)
-	}
-#endif
-
 #ifdef GLAD_ENABLED
-
 	if (!gladLoadGL()) {
 		ERR_PRINT("Error initializing GLAD");
+	}
+
+// GLVersion seems to be used for both GL and GL ES, so we need different version checks for them
+#ifdef OPENGL_ENABLED // OpenGL 3.3 Core Profile required
+	if (GLVersion.major < 3 && GLVersion.minor < 3) {
+#else // OpenGL ES 3.0
+	if (GLVersion.major < 3) {
+#endif
+		ERR_PRINT("Your system's graphic drivers seem not to support OpenGL 3.3 / OpenGL ES 3.0, sorry :(\n"
+				  "Try a drivers update, buy a new GPU or try software rendering on Linux; Godot will now crash with a segmentation fault.");
+		OS::get_singleton()->alert("Your system's graphic drivers seem not to support OpenGL 3.3 / OpenGL ES 3.0, sorry :(\n"
+								   "Godot Engine will self-destruct as soon as you acknowledge this error message.",
+				"Fatal error: Insufficient OpenGL / GLES driver support");
 	}
 
 #ifdef __APPLE__
 // FIXME glDebugMessageCallbackARB does not seem to work on Mac OS X and opengl 3, this may be an issue with our opengl canvas..
 #else
-	glEnable(_EXT_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-	glDebugMessageCallbackARB(_gl_debug_print, NULL);
-	glEnable(_EXT_DEBUG_OUTPUT);
+	if (OS::get_singleton()->is_stdout_verbose()) {
+		glEnable(_EXT_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+		glDebugMessageCallbackARB(_gl_debug_print, NULL);
+		glEnable(_EXT_DEBUG_OUTPUT);
+	}
 #endif
 
-#endif
+#endif // GLAD_ENABLED
 
-	/*	glDebugMessageControlARB(GL_DEBUG_SOURCE_API_ARB,GL_DEBUG_TYPE_ERROR_ARB,GL_DEBUG_SEVERITY_HIGH_ARB,0,NULL,GL_TRUE);
+	/* // For debugging
+	glDebugMessageControlARB(GL_DEBUG_SOURCE_API_ARB,GL_DEBUG_TYPE_ERROR_ARB,GL_DEBUG_SEVERITY_HIGH_ARB,0,NULL,GL_TRUE);
 	glDebugMessageControlARB(GL_DEBUG_SOURCE_API_ARB,GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB,GL_DEBUG_SEVERITY_HIGH_ARB,0,NULL,GL_TRUE);
 	glDebugMessageControlARB(GL_DEBUG_SOURCE_API_ARB,GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB,GL_DEBUG_SEVERITY_HIGH_ARB,0,NULL,GL_TRUE);
 	glDebugMessageControlARB(GL_DEBUG_SOURCE_API_ARB,GL_DEBUG_TYPE_PORTABILITY_ARB,GL_DEBUG_SEVERITY_HIGH_ARB,0,NULL,GL_TRUE);
 	glDebugMessageControlARB(GL_DEBUG_SOURCE_API_ARB,GL_DEBUG_TYPE_PERFORMANCE_ARB,GL_DEBUG_SEVERITY_HIGH_ARB,0,NULL,GL_TRUE);
 	glDebugMessageControlARB(GL_DEBUG_SOURCE_API_ARB,GL_DEBUG_TYPE_OTHER_ARB,GL_DEBUG_SEVERITY_HIGH_ARB,0,NULL,GL_TRUE);
 	glDebugMessageInsertARB(
-
 			GL_DEBUG_SOURCE_API_ARB,
 			GL_DEBUG_TYPE_OTHER_ARB, 1,
 			GL_DEBUG_SEVERITY_HIGH_ARB,5, "hello");
-
-*/
+	*/
 
 	const GLubyte *renderer = glGetString(GL_RENDERER);
 	print_line("OpenGL ES 3.0 Renderer: " + String((const char *)renderer));
@@ -354,46 +352,12 @@ void RasterizerGLES3::blit_render_target_to_screen(RID p_render_target, const Re
 	canvas->canvas_end();
 }
 
-void RasterizerGLES3::end_frame() {
+void RasterizerGLES3::end_frame(bool p_swap_buffers) {
 
-#if 0
-	canvas->canvas_begin();
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D,storage->resources.white_tex);
-	glDisable(GL_BLEND);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-
-
-	float vtx[8]={0,0,
-	0,1,
-	1,1,
-	1,0
-	};
-
-	glBindBuffer(GL_ARRAY_BUFFER,0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
-
-	glEnableVertexAttribArray(VS::ARRAY_VERTEX);
-	glVertexAttribPointer( VS::ARRAY_VERTEX, 2 ,GL_FLOAT, false, 0, vtx );
-
-
-	//glBindBuffer(GL_ARRAY_BUFFER,canvas->data.canvas_quad_vertices);
-	//glEnableVertexAttribArray(VS::ARRAY_VERTEX);
-	//glVertexAttribPointer( VS::ARRAY_VERTEX, 2 ,GL_FLOAT, false, 0, 0 );
-
-	glBindVertexArray(canvas->data.canvas_quad_array);
-
-	canvas->draw_generic_textured_rect(Rect2(0,0,15,15),Rect2(0,0,1,1));
-#endif
-	OS::get_singleton()->swap_buffers();
-
-	/*	print_line("objects: "+itos(storage->info.render_object_count));
-	print_line("material chages: "+itos(storage->info.render_material_switch_count));
-	print_line("surface changes: "+itos(storage->info.render_surface_switch_count));
-	print_line("shader changes: "+itos(storage->info.render_shader_rebind_count));
-	print_line("vertices: "+itos(storage->info.render_vertices_count));
-*/
+	if (p_swap_buffers)
+		OS::get_singleton()->swap_buffers();
+	else
+		glFinish();
 }
 
 void RasterizerGLES3::finalize() {
@@ -414,7 +378,8 @@ void RasterizerGLES3::make_current() {
 void RasterizerGLES3::register_config() {
 
 	GLOBAL_DEF("rendering/quality/filters/use_nearest_mipmap_filter", false);
-	GLOBAL_DEF("rendering/quality/filters/anisotropic_filter_level", 4.0);
+	GLOBAL_DEF("rendering/quality/filters/anisotropic_filter_level", 4);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/filters/anisotropic_filter_level", PropertyInfo(Variant::INT, "rendering/quality/filters/anisotropic_filter_level", PROPERTY_HINT_RANGE, "1,16,1"));
 	GLOBAL_DEF("rendering/limits/time/time_rollover_secs", 3600);
 }
 

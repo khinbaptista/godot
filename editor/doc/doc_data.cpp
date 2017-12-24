@@ -29,6 +29,7 @@
 /*************************************************************************/
 #include "doc_data.h"
 
+#include "engine.h"
 #include "global_constants.h"
 #include "io/compression.h"
 #include "io/marshalls.h"
@@ -213,7 +214,11 @@ void DocData::generate(bool p_basic_types) {
 	ClassDB::get_class_list(&classes);
 	classes.sort_custom<StringName::AlphCompare>();
 
+	bool skip_setter_getter_methods = true;
+
 	while (classes.size()) {
+
+		Set<StringName> setters_getters;
 
 		String name = classes.front()->get();
 		String cname = name;
@@ -230,7 +235,7 @@ void DocData::generate(bool p_basic_types) {
 		ClassDB::get_property_list(name, &properties, true);
 
 		for (List<PropertyInfo>::Element *E = properties.front(); E; E = E->next()) {
-			if (E->get().usage & PROPERTY_USAGE_GROUP || E->get().usage & PROPERTY_USAGE_CATEGORY)
+			if (E->get().usage & PROPERTY_USAGE_GROUP || E->get().usage & PROPERTY_USAGE_CATEGORY || E->get().usage & PROPERTY_USAGE_INTERNAL)
 				continue;
 
 			PropertyDoc prop;
@@ -265,6 +270,13 @@ void DocData::generate(bool p_basic_types) {
 						prop.type = Variant::get_type_name(retinfo.type);
 					}
 				}
+
+				setters_getters.insert(getter);
+			}
+
+			if (setter != StringName()) {
+
+				setters_getters.insert(setter);
 			}
 
 			if (!found_type) {
@@ -286,6 +298,9 @@ void DocData::generate(bool p_basic_types) {
 
 			if (E->get().name == "" || (E->get().name[0] == '_' && !(E->get().flags & METHOD_FLAG_VIRTUAL)))
 				continue; //hidden, don't count
+
+			if (skip_setter_getter_methods && setters_getters.has(E->get().name) && E->get().name.find("/") == -1)
+				continue;
 
 			MethodDoc method;
 
@@ -529,7 +544,7 @@ void DocData::generate(bool p_basic_types) {
 
 	{
 
-		String cname = "@Global Scope";
+		String cname = "@GlobalScope";
 		class_list[cname] = ClassDoc();
 		ClassDoc &c = class_list[cname];
 		c.name = cname;
@@ -543,14 +558,14 @@ void DocData::generate(bool p_basic_types) {
 			c.constants.push_back(cd);
 		}
 
-		List<ProjectSettings::Singleton> singletons;
-		ProjectSettings::get_singleton()->get_singletons(&singletons);
+		List<Engine::Singleton> singletons;
+		Engine::get_singleton()->get_singletons(&singletons);
 
 		//servers (this is kind of hackish)
-		for (List<ProjectSettings::Singleton>::Element *E = singletons.front(); E; E = E->next()) {
+		for (List<Engine::Singleton>::Element *E = singletons.front(); E; E = E->next()) {
 
 			PropertyDoc pd;
-			ProjectSettings::Singleton &s = E->get();
+			Engine::Singleton &s = E->get();
 			pd.name = s.name;
 			pd.type = s.ptr->get_class();
 			while (String(ClassDB::get_parent_class(pd.type)) != "Object")
@@ -661,7 +676,7 @@ static Error _parse_methods(Ref<XMLParser> &parser, Vector<DocData::MethodDoc> &
 
 							parser->read();
 							if (parser->get_node_type() == XMLParser::NODE_TEXT)
-								method.description = parser->get_node_data().strip_edges();
+								method.description = parser->get_node_data();
 						}
 
 					} else if (parser->get_node_type() == XMLParser::NODE_ELEMENT_END && parser->get_node_name() == element)
@@ -776,20 +791,20 @@ Error DocData::_load(Ref<XMLParser> parser) {
 
 					parser->read();
 					if (parser->get_node_type() == XMLParser::NODE_TEXT)
-						c.brief_description = parser->get_node_data().strip_edges();
+						c.brief_description = parser->get_node_data();
 
 				} else if (name == "description") {
 					parser->read();
 					if (parser->get_node_type() == XMLParser::NODE_TEXT)
-						c.description = parser->get_node_data().strip_edges();
+						c.description = parser->get_node_data();
 				} else if (name == "tutorials") {
 					parser->read();
 					if (parser->get_node_type() == XMLParser::NODE_TEXT)
-						c.tutorials = parser->get_node_data().strip_edges();
+						c.tutorials = parser->get_node_data();
 				} else if (name == "demos") {
 					parser->read();
 					if (parser->get_node_type() == XMLParser::NODE_TEXT)
-						c.demos = parser->get_node_data().strip_edges();
+						c.demos = parser->get_node_data();
 				} else if (name == "methods") {
 
 					Error err = _parse_methods(parser, c.methods);
@@ -823,7 +838,7 @@ Error DocData::_load(Ref<XMLParser> parser) {
 									prop.enumeration = parser->get_attribute_value("enum");
 								parser->read();
 								if (parser->get_node_type() == XMLParser::NODE_TEXT)
-									prop.description = parser->get_node_data().strip_edges();
+									prop.description = parser->get_node_data();
 								c.properties.push_back(prop);
 							} else {
 								ERR_EXPLAIN("Invalid tag in doc file: " + name);
@@ -852,7 +867,7 @@ Error DocData::_load(Ref<XMLParser> parser) {
 								prop.type = parser->get_attribute_value("type");
 								parser->read();
 								if (parser->get_node_type() == XMLParser::NODE_TEXT)
-									prop.description = parser->get_node_data().strip_edges();
+									prop.description = parser->get_node_data();
 								c.theme_properties.push_back(prop);
 							} else {
 								ERR_EXPLAIN("Invalid tag in doc file: " + name);
@@ -883,7 +898,7 @@ Error DocData::_load(Ref<XMLParser> parser) {
 								}
 								parser->read();
 								if (parser->get_node_type() == XMLParser::NODE_TEXT)
-									constant.description = parser->get_node_data().strip_edges();
+									constant.description = parser->get_node_data();
 								c.constants.push_back(constant);
 							} else {
 								ERR_EXPLAIN("Invalid tag in doc file: " + name);
@@ -910,6 +925,8 @@ Error DocData::_load(Ref<XMLParser> parser) {
 
 static void _write_string(FileAccess *f, int p_tablevel, const String &p_string) {
 
+	if (p_string == "")
+		return;
 	String tab;
 	for (int i = 0; i < p_tablevel; i++)
 		tab += "\t";
@@ -948,24 +965,20 @@ Error DocData::save_classes(const String &p_default_path, const Map<String, Stri
 		if (c.category == "")
 			category = "Core";
 		header += " category=\"" + category + "\"";
-		header += " version=\"" + String(VERSION_MKSTRING) + "\"";
+		header += String(" version=\"") + itos(VERSION_MAJOR) + "." + itos(VERSION_MINOR) + "-" + VERSION_STATUS + "\"";
 		header += ">";
 		_write_string(f, 0, header);
 		_write_string(f, 1, "<brief_description>");
-		if (c.brief_description != "")
-			_write_string(f, 2, c.brief_description.xml_escape());
+		_write_string(f, 2, c.brief_description.strip_edges().xml_escape());
 		_write_string(f, 1, "</brief_description>");
 		_write_string(f, 1, "<description>");
-		if (c.description != "")
-			_write_string(f, 2, c.description.xml_escape());
+		_write_string(f, 2, c.description.strip_edges().xml_escape());
 		_write_string(f, 1, "</description>");
 		_write_string(f, 1, "<tutorials>");
-		if (c.tutorials != "")
-			_write_string(f, 2, c.tutorials.xml_escape());
+		_write_string(f, 2, c.tutorials.strip_edges().xml_escape());
 		_write_string(f, 1, "</tutorials>");
 		_write_string(f, 1, "<demos>");
-		if (c.demos != "")
-			_write_string(f, 2, c.demos.xml_escape());
+		_write_string(f, 2, c.demos.strip_edges().xml_escape());
 		_write_string(f, 1, "</demos>");
 		_write_string(f, 1, "<methods>");
 
@@ -1009,8 +1022,7 @@ Error DocData::save_classes(const String &p_default_path, const Map<String, Stri
 			}
 
 			_write_string(f, 3, "<description>");
-			if (m.description != "")
-				_write_string(f, 4, m.description.xml_escape());
+			_write_string(f, 4, m.description.strip_edges().xml_escape());
 			_write_string(f, 3, "</description>");
 
 			_write_string(f, 2, "</method>");
@@ -1031,8 +1043,7 @@ Error DocData::save_classes(const String &p_default_path, const Map<String, Stri
 				}
 				PropertyDoc &p = c.properties[i];
 				_write_string(f, 2, "<member name=\"" + p.name + "\" type=\"" + p.type + "\" setter=\"" + p.setter + "\" getter=\"" + p.getter + "\"" + enum_text + ">");
-				if (p.description != "")
-					_write_string(f, 3, p.description.xml_escape());
+				_write_string(f, 3, p.description.strip_edges().xml_escape());
 				_write_string(f, 2, "</member>");
 			}
 			_write_string(f, 1, "</members>");
@@ -1055,8 +1066,7 @@ Error DocData::save_classes(const String &p_default_path, const Map<String, Stri
 				}
 
 				_write_string(f, 3, "<description>");
-				if (m.description != "")
-					_write_string(f, 4, m.description.xml_escape());
+				_write_string(f, 4, m.description.strip_edges().xml_escape());
 				_write_string(f, 3, "</description>");
 
 				_write_string(f, 2, "</signal>");
@@ -1071,12 +1081,11 @@ Error DocData::save_classes(const String &p_default_path, const Map<String, Stri
 
 			ConstantDoc &k = c.constants[i];
 			if (k.enumeration != String()) {
-				_write_string(f, 2, "<constant name=\"" + k.name + "\" value=\"" + k.value + "\">");
-			} else {
 				_write_string(f, 2, "<constant name=\"" + k.name + "\" value=\"" + k.value + "\" enum=\"" + k.enumeration + "\">");
+			} else {
+				_write_string(f, 2, "<constant name=\"" + k.name + "\" value=\"" + k.value + "\">");
 			}
-			if (k.description != "")
-				_write_string(f, 3, k.description.xml_escape());
+			_write_string(f, 3, k.description.strip_edges().xml_escape());
 			_write_string(f, 2, "</constant>");
 		}
 
@@ -1106,7 +1115,7 @@ Error DocData::load_compressed(const uint8_t *p_data, int p_compressed_size, int
 
 	Vector<uint8_t> data;
 	data.resize(p_uncompressed_size);
-	Compression::decompress(data.ptr(), p_uncompressed_size, p_data, p_compressed_size, Compression::MODE_DEFLATE);
+	Compression::decompress(data.ptrw(), p_uncompressed_size, p_data, p_compressed_size, Compression::MODE_DEFLATE);
 	class_list.clear();
 
 	Ref<XMLParser> parser = memnew(XMLParser);

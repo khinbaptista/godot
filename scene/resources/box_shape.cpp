@@ -33,7 +33,7 @@
 Vector<Vector3> BoxShape::_gen_debug_mesh_lines() {
 
 	Vector<Vector3> lines;
-	Rect3 aabb;
+	AABB aabb;
 	aabb.position = -get_extents();
 	aabb.size = aabb.position * -2;
 
@@ -73,8 +73,8 @@ void BoxShape::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "extents"), "set_extents", "get_extents");
 }
 
-BoxShape::BoxShape()
-	: Shape(PhysicsServer::get_singleton()->shape_create(PhysicsServer::SHAPE_BOX)) {
+BoxShape::BoxShape() :
+		Shape(PhysicsServer::get_singleton()->shape_create(PhysicsServer::SHAPE_BOX)) {
 
 	set_extents(Vector3(1, 1, 1));
 }

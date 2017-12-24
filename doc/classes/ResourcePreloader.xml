@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="ResourcePreloader" inherits="Node" category="Core" version="3.0.alpha.custom_build">
+<class name="ResourcePreloader" inherits="Node" category="Core" version="3.0-beta">
 	<brief_description>
 		Resource Preloader Node.
 	</brief_description>
@@ -67,10 +67,6 @@
 			</description>
 		</method>
 	</methods>
-	<members>
-		<member name="resources" type="Array" setter="_set_resources" getter="_get_resources">
-		</member>
-	</members>
 	<constants>
 	</constants>
 </class>

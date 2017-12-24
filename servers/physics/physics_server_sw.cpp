@@ -695,6 +695,19 @@ real_t PhysicsServerSW::body_get_param(RID p_body, BodyParameter p_param) const 
 	return body->get_param(p_param);
 };
 
+void PhysicsServerSW::body_set_kinematic_safe_margin(RID p_body, real_t p_margin) {
+	BodySW *body = body_owner.get(p_body);
+	ERR_FAIL_COND(!body);
+	body->set_kinematic_margin(p_margin);
+}
+
+real_t PhysicsServerSW::body_get_kinematic_safe_margin(RID p_body) const {
+	BodySW *body = body_owner.get(p_body);
+	ERR_FAIL_COND_V(!body, 0);
+
+	return body->get_kinematic_margin();
+}
+
 void PhysicsServerSW::body_set_state(RID p_body, BodyState p_state, const Variant &p_variant) {
 
 	BodySW *body = body_owner.get(p_body);
@@ -781,20 +794,20 @@ void PhysicsServerSW::body_set_axis_velocity(RID p_body, const Vector3 &p_axis_v
 	body->wakeup();
 };
 
-void PhysicsServerSW::body_set_axis_lock(RID p_body, BodyAxisLock p_lock) {
+void PhysicsServerSW::body_set_axis_lock(RID p_body, BodyAxis p_axis, bool lock) {
 
 	BodySW *body = body_owner.get(p_body);
 	ERR_FAIL_COND(!body);
 
-	body->set_axis_lock(p_lock);
+	body->set_axis_lock(p_axis, lock);
 	body->wakeup();
 }
 
-PhysicsServerSW::BodyAxisLock PhysicsServerSW::body_get_axis_lock(RID p_body) const {
+bool PhysicsServerSW::body_is_axis_locked(RID p_body, BodyAxis p_axis) const {
 
 	const BodySW *body = body_owner.get(p_body);
-	ERR_FAIL_COND_V(!body, BODY_AXIS_LOCK_DISABLED);
-	return body->get_axis_lock();
+	ERR_FAIL_COND_V(!body, 0);
+	return body->is_axis_locked(p_axis);
 }
 
 void PhysicsServerSW::body_add_collision_exception(RID p_body, RID p_body_b) {
@@ -888,7 +901,7 @@ bool PhysicsServerSW::body_is_ray_pickable(RID p_body) const {
 	return body->is_ray_pickable();
 }
 
-bool PhysicsServerSW::body_test_motion(RID p_body, const Transform &p_from, const Vector3 &p_motion, float p_margin, MotionResult *r_result) {
+bool PhysicsServerSW::body_test_motion(RID p_body, const Transform &p_from, const Vector3 &p_motion, MotionResult *r_result) {
 
 	BodySW *body = body_owner.get(p_body);
 	ERR_FAIL_COND_V(!body, false);
@@ -897,7 +910,7 @@ bool PhysicsServerSW::body_test_motion(RID p_body, const Transform &p_from, cons
 
 	_update_shapes();
 
-	return body->get_space()->test_body_motion(body, p_from, p_motion, p_margin, r_result);
+	return body->get_space()->test_body_motion(body, p_from, p_motion, body->get_kinematic_margin(), r_result);
 }
 
 PhysicsDirectBodyState *PhysicsServerSW::body_get_direct_state(RID p_body) {

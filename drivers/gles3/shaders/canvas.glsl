@@ -171,7 +171,7 @@ VERTEX_SHADER_CODE
 
 #ifdef USE_PIXEL_SNAP
 
-	outvec.xy=floor(outvec+0.5);
+	outvec.xy=floor(outvec+0.5).xy;
 #endif
 
 
@@ -381,8 +381,7 @@ void main() {
 
 	if (clip_rect_uv) {
 
-		vec2 half_texpixel = color_texpixel_size * 0.5;
-		uv = clamp(uv,src_rect.xy+half_texpixel,src_rect.xy+abs(src_rect.zw)-color_texpixel_size);
+		uv = clamp(uv,src_rect.xy,src_rect.xy+abs(src_rect.zw));
 	}
 
 #endif

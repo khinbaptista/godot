@@ -34,7 +34,6 @@
 #include "errno.h"
 #include "key_mapping_x11.h"
 #include "print_string.h"
-#include "servers/physics/physics_server_sw.h"
 #include "servers/visual/visual_server_raster.h"
 #include "servers/visual/visual_server_wrap_mt.h"
 
@@ -83,10 +82,6 @@ int OS_X11::get_video_driver_count() const {
 
 const char *OS_X11::get_video_driver_name(int p_driver) const {
 	return "GLES3";
-}
-
-OS::VideoMode OS_X11::get_default_video_mode() const {
-	return OS::VideoMode(1024, 600, false);
 }
 
 int OS_X11::get_audio_driver_count() const {
@@ -139,10 +134,9 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 		// Try to support IME if detectable auto-repeat is supported
 		if (xkb_dar == True) {
 
+#ifdef X_HAVE_UTF8_STRING
 			// Xutf8LookupString will be used later instead of XmbLookupString before
 			// the multibyte sequences can be converted to unicode string.
-
-#ifdef X_HAVE_UTF8_STRING
 			modifiers = XSetLocaleModifiers("");
 #endif
 		}
@@ -184,6 +178,49 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 			}
 		}
 	}
+
+#ifdef TOUCH_ENABLED
+	if (!XQueryExtension(x11_display, "XInputExtension", &touch.opcode, &event_base, &error_base)) {
+		fprintf(stderr, "XInput extension not available");
+	} else {
+		// 2.2 is the first release with multitouch
+		int xi_major = 2;
+		int xi_minor = 2;
+		if (XIQueryVersion(x11_display, &xi_major, &xi_minor) != Success) {
+			fprintf(stderr, "XInput 2.2 not available (server supports %d.%d)\n", xi_major, xi_minor);
+			touch.opcode = 0;
+		} else {
+			int dev_count;
+			XIDeviceInfo *info = XIQueryDevice(x11_display, XIAllDevices, &dev_count);
+
+			for (int i = 0; i < dev_count; i++) {
+				XIDeviceInfo *dev = &info[i];
+				if (!dev->enabled)
+					continue;
+				if (!(dev->use == XIMasterPointer || dev->use == XIFloatingSlave))
+					continue;
+
+				bool direct_touch = false;
+				for (int j = 0; j < dev->num_classes; j++) {
+					if (dev->classes[j]->type == XITouchClass && ((XITouchClassInfo *)dev->classes[j])->mode == XIDirectTouch) {
+						direct_touch = true;
+						break;
+					}
+				}
+				if (direct_touch) {
+					touch.devices.push_back(dev->deviceid);
+					fprintf(stderr, "Using touch device: %s\n", dev->name);
+				}
+			}
+
+			XIFreeDeviceInfo(info);
+
+			if (!touch.devices.size()) {
+				fprintf(stderr, "No touch devices found\n");
+			}
+		}
+	}
+#endif
 
 	xim = XOpenIM(x11_display, NULL, NULL, NULL);
 
@@ -266,41 +303,13 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 
 		visual_server = memnew(VisualServerWrapMT(visual_server, get_render_thread_mode() == RENDER_SEPARATE_THREAD));
 	}
-
-	// borderless fullscreen window mode
-	if (current_videomode.fullscreen) {
-		// set bypass compositor hint
-		Atom bypass_compositor = XInternAtom(x11_display, "_NET_WM_BYPASS_COMPOSITOR", False);
-		unsigned long compositing_disable_on = 1;
-		XChangeProperty(x11_display, x11_window, bypass_compositor, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&compositing_disable_on, 1);
-
-		// needed for lxde/openbox, possibly others
-		Hints hints;
-		Atom property;
-		hints.flags = 2;
-		hints.decorations = 0;
-		property = XInternAtom(x11_display, "_MOTIF_WM_HINTS", True);
-		XChangeProperty(x11_display, x11_window, property, property, 32, PropModeReplace, (unsigned char *)&hints, 5);
-		XMapRaised(x11_display, x11_window);
-		XWindowAttributes xwa;
-		XGetWindowAttributes(x11_display, DefaultRootWindow(x11_display), &xwa);
-		XMoveResizeWindow(x11_display, x11_window, 0, 0, xwa.width, xwa.height);
-
-		// code for netwm-compliants
-		XEvent xev;
-		Atom wm_state = XInternAtom(x11_display, "_NET_WM_STATE", False);
-		Atom fullscreen = XInternAtom(x11_display, "_NET_WM_STATE_FULLSCREEN", False);
-
-		memset(&xev, 0, sizeof(xev));
-		xev.type = ClientMessage;
-		xev.xclient.window = x11_window;
-		xev.xclient.message_type = wm_state;
-		xev.xclient.format = 32;
-		xev.xclient.data.l[0] = 1;
-		xev.xclient.data.l[1] = fullscreen;
-		xev.xclient.data.l[2] = 0;
-
-		XSendEvent(x11_display, DefaultRootWindow(x11_display), False, SubstructureNotifyMask, &xev);
+	if (current_videomode.maximized) {
+		current_videomode.maximized = false;
+		set_window_maximized(true);
+		// borderless fullscreen window mode
+	} else if (current_videomode.fullscreen) {
+		current_videomode.fullscreen = false;
+		set_window_fullscreen(true);
 	} else if (current_videomode.borderless_window) {
 		Hints hints;
 		Atom property;
@@ -351,6 +360,34 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 						  im_event_mask;
 
 	XChangeWindowAttributes(x11_display, x11_window, CWEventMask, &new_attr);
+
+#ifdef TOUCH_ENABLED
+	if (touch.devices.size()) {
+
+		// Must be alive after this block
+		static unsigned char mask_data[XIMaskLen(XI_LASTEVENT)] = {};
+
+		touch.event_mask.deviceid = XIAllDevices;
+		touch.event_mask.mask_len = sizeof(mask_data);
+		touch.event_mask.mask = mask_data;
+
+		XISetMask(touch.event_mask.mask, XI_TouchBegin);
+		XISetMask(touch.event_mask.mask, XI_TouchUpdate);
+		XISetMask(touch.event_mask.mask, XI_TouchEnd);
+		XISetMask(touch.event_mask.mask, XI_TouchOwnership);
+
+		XISelectEvents(x11_display, x11_window, &touch.event_mask, 1);
+
+		// Disabled by now since grabbing also blocks mouse events
+		// (they are received as extended events instead of standard events)
+		/*XIClearMask(touch.event_mask.mask, XI_TouchOwnership);
+
+		// Grab touch devices to avoid OS gesture interference
+		for (int i = 0; i < touch.devices.size(); ++i) {
+			XIGrabDevice(x11_display, touch.devices[i], x11_window, CurrentTime, None, XIGrabModeAsync, XIGrabModeAsync, False, &touch.event_mask);
+		}*/
+	}
+#endif
 
 	/* set the titlebar name */
 	XStoreName(x11_display, x11_window, "Godot");
@@ -473,12 +510,6 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 	requested = None;
 
 	visual_server->init();
-	//
-	physics_server = memnew(PhysicsServerSW);
-	physics_server->init();
-	//physics_2d_server = memnew( Physics2DServerSW );
-	physics_2d_server = Physics2DServerWrapMT::init_server<Physics2DServerSW>();
-	physics_2d_server->init();
 
 	input = memnew(InputDefault);
 
@@ -486,9 +517,17 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 #ifdef JOYDEV_ENABLED
 	joypad = memnew(JoypadLinux(input));
 #endif
-	_ensure_data_dir();
+	_ensure_user_data_dir();
 
 	power_manager = memnew(PowerX11);
+
+	XEvent xevent;
+	while (XPending(x11_display) > 0) {
+		XNextEvent(x11_display, &xevent);
+		if (xevent.type == ConfigureNotify) {
+			_window_changed(&xevent);
+		}
+	}
 }
 
 void OS_X11::xim_destroy_callback(::XIM im, ::XPointer client_data,
@@ -528,17 +567,15 @@ void OS_X11::finalize() {
 #ifdef JOYDEV_ENABLED
 	memdelete(joypad);
 #endif
+#ifdef TOUCH_ENABLED
+	touch.devices.clear();
+	touch.state.clear();
+#endif
 	memdelete(input);
 
 	visual_server->finish();
 	memdelete(visual_server);
 	//memdelete(rasterizer);
-
-	physics_server->finish();
-	memdelete(physics_server);
-
-	physics_2d_server->finish();
-	memdelete(physics_2d_server);
 
 	memdelete(power_manager);
 
@@ -678,6 +715,9 @@ void OS_X11::get_fullscreen_mode_list(List<VideoMode> *p_list, int p_screen) con
 }
 
 void OS_X11::set_wm_fullscreen(bool p_enabled) {
+	if (current_videomode.fullscreen == p_enabled)
+		return;
+
 	if (p_enabled && !is_window_resizable()) {
 		// Set the window as resizable to prevent window managers to ignore the fullscreen state flag.
 		XSizeHints *xsh;
@@ -1001,6 +1041,9 @@ bool OS_X11::is_window_minimized() const {
 }
 
 void OS_X11::set_window_maximized(bool p_enabled) {
+	if (is_window_maximized() == p_enabled)
+		return;
+
 	// Using EWMH -- Extended Window Manager Hints
 	XEvent xev;
 	Atom wm_state = XInternAtom(x11_display, "_NET_WM_STATE", False);
@@ -1066,7 +1109,7 @@ bool OS_X11::is_window_maximized() const {
 	return false;
 }
 
-void OS_X11::set_borderless_window(int p_borderless) {
+void OS_X11::set_borderless_window(bool p_borderless) {
 
 	if (current_videomode.borderless_window == p_borderless)
 		return;
@@ -1447,6 +1490,20 @@ static Atom pick_target_from_atoms(Display *p_disp, Atom p_t1, Atom p_t2, Atom p
 	return None;
 }
 
+void OS_X11::_window_changed(XEvent *event) {
+
+	if (xic) {
+		//  Not portable.
+		set_ime_position(Point2(0, 1));
+	}
+	if ((event->xconfigure.width == current_videomode.width) &&
+			(event->xconfigure.height == current_videomode.height))
+		return;
+
+	current_videomode.width = event->xconfigure.width;
+	current_videomode.height = event->xconfigure.height;
+}
+
 void OS_X11::process_xevents() {
 
 	//printf("checking events %i\n", XPending(x11_display));
@@ -1463,6 +1520,69 @@ void OS_X11::process_xevents() {
 		if (XFilterEvent(&event, None)) {
 			continue;
 		}
+
+#ifdef TOUCH_ENABLED
+		if (XGetEventData(x11_display, &event.xcookie)) {
+
+			if (event.xcookie.type == GenericEvent && event.xcookie.extension == touch.opcode) {
+
+				XIDeviceEvent *event_data = (XIDeviceEvent *)event.xcookie.data;
+				int index = event_data->detail;
+				Vector2 pos = Vector2(event_data->event_x, event_data->event_y);
+
+				switch (event_data->evtype) {
+
+					case XI_TouchBegin: // Fall-through
+							// Disabled hand-in-hand with the grabbing
+							//XIAllowTouchEvents(x11_display, event_data->deviceid, event_data->detail, x11_window, XIAcceptTouch);
+
+					case XI_TouchEnd: {
+
+						bool is_begin = event_data->evtype == XI_TouchBegin;
+
+						Ref<InputEventScreenTouch> st;
+						st.instance();
+						st->set_index(index);
+						st->set_position(pos);
+						st->set_pressed(is_begin);
+
+						if (is_begin) {
+							if (touch.state.has(index)) // Defensive
+								break;
+							touch.state[index] = pos;
+							input->parse_input_event(st);
+						} else {
+							if (!touch.state.has(index)) // Defensive
+								break;
+							touch.state.erase(index);
+							input->parse_input_event(st);
+						}
+					} break;
+
+					case XI_TouchUpdate: {
+
+						Map<int, Vector2>::Element *curr_pos_elem = touch.state.find(index);
+						if (!curr_pos_elem) { // Defensive
+							break;
+						}
+
+						if (curr_pos_elem->value() != pos) {
+
+							Ref<InputEventScreenDrag> sd;
+							sd.instance();
+							sd->set_index(index);
+							sd->set_position(pos);
+							sd->set_relative(pos - curr_pos_elem->value());
+							input->parse_input_event(sd);
+
+							curr_pos_elem->value() = pos;
+						}
+					} break;
+				}
+			}
+		}
+		XFreeEventData(x11_display, &event.xcookie);
+#endif
 
 		switch (event.type) {
 			case Expose:
@@ -1506,6 +1626,12 @@ void OS_X11::process_xevents() {
 							ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
 							GrabModeAsync, GrabModeAsync, x11_window, None, CurrentTime);
 				}
+#ifdef TOUCH_ENABLED
+					// Grab touch devices to avoid OS gesture interference
+					/*for (int i = 0; i < touch.devices.size(); ++i) {
+					XIGrabDevice(x11_display, touch.devices[i], x11_window, CurrentTime, None, XIGrabModeAsync, XIGrabModeAsync, False, &touch.event_mask);
+				}*/
+#endif
 				if (xic) {
 					XSetICFocus(xic);
 				}
@@ -1522,24 +1648,30 @@ void OS_X11::process_xevents() {
 					}
 					XUngrabPointer(x11_display, CurrentTime);
 				}
+#ifdef TOUCH_ENABLED
+				// Ungrab touch devices so input works as usual while we are unfocused
+				/*for (int i = 0; i < touch.devices.size(); ++i) {
+					XIUngrabDevice(x11_display, touch.devices[i], CurrentTime);
+				}*/
+
+				// Release every pointer to avoid sticky points
+				for (Map<int, Vector2>::Element *E = touch.state.front(); E; E = E->next()) {
+
+					Ref<InputEventScreenTouch> st;
+					st.instance();
+					st->set_index(E->key());
+					st->set_position(E->get());
+					input->parse_input_event(st);
+				}
+				touch.state.clear();
+#endif
 				if (xic) {
 					XUnsetICFocus(xic);
 				}
 				break;
 
 			case ConfigureNotify:
-				if (xic) {
-					//  Not portable.
-					set_ime_position(Point2(0, 1));
-				}
-				/* call resizeGLScene only if our window-size changed */
-
-				if ((event.xconfigure.width == current_videomode.width) &&
-						(event.xconfigure.height == current_videomode.height))
-					break;
-
-				current_videomode.width = event.xconfigure.width;
-				current_videomode.height = event.xconfigure.height;
+				_window_changed(&event);
 				break;
 			case ButtonPress:
 			case ButtonRelease: {
@@ -1971,6 +2103,39 @@ bool OS_X11::_check_internal_feature_support(const String &p_feature) {
 	return p_feature == "pc" || p_feature == "s3tc";
 }
 
+String OS_X11::get_config_path() const {
+
+	if (has_environment("XDG_CONFIG_HOME")) {
+		return get_environment("XDG_CONFIG_HOME");
+	} else if (has_environment("HOME")) {
+		return get_environment("HOME").plus_file(".config");
+	} else {
+		return ".";
+	}
+}
+
+String OS_X11::get_data_path() const {
+
+	if (has_environment("XDG_DATA_HOME")) {
+		return get_environment("XDG_DATA_HOME");
+	} else if (has_environment("HOME")) {
+		return get_environment("HOME").plus_file(".local/share");
+	} else {
+		return get_config_path();
+	}
+}
+
+String OS_X11::get_cache_path() const {
+
+	if (has_environment("XDG_CACHE_HOME")) {
+		return get_environment("XDG_CACHE_HOME");
+	} else if (has_environment("HOME")) {
+		return get_environment("HOME").plus_file(".cache");
+	} else {
+		return get_config_path();
+	}
+}
+
 String OS_X11::get_system_dir(SystemDir p_dir) const {
 
 	String xdgparam;
@@ -2113,6 +2278,13 @@ void OS_X11::set_icon(const Ref<Image> &p_icon) {
 	XFlush(x11_display);
 }
 
+void OS_X11::force_process_input() {
+	process_xevents(); // get rid of pending events
+#ifdef JOYDEV_ENABLED
+	joypad->process_joypads();
+#endif
+}
+
 void OS_X11::run() {
 
 	force_quit = false;
@@ -2154,7 +2326,7 @@ void OS_X11::set_use_vsync(bool p_enable) {
 		return context_gl->set_use_vsync(p_enable);
 #endif
 }
-
+/*
 bool OS_X11::is_vsync_enabled() const {
 #if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED)
 	if (context_gl)
@@ -2162,7 +2334,7 @@ bool OS_X11::is_vsync_enabled() const {
 #endif
 	return true;
 }
-
+*/
 void OS_X11::set_context(int p_context) {
 
 	XClassHint *classHint = XAllocClassHint();

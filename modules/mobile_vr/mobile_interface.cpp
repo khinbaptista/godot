@@ -122,6 +122,7 @@ void MobileVRInterface::set_position_from_sensors() {
 	Vector3 north(0.0, 0.0, 1.0); // North is Z positive
 
 	// make copies of our inputs
+	bool has_grav = false;
 	Vector3 acc = input->get_accelerometer();
 	Vector3 gyro = input->get_gyroscope();
 	Vector3 grav = input->get_gravity();
@@ -143,25 +144,17 @@ void MobileVRInterface::set_position_from_sensors() {
 		// what a stable gravity vector is
 		grav = acc;
 		if (grav.length() > 0.1) {
-			has_gyro = true;
+			has_grav = true;
 		};
 	} else {
-		has_gyro = true;
+		has_grav = true;
 	};
 
 	bool has_magneto = magneto.length() > 0.1;
-	bool has_grav = grav.length() > 0.1;
-
-#ifdef ANDROID_ENABLED
-	///@TODO needs testing, i don't have a gyro, potentially can be removed depending on what comes out of issue #8101
-	// On Android x and z axis seem inverted
-	gyro.x = -gyro.x;
-	gyro.z = -gyro.z;
-	grav.x = -grav.x;
-	grav.z = -grav.z;
-	magneto.x = -magneto.x;
-	magneto.z = -magneto.z;
-#endif
+	if (gyro.length() > 0.1) {
+		/* this can return to 0.0 if the user doesn't move the phone, so once on, it's on */
+		has_gyro = true;
+	};
 
 	if (has_gyro) {
 		// start with applying our gyro (do NOT smooth our gyro!)
@@ -330,7 +323,7 @@ void MobileVRInterface::uninitialize() {
 	};
 };
 
-Size2 MobileVRInterface::get_recommended_render_targetsize() {
+Size2 MobileVRInterface::get_render_targetsize() {
 	_THREAD_SAFE_METHOD_
 
 	// we use half our window size
@@ -468,6 +461,7 @@ MobileVRInterface::MobileVRInterface() {
 		glGenBuffers(1, &half_screen_quad);
 		glBindBuffer(GL_ARRAY_BUFFER, half_screen_quad);
 		{
+			/* clang-format off */
 			const float qv[16] = {
 				0, -1,
 				-1, -1,
@@ -478,6 +472,7 @@ MobileVRInterface::MobileVRInterface() {
 				1, -1,
 				1, -1,
 			};
+			/* clang-format on */
 
 			glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 16, qv, GL_STATIC_DRAW);
 		}

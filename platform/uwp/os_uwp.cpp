@@ -28,18 +28,19 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 #include "os_uwp.h"
+
 #include "drivers/gles3/rasterizer_gles3.h"
 #include "drivers/unix/ip_unix.h"
 #include "drivers/windows/dir_access_windows.h"
 #include "drivers/windows/file_access_windows.h"
 #include "drivers/windows/mutex_windows.h"
+#include "drivers/windows/packet_peer_udp_winsock.h"
 #include "drivers/windows/rw_lock_windows.h"
 #include "drivers/windows/semaphore_windows.h"
+#include "drivers/windows/stream_peer_tcp_winsock.h"
+#include "drivers/windows/tcp_server_winsock.h"
 #include "io/marshalls.h"
 #include "main/main.h"
-#include "platform/windows/packet_peer_udp_winsock.h"
-#include "platform/windows/stream_peer_winsock.h"
-#include "platform/windows/tcp_server_winsock.h"
 #include "platform/windows/windows_terminal_logger.h"
 #include "project_settings.h"
 #include "servers/audio_server.h"
@@ -69,12 +70,7 @@ int OSUWP::get_video_driver_count() const {
 }
 const char *OSUWP::get_video_driver_name(int p_driver) const {
 
-	return "GLES2";
-}
-
-OS::VideoMode OSUWP::get_default_video_mode() const {
-
-	return video_mode;
+	return "GLES3";
 }
 
 Size2 OSUWP::get_window_size() const {
@@ -167,7 +163,7 @@ void OSUWP::initialize_core() {
 	DirAccess::make_default<DirAccessWindows>(DirAccess::ACCESS_FILESYSTEM);
 
 	TCPServerWinsock::make_default();
-	StreamPeerWinsock::make_default();
+	StreamPeerTCPWinsock::make_default();
 	PacketPeerUDPWinsock::make_default();
 
 	// We need to know how often the clock is updated
@@ -181,15 +177,6 @@ void OSUWP::initialize_core() {
 	IP_Unix::make_default();
 
 	cursor_shape = CURSOR_ARROW;
-}
-
-void OSUWP::initialize_logger() {
-	Vector<Logger *> loggers;
-	loggers.push_back(memnew(WindowsTerminalLogger));
-	// FIXME: Reenable once we figure out how to get this properly in user://
-	// instead of littering the user's working dirs (res:// + pwd) with log files (GH-12277)
-	//loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
-	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
 bool OSUWP::can_draw() const {
@@ -254,6 +241,7 @@ void OSUWP::initialize(const VideoMode &p_desired, int p_video_driver, int p_aud
 
 	RasterizerGLES3::register_config();
 	RasterizerGLES3::make_current();
+	gl_context->set_use_vsync(vm.use_vsync);
 
 	visual_server = memnew(VisualServerRaster);
 	// FIXME: Reimplement threaded rendering? Or remove?
@@ -263,13 +251,6 @@ void OSUWP::initialize(const VideoMode &p_desired, int p_video_driver, int p_aud
 		visual_server = memnew(VisualServerWrapMT(visual_server, get_render_thread_mode() == RENDER_SEPARATE_THREAD));
 	}
 	*/
-
-	//
-	physics_server = memnew(PhysicsServerSW);
-	physics_server->init();
-
-	physics_2d_server = memnew(Physics2DServerSW);
-	physics_2d_server->init();
 
 	visual_server->init();
 
@@ -310,7 +291,7 @@ void OSUWP::initialize(const VideoMode &p_desired, int p_video_driver, int p_aud
 				ref new TypedEventHandler<Gyrometer ^, GyrometerReadingChangedEventArgs ^>(managed_object, &ManagedType::on_gyroscope_reading_changed);
 	}
 
-	_ensure_data_dir();
+	_ensure_user_data_dir();
 
 	if (is_keep_screen_on())
 		display_request->RequestActive();
@@ -368,12 +349,6 @@ void OSUWP::finalize() {
 #endif
 
 	memdelete(input);
-
-	physics_server->finish();
-	memdelete(physics_server);
-
-	physics_2d_server->finish();
-	memdelete(physics_2d_server);
 
 	joypad = nullptr;
 }
@@ -799,7 +774,7 @@ MainLoop *OSUWP::get_main_loop() const {
 	return main_loop;
 }
 
-String OSUWP::get_data_dir() const {
+String OSUWP::get_user_data_dir() const {
 
 	Windows::Storage::StorageFolder ^ data_folder = Windows::Storage::ApplicationData::Current->LocalFolder;
 
@@ -851,7 +826,9 @@ OSUWP::OSUWP() {
 
 	AudioDriverManager::add_driver(&audio_driver);
 
-	_set_logger(memnew(WindowsTerminalLogger));
+	Vector<Logger *> loggers;
+	loggers.push_back(memnew(WindowsTerminalLogger));
+	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
 OSUWP::~OSUWP() {

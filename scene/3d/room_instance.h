@@ -44,7 +44,7 @@
 
 */
 
-//this will be removed, left for reference
+// FIXME: this will be removed, left for reference
 #if 0
 
 class Room : public VisualInstance {
@@ -71,7 +71,7 @@ public:
 		NOTIFICATION_AREA_CHANGED = 60
 	};
 
-	virtual Rect3 get_aabb() const;
+	virtual AABB get_aabb() const;
 	virtual PoolVector<Face3> get_faces(uint32_t p_usage_flags) const;
 
 	void set_room(const Ref<RoomBounds> &p_room);

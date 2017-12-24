@@ -88,7 +88,7 @@ void SceneTreeEditor::_cell_button_pressed(Object *p_item, int p_column, int p_i
 
 	} else if (p_id == BUTTON_LOCK) {
 
-		if (n->is_class("CanvasItem")) {
+		if (n->is_class("CanvasItem") || n->is_class("Spatial")) {
 			n->set_meta("_edit_lock_", Variant());
 			_update_tree();
 			emit_signal("node_changed");
@@ -256,9 +256,9 @@ bool SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 
 			bool v = p_node->call("is_visible");
 			if (v)
-				item->add_button(0, get_icon("Visible", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
+				item->add_button(0, get_icon("GuiVisibilityVisible", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
 			else
-				item->add_button(0, get_icon("Hidden", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
+				item->add_button(0, get_icon("GuiVisibilityHidden", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
 
 			if (!p_node->is_connected("visibility_changed", this, "_node_visibility_changed"))
 				p_node->connect("visibility_changed", this, "_node_visibility_changed", varray(p_node));
@@ -266,11 +266,15 @@ bool SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 			_update_visibility_color(p_node, item);
 		} else if (p_node->is_class("Spatial")) {
 
+			bool is_locked = p_node->has_meta("_edit_lock_");
+			if (is_locked)
+				item->add_button(0, get_icon("Lock", "EditorIcons"), BUTTON_LOCK, false, TTR("Node is locked.\nClick to unlock"));
+
 			bool v = p_node->call("is_visible");
 			if (v)
-				item->add_button(0, get_icon("Visible", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
+				item->add_button(0, get_icon("GuiVisibilityVisible", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
 			else
-				item->add_button(0, get_icon("Hidden", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
+				item->add_button(0, get_icon("GuiVisibilityHidden", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
 
 			if (!p_node->is_connected("visibility_changed", this, "_node_visibility_changed"))
 				p_node->connect("visibility_changed", this, "_node_visibility_changed", varray(p_node));
@@ -333,9 +337,9 @@ void SceneTreeEditor::_node_visibility_changed(Node *p_node) {
 	}
 
 	if (visible)
-		item->set_button(0, idx, get_icon("Visible", "EditorIcons"));
+		item->set_button(0, idx, get_icon("GuiVisibilityVisible", "EditorIcons"));
 	else
-		item->set_button(0, idx, get_icon("Hidden", "EditorIcons"));
+		item->set_button(0, idx, get_icon("GuiVisibilityHidden", "EditorIcons"));
 
 	_update_visibility_color(p_node, item);
 }
@@ -354,7 +358,11 @@ void SceneTreeEditor::_update_visibility_color(Node *p_node, TreeItem *p_item) {
 
 void SceneTreeEditor::_node_script_changed(Node *p_node) {
 
-	_update_tree();
+	if (tree_dirty)
+		return;
+
+	MessageQueue::get_singleton()->push_call(this, "_update_tree");
+	tree_dirty = true;
 	/*
 	changes the order :|
 	TreeItem* item=p_node?_find(tree->get_root(),p_node->get_path()):NULL;
@@ -471,6 +479,13 @@ void SceneTreeEditor::_selected_changed() {
 	blocked++;
 	emit_signal("node_selected");
 	blocked--;
+}
+
+void SceneTreeEditor::_deselect_items() {
+
+	// Clear currently elected items in scene tree dock.
+	if (editor_selection)
+		editor_selection->clear();
 }
 
 void SceneTreeEditor::_cell_multi_selected(Object *p_object, int p_cell, bool p_selected) {
@@ -759,9 +774,11 @@ Variant SceneTreeEditor::get_drag_data_fw(const Point2 &p_point, Control *p_from
 
 		Node *n = get_node(np);
 		if (n) {
-
-			selected.push_back(n);
-			icons.push_back(next->get_icon(0));
+			// Only allow selection if not part of an instanced scene.
+			if (!n->get_owner() || n->get_owner() == get_scene_node() || n->get_owner()->get_filename() == String()) {
+				selected.push_back(n);
+				icons.push_back(next->get_icon(0));
+			}
 		}
 		next = tree->get_next_selected(next);
 	}
@@ -921,6 +938,7 @@ void SceneTreeEditor::_bind_methods() {
 	ClassDB::bind_method("_update_tree", &SceneTreeEditor::_update_tree);
 	ClassDB::bind_method("_node_removed", &SceneTreeEditor::_node_removed);
 	ClassDB::bind_method("_selected_changed", &SceneTreeEditor::_selected_changed);
+	ClassDB::bind_method("_deselect_items", &SceneTreeEditor::_deselect_items);
 	ClassDB::bind_method("_renamed", &SceneTreeEditor::_renamed);
 	ClassDB::bind_method("_rename_node", &SceneTreeEditor::_rename_node);
 	ClassDB::bind_method("_test_update_tree", &SceneTreeEditor::_test_update_tree);
@@ -997,6 +1015,7 @@ SceneTreeEditor::SceneTreeEditor(bool p_label, bool p_can_rename, bool p_can_ope
 	tree->connect("item_edited", this, "_renamed", varray(), CONNECT_DEFERRED);
 	tree->connect("multi_selected", this, "_cell_multi_selected");
 	tree->connect("button_pressed", this, "_cell_button_pressed");
+	tree->connect("nothing_selected", this, "_deselect_items");
 	//tree->connect("item_edited", this,"_renamed",Vector<Variant>(),true);
 
 	error = memnew(AcceptDialog);

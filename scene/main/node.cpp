@@ -177,8 +177,8 @@ void Node::_propagate_ready() {
 	}
 	data.blocked--;
 	if (data.ready_first) {
-		notification(NOTIFICATION_READY);
 		data.ready_first = false;
+		notification(NOTIFICATION_READY);
 	}
 }
 
@@ -1198,7 +1198,7 @@ void Node::_validate_child_name(Node *p_child, bool p_force_human_readable) {
 			unique = false;
 		} else {
 			//check if exists
-			Node **childs = data.children.ptr();
+			Node **childs = data.children.ptrw();
 			int cc = data.children.size();
 
 			for (int i = 0; i < cc; i++) {
@@ -2067,7 +2067,7 @@ int Node::get_position_in_parent() const {
 	return data.pos;
 }
 
-Node *Node::_duplicate(int p_flags) const {
+Node *Node::_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap) const {
 
 	Node *node = NULL;
 
@@ -2084,7 +2084,12 @@ Node *Node::_duplicate(int p_flags) const {
 
 		Ref<PackedScene> res = ResourceLoader::load(get_filename());
 		ERR_FAIL_COND_V(res.is_null(), NULL);
-		node = res->instance();
+		PackedScene::GenEditState ges = PackedScene::GEN_EDIT_STATE_DISABLED;
+#ifdef TOOLS_ENABLED
+		if (p_flags & DUPLICATE_FROM_EDITOR)
+			ges = PackedScene::GEN_EDIT_STATE_INSTANCE;
+#endif
+		node = res->instance(ges);
 		ERR_FAIL_COND_V(!node, NULL);
 
 		instanced = true;
@@ -2103,52 +2108,89 @@ Node *Node::_duplicate(int p_flags) const {
 		node->set_filename(get_filename());
 	}
 
-	List<PropertyInfo> plist;
-
-	get_property_list(&plist);
-
 	StringName script_property_name = CoreStringNames::get_singleton()->_script;
 
-	if (p_flags & DUPLICATE_SCRIPTS) {
-		bool is_valid = false;
-		Variant script = get(script_property_name, &is_valid);
-		if (is_valid) {
-			node->set(script_property_name, script);
+	List<const Node *> hidden_roots;
+	List<const Node *> node_tree;
+	node_tree.push_front(this);
+
+	if (instanced) {
+		// Since nodes in the instanced hierarchy won't be duplicated explicitly, we need to make an inventory
+		// of all the nodes in the tree of the instanced scene in order to transfer the values of the properties
+
+		for (List<const Node *>::Element *N = node_tree.front(); N; N = N->next()) {
+			for (int i = 0; i < N->get()->get_child_count(); ++i) {
+
+				Node *descendant = N->get()->get_child(i);
+				// Skip nodes not really belonging to the instanced hierarchy; they'll be processed normally later
+				// but remember non-instanced nodes that are hidden below instanced ones
+				if (descendant->data.owner != this) {
+					if (descendant->get_parent() && descendant->get_parent() != this && descendant->get_parent()->data.owner == this)
+						hidden_roots.push_back(descendant);
+					continue;
+				}
+
+				node_tree.push_back(descendant);
+			}
 		}
 	}
 
-	for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next()) {
+	for (List<const Node *>::Element *N = node_tree.front(); N; N = N->next()) {
 
-		if (!(E->get().usage & PROPERTY_USAGE_STORAGE))
-			continue;
-		String name = E->get().name;
-		if (name == script_property_name)
-			continue;
+		Node *current_node = node->get_node(get_path_to(N->get()));
+		ERR_CONTINUE(!current_node);
 
-		Variant value = get(name);
-		// Duplicate dictionaries and arrays, mainly needed for __meta__
-		if (value.get_type() == Variant::DICTIONARY) {
-			value = Dictionary(value).copy();
-		} else if (value.get_type() == Variant::ARRAY) {
-			value = Array(value).duplicate();
+		if (p_flags & DUPLICATE_SCRIPTS) {
+			bool is_valid = false;
+			Variant script = N->get()->get(script_property_name, &is_valid);
+			if (is_valid) {
+				current_node->set(script_property_name, script);
+			}
 		}
 
-		node->set(name, value);
+		List<PropertyInfo> plist;
+		N->get()->get_property_list(&plist);
+
+		for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next()) {
+
+			if (!(E->get().usage & PROPERTY_USAGE_STORAGE))
+				continue;
+			String name = E->get().name;
+			if (name == script_property_name)
+				continue;
+
+			Variant value = N->get()->get(name);
+			// Duplicate dictionaries and arrays, mainly needed for __meta__
+			if (value.get_type() == Variant::DICTIONARY) {
+				value = Dictionary(value).duplicate();
+			} else if (value.get_type() == Variant::ARRAY) {
+				value = Array(value).duplicate();
+			}
+
+			current_node->set(name, value);
+		}
 	}
 
 	node->set_name(get_name());
+
+#ifdef TOOLS_ENABLED
+	if ((p_flags & DUPLICATE_FROM_EDITOR) && r_duplimap)
+		r_duplimap->insert(this, node);
+#endif
 
 	if (p_flags & DUPLICATE_GROUPS) {
 		List<GroupInfo> gi;
 		get_groups(&gi);
 		for (List<GroupInfo>::Element *E = gi.front(); E; E = E->next()) {
 
+#ifdef TOOLS_ENABLED
+			if ((p_flags & DUPLICATE_FROM_EDITOR) && !E->get().persistent)
+				continue;
+#endif
+
 			node->add_to_group(E->get().name, E->get().persistent);
 		}
 	}
-
-	if (p_flags & DUPLICATE_SIGNALS)
-		_duplicate_signals(this, node);
 
 	for (int i = 0; i < get_child_count(); i++) {
 
@@ -2157,7 +2199,7 @@ Node *Node::_duplicate(int p_flags) const {
 		if (instanced && get_child(i)->data.owner == this)
 			continue; //part of instance
 
-		Node *dup = get_child(i)->duplicate(p_flags);
+		Node *dup = get_child(i)->_duplicate(p_flags, r_duplimap);
 		if (!dup) {
 
 			memdelete(node);
@@ -2165,6 +2207,34 @@ Node *Node::_duplicate(int p_flags) const {
 		}
 
 		node->add_child(dup);
+		if (i < node->get_child_count() - 1) {
+			node->move_child(dup, i);
+		}
+	}
+
+	for (List<const Node *>::Element *E = hidden_roots.front(); E; E = E->next()) {
+
+		Node *parent = node->get_node(get_path_to(E->get()->data.parent));
+		if (!parent) {
+
+			memdelete(node);
+			return NULL;
+		}
+
+		Node *dup = E->get()->_duplicate(p_flags, r_duplimap);
+		if (!dup) {
+
+			memdelete(node);
+			return NULL;
+		}
+
+		parent->add_child(dup);
+		int pos = E->get()->get_position_in_parent();
+
+		if (pos < parent->get_child_count() - 1) {
+
+			parent->move_child(dup, pos);
+		}
 	}
 
 	return node;
@@ -2180,6 +2250,20 @@ Node *Node::duplicate(int p_flags) const {
 
 	return dupe;
 }
+
+#ifdef TOOLS_ENABLED
+Node *Node::duplicate_from_editor(Map<const Node *, Node *> &r_duplimap) const {
+
+	Node *dupe = _duplicate(DUPLICATE_SIGNALS | DUPLICATE_GROUPS | DUPLICATE_SCRIPTS | DUPLICATE_USE_INSTANCING | DUPLICATE_FROM_EDITOR, &r_duplimap);
+
+	// Duplication of signals must happen after all the node descendants have been copied,
+	// because re-targeting of connections from some descendant to another is not possible
+	// if the emitter node comes later in tree order than the receiver
+	_duplicate_signals(this, dupe);
+
+	return dupe;
+}
+#endif
 
 void Node::_duplicate_and_reown(Node *p_new_parent, const Map<Node *, Node *> &p_reown_map) const {
 
@@ -2219,7 +2303,7 @@ void Node::_duplicate_and_reown(Node *p_new_parent, const Map<Node *, Node *> &p
 		Variant value = get(name);
 		// Duplicate dictionaries and arrays, mainly needed for __meta__
 		if (value.get_type() == Variant::DICTIONARY) {
-			value = Dictionary(value).copy();
+			value = Dictionary(value).duplicate();
 		} else if (value.get_type() == Variant::ARRAY) {
 			value = Array(value).duplicate();
 		}
@@ -2251,6 +2335,9 @@ void Node::_duplicate_and_reown(Node *p_new_parent, const Map<Node *, Node *> &p
 	}
 }
 
+// Duplication of signals must happen after all the node descendants have been copied,
+// because re-targeting of connections from some descendant to another is not possible
+// if the emitter node comes later in tree order than the receiver
 void Node::_duplicate_signals(const Node *p_original, Node *p_copy) const {
 
 	if (this != p_original && (get_owner() != p_original && get_owner() != p_original->get_owner()))
@@ -2273,8 +2360,14 @@ void Node::_duplicate_signals(const Node *p_original, Node *p_copy) const {
 			NodePath ptarget = p_original->get_path_to(target);
 			Node *copytarget = p_copy->get_node(ptarget);
 
+			// Cannot find a path to the duplicate target, so it seems it's not part
+			// of the duplicated and not yet parented hierarchy, so at least try to connect
+			// to the same target as the original
+			if (!copytarget)
+				copytarget = target;
+
 			if (copy && copytarget) {
-				copy->connect(E->get().signal, copytarget, E->get().method, E->get().binds, CONNECT_PERSIST);
+				copy->connect(E->get().signal, copytarget, E->get().method, E->get().binds, E->get().flags);
 			}
 		}
 	}
@@ -2319,6 +2412,9 @@ Node *Node::duplicate_and_reown(const Map<Node *, Node *> &p_reown_map) const {
 		get_child(i)->_duplicate_and_reown(node, p_reown_map);
 	}
 
+	// Duplication of signals must happen after all the node descendants have been copied,
+	// because re-targeting of connections from some descendant to another is not possible
+	// if the emitter node comes later in tree order than the receiver
 	_duplicate_signals(this, node);
 	return node;
 }
@@ -2422,7 +2518,9 @@ void Node::_replace_connections_target(Node *p_new_target) {
 
 		if (c.flags & CONNECT_PERSIST) {
 			c.source->disconnect(c.signal, this, c.method);
-			ERR_CONTINUE(!p_new_target->has_method(c.method));
+			bool valid = p_new_target->has_method(c.method) || p_new_target->get_script().is_null() || Ref<Script>(p_new_target->get_script())->has_method(c.method);
+			ERR_EXPLAIN("Attempt to connect signal \'" + c.source->get_class() + "." + c.signal + "\' to nonexistent method \'" + c.target->get_class() + "." + c.method + "\'");
+			ERR_CONTINUE(!valid);
 			c.source->connect(c.signal, p_new_target, c.method, c.binds, c.flags);
 		}
 	}
@@ -2466,24 +2564,19 @@ bool Node::has_node_and_resource(const NodePath &p_path) const {
 		return false;
 	Node *node = get_node(p_path);
 
-	if (p_path.get_subname_count()) {
+	bool result = false;
 
-		RES r;
-		for (int j = 0; j < p_path.get_subname_count(); j++) {
-			r = j == 0 ? node->get(p_path.get_subname(j)) : r->get(p_path.get_subname(j));
-			if (r.is_null())
-				return false;
-		}
-	}
+	node->get_indexed(p_path.get_subnames(), &result);
 
-	return true;
+	return result;
 }
 
 Array Node::_get_node_and_resource(const NodePath &p_path) {
 
 	Node *node;
 	RES res;
-	node = get_node_and_resource(p_path, res);
+	Vector<StringName> leftover_path;
+	node = get_node_and_resource(p_path, res, leftover_path);
 	Array result;
 
 	if (node)
@@ -2496,21 +2589,35 @@ Array Node::_get_node_and_resource(const NodePath &p_path) {
 	else
 		result.push_back(Variant());
 
+	result.push_back(NodePath(Vector<StringName>(), leftover_path, false));
+
 	return result;
 }
 
-Node *Node::get_node_and_resource(const NodePath &p_path, RES &r_res) const {
+Node *Node::get_node_and_resource(const NodePath &p_path, RES &r_res, Vector<StringName> &r_leftover_subpath, bool p_last_is_property) const {
 
 	Node *node = get_node(p_path);
 	r_res = RES();
+	r_leftover_subpath = Vector<StringName>();
 	if (!node)
 		return NULL;
 
 	if (p_path.get_subname_count()) {
 
-		for (int j = 0; j < p_path.get_subname_count(); j++) {
-			r_res = j == 0 ? node->get(p_path.get_subname(j)) : r_res->get(p_path.get_subname(j));
-			ERR_FAIL_COND_V(r_res.is_null(), node);
+		int j = 0;
+		// If not p_last_is_property, we shouldn't consider the last one as part of the resource
+		for (; j < p_path.get_subname_count() - p_last_is_property; j++) {
+			RES new_res = j == 0 ? node->get(p_path.get_subname(j)) : r_res->get(p_path.get_subname(j));
+
+			if (new_res.is_null()) {
+				break;
+			}
+
+			r_res = new_res;
+		}
+		for (; j < p_path.get_subname_count(); j++) {
+			// Put the rest of the subpath in the leftover path
+			r_leftover_subpath.push_back(p_path.get_subname(j));
 		}
 	}
 

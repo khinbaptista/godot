@@ -297,7 +297,7 @@ public:
 
 	String get_system_dir(SystemDir p_dir) const;
 
-	String get_data_dir() const;
+	String get_user_data_dir() const;
 
 	void alert(const String &p_alert, const String &p_title = "ALERT!");
 
@@ -363,6 +363,8 @@ public:
 	int get_uv84_normal_bit(const Vector3 &p_vector);
 
 	Vector<int> triangulate_polygon(const Vector<Vector2> &p_polygon);
+	Vector<Point2> convex_hull_2d(const Vector<Point2> &p_points);
+	Vector<Vector3> clip_polygon(const Vector<Vector3> &p_points, const Plane &p_plane);
 
 	Dictionary make_atlas(const Vector<Size2> &p_rects);
 
@@ -668,6 +670,9 @@ public:
 
 	bool is_in_physics_frame() const;
 
+	bool has_singleton(const String &p_name) const;
+	Object *get_singleton_object(const String &p_name) const;
+
 	void set_editor_hint(bool p_enabled);
 	bool is_editor_hint() const;
 
@@ -714,7 +719,7 @@ protected:
 public:
 	static _JSON *get_singleton() { return singleton; }
 
-	String print(const Variant &p_value);
+	String print(const Variant &p_value, const String &p_indent = "", bool p_sort_keys = false);
 	Ref<JSONParseResult> parse(const String &p_json);
 
 	_JSON();

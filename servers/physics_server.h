@@ -101,8 +101,7 @@ class PhysicsShapeQueryParameters : public Reference {
 	Transform transform;
 	float margin;
 	Set<RID> exclude;
-	uint32_t collision_layer;
-	uint32_t object_type_mask;
+	uint32_t collision_mask;
 
 protected:
 	static void _bind_methods();
@@ -118,11 +117,8 @@ public:
 	void set_margin(float p_margin);
 	float get_margin() const;
 
-	void set_collision_layer(int p_collision_layer);
-	int get_collision_layer() const;
-
-	void set_object_type_mask(int p_object_type_mask);
-	int get_object_type_mask() const;
+	void set_collision_mask(int p_collision_layer);
+	int get_collision_mask() const;
 
 	void set_exclude(const Vector<RID> &p_exclude);
 	Vector<RID> get_exclude() const;
@@ -134,18 +130,8 @@ class PhysicsDirectSpaceState : public Object {
 
 	GDCLASS(PhysicsDirectSpaceState, Object);
 
-public:
-	enum ObjectTypeMask {
-		TYPE_MASK_STATIC_BODY = 1 << 0,
-		TYPE_MASK_KINEMATIC_BODY = 1 << 1,
-		TYPE_MASK_RIGID_BODY = 1 << 2,
-		TYPE_MASK_CHARACTER_BODY = 1 << 3,
-		TYPE_MASK_AREA = 1 << 4,
-		TYPE_MASK_COLLISION = TYPE_MASK_STATIC_BODY | TYPE_MASK_CHARACTER_BODY | TYPE_MASK_KINEMATIC_BODY | TYPE_MASK_RIGID_BODY
-	};
-
 private:
-	Dictionary _intersect_ray(const Vector3 &p_from, const Vector3 &p_to, const Vector<RID> &p_exclude = Vector<RID>(), uint32_t p_layers = 0, uint32_t p_object_type_mask = TYPE_MASK_COLLISION);
+	Dictionary _intersect_ray(const Vector3 &p_from, const Vector3 &p_to, const Vector<RID> &p_exclude = Vector<RID>(), uint32_t p_collision_mask = 0);
 	Array _intersect_shape(const Ref<PhysicsShapeQueryParameters> &p_shape_query, int p_max_results = 32);
 	Array _cast_motion(const Ref<PhysicsShapeQueryParameters> &p_shape_query, const Vector3 &p_motion);
 	Array _collide_shape(const Ref<PhysicsShapeQueryParameters> &p_shape_query, int p_max_results = 32);
@@ -163,7 +149,7 @@ public:
 		int shape;
 	};
 
-	virtual int intersect_point(const Vector3 &p_point, ShapeResult *r_results, int p_result_max, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION) = 0;
+	virtual int intersect_point(const Vector3 &p_point, ShapeResult *r_results, int p_result_max, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF) = 0;
 
 	struct RayResult {
 
@@ -175,9 +161,9 @@ public:
 		int shape;
 	};
 
-	virtual bool intersect_ray(const Vector3 &p_from, const Vector3 &p_to, RayResult &r_result, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION, bool p_pick_ray = false) = 0;
+	virtual bool intersect_ray(const Vector3 &p_from, const Vector3 &p_to, RayResult &r_result, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF, bool p_pick_ray = false) = 0;
 
-	virtual int intersect_shape(const RID &p_shape, const Transform &p_xform, float p_margin, ShapeResult *r_results, int p_result_max, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION) = 0;
+	virtual int intersect_shape(const RID &p_shape, const Transform &p_xform, float p_margin, ShapeResult *r_results, int p_result_max, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF) = 0;
 
 	struct ShapeRestInfo {
 
@@ -189,18 +175,16 @@ public:
 		Vector3 linear_velocity; //velocity at contact point
 	};
 
-	virtual bool cast_motion(const RID &p_shape, const Transform &p_xform, const Vector3 &p_motion, float p_margin, float &p_closest_safe, float &p_closest_unsafe, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION, ShapeRestInfo *r_info = NULL) = 0;
+	virtual bool cast_motion(const RID &p_shape, const Transform &p_xform, const Vector3 &p_motion, float p_margin, float &p_closest_safe, float &p_closest_unsafe, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF, ShapeRestInfo *r_info = NULL) = 0;
 
-	virtual bool collide_shape(RID p_shape, const Transform &p_shape_xform, float p_margin, Vector3 *r_results, int p_result_max, int &r_result_count, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION) = 0;
+	virtual bool collide_shape(RID p_shape, const Transform &p_shape_xform, float p_margin, Vector3 *r_results, int p_result_max, int &r_result_count, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF) = 0;
 
-	virtual bool rest_info(RID p_shape, const Transform &p_shape_xform, float p_margin, ShapeRestInfo *r_info, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION) = 0;
+	virtual bool rest_info(RID p_shape, const Transform &p_shape_xform, float p_margin, ShapeRestInfo *r_info, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF) = 0;
 
 	virtual Vector3 get_closest_point_to_object_volume(RID p_object, const Vector3 p_point) const = 0;
 
 	PhysicsDirectSpaceState();
 };
-
-VARIANT_ENUM_CAST(PhysicsDirectSpaceState::ObjectTypeMask);
 
 class PhysicsShapeQueryResult : public Reference {
 
@@ -357,7 +341,7 @@ public:
 		BODY_MODE_STATIC,
 		BODY_MODE_KINEMATIC,
 		BODY_MODE_RIGID,
-		//BODY_MODE_SOFT
+		BODY_MODE_SOFT,
 		BODY_MODE_CHARACTER
 	};
 
@@ -411,6 +395,9 @@ public:
 	virtual void body_set_param(RID p_body, BodyParameter p_param, float p_value) = 0;
 	virtual float body_get_param(RID p_body, BodyParameter p_param) const = 0;
 
+	virtual void body_set_kinematic_safe_margin(RID p_body, real_t p_margin) = 0;
+	virtual real_t body_get_kinematic_safe_margin(RID p_body) const = 0;
+
 	//state
 	enum BodyState {
 		BODY_STATE_TRANSFORM,
@@ -434,15 +421,17 @@ public:
 	virtual void body_apply_torque_impulse(RID p_body, const Vector3 &p_impulse) = 0;
 	virtual void body_set_axis_velocity(RID p_body, const Vector3 &p_axis_velocity) = 0;
 
-	enum BodyAxisLock {
-		BODY_AXIS_LOCK_DISABLED,
-		BODY_AXIS_LOCK_X,
-		BODY_AXIS_LOCK_Y,
-		BODY_AXIS_LOCK_Z,
+	enum BodyAxis {
+		BODY_AXIS_LINEAR_X = 1 << 0,
+		BODY_AXIS_LINEAR_Y = 1 << 1,
+		BODY_AXIS_LINEAR_Z = 1 << 2,
+		BODY_AXIS_ANGULAR_X = 1 << 3,
+		BODY_AXIS_ANGULAR_Y = 1 << 4,
+		BODY_AXIS_ANGULAR_Z = 1 << 5
 	};
 
-	virtual void body_set_axis_lock(RID p_body, BodyAxisLock p_lock) = 0;
-	virtual BodyAxisLock body_get_axis_lock(RID p_body) const = 0;
+	virtual void body_set_axis_lock(RID p_body, BodyAxis p_axis, bool p_lock) = 0;
+	virtual bool body_is_axis_locked(RID p_body, BodyAxis p_axis) const = 0;
 
 	//fix
 	virtual void body_add_collision_exception(RID p_body, RID p_body_b) = 0;
@@ -482,7 +471,7 @@ public:
 		Variant collider_metadata;
 	};
 
-	virtual bool body_test_motion(RID p_body, const Transform &p_from, const Vector3 &p_motion, float p_margin = 0.001, MotionResult *r_result = NULL) = 0;
+	virtual bool body_test_motion(RID p_body, const Transform &p_from, const Vector3 &p_motion, MotionResult *r_result = NULL) = 0;
 
 	/* JOINT API */
 
@@ -658,6 +647,46 @@ public:
 	~PhysicsServer();
 };
 
+typedef PhysicsServer *(*CreatePhysicsServerCallback)();
+
+class PhysicsServerManager {
+	struct ClassInfo {
+		String name;
+		CreatePhysicsServerCallback create_callback;
+
+		ClassInfo() :
+				name(""),
+				create_callback(NULL) {}
+
+		ClassInfo(String p_name, CreatePhysicsServerCallback p_create_callback) :
+				name(p_name),
+				create_callback(p_create_callback) {}
+
+		ClassInfo(const ClassInfo &p_ci) :
+				name(p_ci.name),
+				create_callback(p_ci.create_callback) {}
+	};
+
+	static Vector<ClassInfo> physics_servers;
+	static int default_server_id;
+	static int default_server_priority;
+
+public:
+	static const String setting_property_name;
+
+private:
+	static void on_servers_changed();
+
+public:
+	static void register_server(const String &p_name, CreatePhysicsServerCallback p_creat_callback);
+	static void set_default_server(const String &p_name, int p_priority = 0);
+	static int find_server_id(const String &p_name);
+	static int get_servers_count();
+	static String get_server_name(int p_id);
+	static PhysicsServer *new_default_server();
+	static PhysicsServer *new_server(const String &p_name);
+};
+
 VARIANT_ENUM_CAST(PhysicsServer::ShapeType);
 VARIANT_ENUM_CAST(PhysicsServer::SpaceParameter);
 VARIANT_ENUM_CAST(PhysicsServer::AreaParameter);
@@ -665,7 +694,7 @@ VARIANT_ENUM_CAST(PhysicsServer::AreaSpaceOverrideMode);
 VARIANT_ENUM_CAST(PhysicsServer::BodyMode);
 VARIANT_ENUM_CAST(PhysicsServer::BodyParameter);
 VARIANT_ENUM_CAST(PhysicsServer::BodyState);
-VARIANT_ENUM_CAST(PhysicsServer::BodyAxisLock);
+VARIANT_ENUM_CAST(PhysicsServer::BodyAxis);
 VARIANT_ENUM_CAST(PhysicsServer::PinJointParam);
 VARIANT_ENUM_CAST(PhysicsServer::JointType);
 VARIANT_ENUM_CAST(PhysicsServer::HingeJointParam);

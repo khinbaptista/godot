@@ -37,14 +37,7 @@ void VisualServerWrapMT::thread_exit() {
 
 void VisualServerWrapMT::thread_draw() {
 
-	draw_mutex->lock();
-
-	draw_pending--;
-	bool draw = (draw_pending == 0); // only draw when no more flushes are pending
-
-	draw_mutex->unlock();
-
-	if (draw) {
+	if (!atomic_decrement(&draw_pending)) {
 
 		visual_server->draw();
 	}
@@ -52,11 +45,7 @@ void VisualServerWrapMT::thread_draw() {
 
 void VisualServerWrapMT::thread_flush() {
 
-	draw_mutex->lock();
-
-	draw_pending--;
-
-	draw_mutex->unlock();
+	atomic_decrement(&draw_pending);
 }
 
 void VisualServerWrapMT::_thread_callback(void *_instance) {
@@ -92,36 +81,23 @@ void VisualServerWrapMT::sync() {
 
 	if (create_thread) {
 
-		/* TODO: sync with the thread */
-
-		/*
-		ERR_FAIL_COND(!draw_mutex);
-		draw_mutex->lock();
-		draw_pending++; //cambiar por un saferefcount
-		draw_mutex->unlock();
-		*/
-		//command_queue.push( this, &VisualServerWrapMT::thread_flush);
+		atomic_increment(&draw_pending);
+		command_queue.push_and_sync(this, &VisualServerWrapMT::thread_flush);
 	} else {
 
 		command_queue.flush_all(); //flush all pending from other threads
 	}
 }
 
-void VisualServerWrapMT::draw() {
+void VisualServerWrapMT::draw(bool p_swap_buffers) {
 
 	if (create_thread) {
 
-		/* TODO: Make it draw
-		ERR_FAIL_COND(!draw_mutex);
-		draw_mutex->lock();
-		draw_pending++; //cambiar por un saferefcount
-		draw_mutex->unlock();
-
-		command_queue.push( this, &VisualServerWrapMT::thread_draw);
-		*/
+		atomic_increment(&draw_pending);
+		command_queue.push(this, &VisualServerWrapMT::thread_draw);
 	} else {
 
-		visual_server->draw();
+		visual_server->draw(p_swap_buffers);
 	}
 }
 
@@ -129,7 +105,6 @@ void VisualServerWrapMT::init() {
 
 	if (create_thread) {
 
-		draw_mutex = Mutex::create();
 		print_line("CREATING RENDER THREAD");
 		OS::get_singleton()->release_rendering_thread();
 		if (create_thread) {
@@ -154,25 +129,51 @@ void VisualServerWrapMT::finish() {
 		Thread::wait_to_finish(thread);
 		memdelete(thread);
 
-		texture_free_cached_ids();
-		//mesh_free_cached_ids();
-
 		thread = NULL;
 	} else {
 		visual_server->finish();
 	}
 
-	if (draw_mutex)
-		memdelete(draw_mutex);
+	texture_free_cached_ids();
+	shader_free_cached_ids();
+	material_free_cached_ids();
+	mesh_free_cached_ids();
+	multimesh_free_cached_ids();
+	immediate_free_cached_ids();
+	skeleton_free_cached_ids();
+	directional_light_free_cached_ids();
+	omni_light_free_cached_ids();
+	spot_light_free_cached_ids();
+	reflection_probe_free_cached_ids();
+	gi_probe_free_cached_ids();
+	particles_free_cached_ids();
+	camera_free_cached_ids();
+	viewport_free_cached_ids();
+	environment_free_cached_ids();
+	scenario_free_cached_ids();
+	instance_free_cached_ids();
+	canvas_free_cached_ids();
+	canvas_item_free_cached_ids();
+	canvas_light_occluder_free_cached_ids();
+	canvas_occluder_polygon_free_cached_ids();
 }
 
-VisualServerWrapMT::VisualServerWrapMT(VisualServer *p_contained, bool p_create_thread)
-	: command_queue(p_create_thread) {
+void VisualServerWrapMT::set_use_vsync_callback(bool p_enable) {
+
+	singleton_mt->call_set_use_vsync(p_enable);
+}
+
+VisualServerWrapMT *VisualServerWrapMT::singleton_mt = NULL;
+
+VisualServerWrapMT::VisualServerWrapMT(VisualServer *p_contained, bool p_create_thread) :
+		command_queue(p_create_thread) {
+
+	singleton_mt = this;
+	OS::switch_vsync_function = set_use_vsync_callback; //as this goes to another thread, make sure it goes properly
 
 	visual_server = p_contained;
 	create_thread = p_create_thread;
 	thread = NULL;
-	draw_mutex = NULL;
 	draw_pending = 0;
 	draw_thread_up = false;
 	alloc_mutex = Mutex::create();

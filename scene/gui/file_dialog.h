@@ -33,7 +33,6 @@
 #include "box_container.h"
 #include "os/dir_access.h"
 #include "scene/gui/dialogs.h"
-#include "scene/gui/dialogs.h"
 #include "scene/gui/line_edit.h"
 #include "scene/gui/option_button.h"
 #include "scene/gui/tool_button.h"
@@ -87,9 +86,13 @@ private:
 	DirAccess *dir_access;
 	ConfirmationDialog *confirm_save;
 
+	ToolButton *dir_up;
+
 	ToolButton *refresh;
 
 	Vector<String> filters;
+
+	bool mode_overrides_title;
 
 	static bool default_show_hidden_files;
 	bool show_hidden_files;
@@ -112,10 +115,13 @@ private:
 	void _filter_selected(int);
 	void _make_dir();
 	void _make_dir_confirm();
+	void _go_up();
 
 	void _update_drives();
 
 	void _unhandled_input(const Ref<InputEvent> &p_event);
+
+	bool _is_open_should_be_disabled();
 
 	virtual void _post_popup();
 
@@ -139,6 +145,9 @@ public:
 	void set_current_file(const String &p_file);
 	void set_current_path(const String &p_path);
 
+	void set_mode_overrides_title(bool p_override);
+	bool is_mode_overriding_title() const;
+
 	void set_mode(Mode p_mode);
 	Mode get_mode() const;
 
@@ -154,6 +163,8 @@ public:
 	static void set_default_show_hidden_files(bool p_show);
 
 	void invalidate();
+
+	void deselect_items();
 
 	FileDialog();
 	~FileDialog();

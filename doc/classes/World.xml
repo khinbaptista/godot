@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="World" inherits="Resource" category="Core" version="3.0.alpha.custom_build">
+<class name="World" inherits="Resource" category="Core" version="3.0-beta">
 	<brief_description>
 		Class that has everything pertaining to a world.
 	</brief_description>
@@ -15,53 +15,30 @@
 			<return type="PhysicsDirectSpaceState">
 			</return>
 			<description>
-			</description>
-		</method>
-		<method name="get_environment" qualifiers="const">
-			<return type="Environment">
-			</return>
-			<description>
-			</description>
-		</method>
-		<method name="get_fallback_environment" qualifiers="const">
-			<return type="Environment">
-			</return>
-			<description>
+				Returns the World's physics space.
 			</description>
 		</method>
 		<method name="get_scenario" qualifiers="const">
 			<return type="RID">
 			</return>
 			<description>
+				Returns the World's visual scenario.
 			</description>
 		</method>
 		<method name="get_space" qualifiers="const">
 			<return type="RID">
 			</return>
 			<description>
-			</description>
-		</method>
-		<method name="set_environment">
-			<return type="void">
-			</return>
-			<argument index="0" name="env" type="Environment">
-			</argument>
-			<description>
-			</description>
-		</method>
-		<method name="set_fallback_environment">
-			<return type="void">
-			</return>
-			<argument index="0" name="env" type="Environment">
-			</argument>
-			<description>
+				Returns the World's sound space.
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="environment" type="Environment" setter="set_environment" getter="get_environment">
+			The World's [Environment].
 		</member>
 		<member name="fallback_environment" type="Environment" setter="set_fallback_environment" getter="get_fallback_environment">
+			The World's fallback_environment will be used if the World's [Environment] fails or is missing.
 		</member>
 	</members>
 	<constants>

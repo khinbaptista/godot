@@ -189,15 +189,14 @@ ClockDirection Face3::get_clock_dir() const {
 	return (normal.dot(vertex[0]) >= 0) ? CLOCKWISE : COUNTERCLOCKWISE;
 }
 
-bool Face3::intersects_aabb(const Rect3 &p_aabb) const {
+bool Face3::intersects_aabb(const AABB &p_aabb) const {
 
 	/** TEST PLANE **/
 	if (!p_aabb.intersects_plane(get_plane()))
 		return false;
 
-/** TEST FACE AXIS */
-
 #define TEST_AXIS(m_ax)                                            \
+	/** TEST FACE AXIS */                                          \
 	{                                                              \
 		real_t aabb_min = p_aabb.position.m_ax;                    \
 		real_t aabb_max = p_aabb.position.m_ax + p_aabb.size.m_ax; \

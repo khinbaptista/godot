@@ -53,9 +53,6 @@ class Polygon2D : public Node2D {
 	mutable bool rect_cache_dirty;
 	mutable Rect2 item_rect;
 
-	void _set_texture_rotationd(float p_rot);
-	float _get_texture_rotationd() const;
-
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
@@ -82,6 +79,9 @@ public:
 	void set_texture_rotation(float p_rot);
 	float get_texture_rotation() const;
 
+	void set_texture_rotation_degrees(float p_rot);
+	float get_texture_rotation_degrees() const;
+
 	void set_texture_scale(const Size2 &p_scale);
 	Size2 get_texture_scale() const;
 
@@ -99,11 +99,11 @@ public:
 
 	//editor stuff
 
-	virtual void edit_set_pivot(const Point2 &p_pivot);
-	virtual Point2 edit_get_pivot() const;
-	virtual bool edit_has_pivot() const;
+	virtual void _edit_set_pivot(const Point2 &p_pivot);
+	virtual Point2 _edit_get_pivot() const;
+	virtual bool _edit_use_pivot() const;
 
-	virtual Rect2 get_item_rect() const;
+	virtual Rect2 _edit_get_rect() const;
 
 	Polygon2D();
 };

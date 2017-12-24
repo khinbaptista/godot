@@ -237,6 +237,7 @@ protected:
 	Ref<Texture> atlas;
 	Rect2 region;
 	Rect2 margin;
+	bool filter_clip;
 
 	static void _bind_methods();
 
@@ -258,6 +259,9 @@ public:
 
 	void set_margin(const Rect2 &p_margin);
 	Rect2 get_margin() const;
+
+	void set_filter_clip(const bool p_enable);
+	bool has_filter_clip() const;
 
 	virtual void draw(RID p_canvas_item, const Point2 &p_pos, const Color &p_modulate = Color(1, 1, 1), bool p_transpose = false, const Ref<Texture> &p_normal_map = Ref<Texture>()) const;
 	virtual void draw_rect(RID p_canvas_item, const Rect2 &p_rect, bool p_tile = false, const Color &p_modulate = Color(1, 1, 1), bool p_transpose = false, const Ref<Texture> &p_normal_map = Ref<Texture>()) const;
@@ -487,6 +491,33 @@ public:
 
 	GradientTexture();
 	virtual ~GradientTexture();
+};
+
+class ProxyTexture : public Texture {
+	GDCLASS(ProxyTexture, Texture)
+
+private:
+	RID proxy;
+	Ref<Texture> base;
+
+protected:
+	static void _bind_methods();
+
+public:
+	void set_base(const Ref<Texture> &p_texture);
+	Ref<Texture> get_base() const;
+
+	virtual int get_width() const;
+	virtual int get_height() const;
+	virtual RID get_rid() const;
+
+	virtual bool has_alpha() const;
+
+	virtual void set_flags(uint32_t p_flags);
+	virtual uint32_t get_flags() const;
+
+	ProxyTexture();
+	~ProxyTexture();
 };
 
 #endif

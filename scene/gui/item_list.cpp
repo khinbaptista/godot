@@ -257,6 +257,20 @@ void ItemList::unselect(int p_idx) {
 	}
 	update();
 }
+
+void ItemList::unselect_all() {
+
+	if (items.size() < 1)
+		return;
+
+	for (int i = 0; i < items.size(); i++) {
+
+		items[i].selected = false;
+	}
+
+	update();
+}
+
 bool ItemList::is_selected(int p_idx) const {
 
 	ERR_FAIL_INDEX_V(p_idx, items.size(), false);
@@ -525,6 +539,14 @@ void ItemList::_gui_input(const Ref<InputEvent> &p_event) {
 
 			return;
 		}
+		if (mb->get_button_index() == BUTTON_RIGHT) {
+			emit_signal("rmb_clicked", mb->get_position());
+
+			return;
+		}
+
+		// Since closest is null, more likely we clicked on empty space, so send signal to interested controls. Allows, for example, implement items deselecting.
+		emit_signal("nothing_selected");
 	}
 	if (mb.is_valid() && mb->get_button_index() == BUTTON_WHEEL_UP && mb->is_pressed()) {
 
@@ -708,6 +730,12 @@ void ItemList::_gui_input(const Ref<InputEvent> &p_event) {
 			}
 		}
 	}
+
+	Ref<InputEventPanGesture> pan_gesture = p_event;
+	if (pan_gesture.is_valid()) {
+
+		scroll_bar->set_value(scroll_bar->get_value() + scroll_bar->get_page() * pan_gesture->get_delta().y / 8);
+	}
 }
 
 void ItemList::ensure_current_is_visible() {
@@ -754,7 +782,7 @@ void ItemList::_notification(int p_what) {
 
 		int width = size.width - bg->get_minimum_size().width;
 		if (scroll_bar->is_visible()) {
-			width -= mw + bg->get_margin(MARGIN_RIGHT);
+			width -= mw;
 		}
 
 		draw_style_box(bg, Rect2(Point2(), size));
@@ -1107,7 +1135,7 @@ void ItemList::_notification(int p_what) {
 		}
 
 		for (int i = 0; i < separators.size(); i++) {
-			draw_line(Vector2(bg->get_margin(MARGIN_LEFT), base_ofs.y + separators[i]), Vector2(size.width - bg->get_margin(MARGIN_RIGHT), base_ofs.y + separators[i]), guide_color);
+			draw_line(Vector2(bg->get_margin(MARGIN_LEFT), base_ofs.y + separators[i]), Vector2(width, base_ofs.y + separators[i]), guide_color);
 		}
 	}
 }
@@ -1236,6 +1264,15 @@ Vector<int> ItemList::get_selected_items() {
 		}
 	}
 	return selected;
+}
+
+bool ItemList::is_anything_selected() {
+	for (int i = 0; i < items.size(); i++) {
+		if (items[i].selected)
+			return true;
+	}
+
+	return false;
 }
 
 void ItemList::_set_items(const Array &p_items) {
@@ -1397,6 +1434,8 @@ void ItemList::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("item_rmb_selected", PropertyInfo(Variant::INT, "index"), PropertyInfo(Variant::VECTOR2, "at_position")));
 	ADD_SIGNAL(MethodInfo("multi_selected", PropertyInfo(Variant::INT, "index"), PropertyInfo(Variant::BOOL, "selected")));
 	ADD_SIGNAL(MethodInfo("item_activated", PropertyInfo(Variant::INT, "index")));
+	ADD_SIGNAL(MethodInfo("rmb_clicked", PropertyInfo(Variant::VECTOR2, "at_position")));
+	ADD_SIGNAL(MethodInfo("nothing_selected"));
 
 	GLOBAL_DEF("gui/timers/incremental_search_max_interval_msec", 2000);
 }

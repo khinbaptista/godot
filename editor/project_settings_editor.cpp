@@ -360,7 +360,7 @@ void ProjectSettingsEditor::_wait_for_key(const Ref<InputEvent> &p_event) {
 		last_wait_for_key = p_event;
 		String str = keycode_get_string(k->get_scancode()).capitalize();
 		if (k->get_metakey())
-			str = TTR("Meta+") + str;
+			str = vformat("%s+", find_keycode_name(KEY_META)) + str;
 		if (k->get_shift())
 			str = TTR("Shift+") + str;
 		if (k->get_alt())
@@ -531,7 +531,7 @@ void ProjectSettingsEditor::_action_button_pressed(Object *p_obj, int p_column, 
 			Variant old_val = ProjectSettings::get_singleton()->get(name);
 			int order = ProjectSettings::get_singleton()->get_order(name);
 
-			undo_redo->create_action(TTR("Add Input Action"));
+			undo_redo->create_action(TTR("Erase Input Action"));
 			undo_redo->add_do_method(ProjectSettings::get_singleton(), "clear", name);
 			undo_redo->add_undo_method(ProjectSettings::get_singleton(), "set", name, old_val);
 			undo_redo->add_undo_method(ProjectSettings::get_singleton(), "set_order", name, order);
@@ -642,7 +642,7 @@ void ProjectSettingsEditor::_update_actions() {
 
 				String str = keycode_get_string(k->get_scancode()).capitalize();
 				if (k->get_metakey())
-					str = TTR("Meta+") + str;
+					str = vformat("%s+", find_keycode_name(KEY_META)) + str;
 				if (k->get_shift())
 					str = TTR("Shift+") + str;
 				if (k->get_alt())
@@ -785,12 +785,12 @@ void ProjectSettingsEditor::_item_del() {
 	String property = globals_editor->get_current_section().plus_file(path);
 
 	if (!ProjectSettings::get_singleton()->has_setting(property)) {
-		EditorNode::get_singleton()->show_warning(TTR("No property '" + property + "' exists."));
+		EditorNode::get_singleton()->show_warning(vformat(TTR("No property '%s' exists."), property));
 		return;
 	}
 
 	if (ProjectSettings::get_singleton()->get_order(property) < ProjectSettings::NO_BUILTIN_ORDER_BASE) {
-		EditorNode::get_singleton()->show_warning(TTR("Setting '" + property + "' is internal, and it can't be deleted."));
+		EditorNode::get_singleton()->show_warning(vformat(TTR("Setting '%s' is internal, and it can't be deleted."), property));
 		return;
 	}
 
@@ -852,7 +852,7 @@ void ProjectSettingsEditor::_action_add() {
 
 	Array va;
 	String name = "input/" + action_name->get_text();
-	undo_redo->create_action(TTR("Add Input Action Event"));
+	undo_redo->create_action(TTR("Add Input Action"));
 	undo_redo->add_do_method(ProjectSettings::get_singleton(), "set", name, va);
 	undo_redo->add_undo_method(ProjectSettings::get_singleton(), "clear", name);
 	undo_redo->add_do_method(this, "_update_actions");
@@ -1318,7 +1318,7 @@ void ProjectSettingsEditor::_update_translations() {
 			t->set_text(0, translations[i].replace_first("res://", ""));
 			t->set_tooltip(0, translations[i]);
 			t->set_metadata(0, i);
-			t->add_button(0, get_icon("Del", "EditorIcons"), 0, false, TTR("Remove"));
+			t->add_button(0, get_icon("Remove", "EditorIcons"), 0, false, TTR("Remove"));
 		}
 	}
 
@@ -1436,7 +1436,7 @@ void ProjectSettingsEditor::_update_translations() {
 			t->set_text(0, keys[i].replace_first("res://", ""));
 			t->set_tooltip(0, keys[i]);
 			t->set_metadata(0, keys[i]);
-			t->add_button(0, get_icon("Del", "EditorIcons"), 0, false, TTR("Remove"));
+			t->add_button(0, get_icon("Remove", "EditorIcons"), 0, false, TTR("Remove"));
 			if (keys[i] == remap_selected) {
 				t->select(0);
 				translation_res_option_add_button->set_disabled(false);
@@ -1454,7 +1454,7 @@ void ProjectSettingsEditor::_update_translations() {
 					t2->set_text(0, path.replace_first("res://", ""));
 					t2->set_tooltip(0, path);
 					t2->set_metadata(0, j);
-					t2->add_button(0, get_icon("Del", "EditorIcons"), 0, false, TTR("Remove"));
+					t2->add_button(0, get_icon("Remove", "EditorIcons"), 0, false, TTR("Remove"));
 					t2->set_cell_mode(1, TreeItem::CELL_MODE_RANGE);
 					t2->set_text(1, langnames);
 					t2->set_editable(1, true);
@@ -1690,12 +1690,12 @@ ProjectSettingsEditor::ProjectSettingsEditor(EditorData *p_data) {
 	vbc->set_anchor_and_margin(MARGIN_LEFT, ANCHOR_BEGIN, 0);
 	vbc->set_anchor_and_margin(MARGIN_RIGHT, ANCHOR_END, 0);
 
-	l = memnew(Label);
-	vbc->add_child(l);
-	l->set_text(TTR("Action:"));
-
 	hbc = memnew(HBoxContainer);
 	vbc->add_child(hbc);
+
+	l = memnew(Label);
+	hbc->add_child(l);
+	l->set_text(TTR("Action:"));
 
 	action_name = memnew(LineEdit);
 	action_name->set_h_size_flags(SIZE_EXPAND_FILL);
@@ -1776,12 +1776,12 @@ ProjectSettingsEditor::ProjectSettingsEditor(EditorData *p_data) {
 
 	//translations
 	TabContainer *translations = memnew(TabContainer);
-	translations->add_style_override("panel", memnew(StyleBoxEmpty));
 	translations->set_tab_align(TabContainer::ALIGN_LEFT);
 	translations->set_name(TTR("Localization"));
 	tab_container->add_child(translations);
 	//remap for properly select language in popup
 	translation_locales_idxs_remap = Vector<int>();
+	translation_locales_list_created = false;
 
 	{
 
@@ -1887,19 +1887,14 @@ ProjectSettingsEditor::ProjectSettingsEditor(EditorData *p_data) {
 		translation_filter->connect("item_edited", this, "_translation_filter_option_changed");
 	}
 
-	{
-		autoload_settings = memnew(EditorAutoloadSettings);
-		autoload_settings->set_name(TTR("AutoLoad"));
-		tab_container->add_child(autoload_settings);
-		autoload_settings->connect("autoload_changed", this, "_settings_changed");
-	}
+	autoload_settings = memnew(EditorAutoloadSettings);
+	autoload_settings->set_name(TTR("AutoLoad"));
+	tab_container->add_child(autoload_settings);
+	autoload_settings->connect("autoload_changed", this, "_settings_changed");
 
-	{
-
-		plugin_settings = memnew(EditorPluginSettings);
-		plugin_settings->set_name(TTR("Plugins"));
-		tab_container->add_child(plugin_settings);
-	}
+	plugin_settings = memnew(EditorPluginSettings);
+	plugin_settings->set_name(TTR("Plugins"));
+	tab_container->add_child(plugin_settings);
 
 	timer = memnew(Timer);
 	timer->set_wait_time(1.5);

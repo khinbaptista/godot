@@ -135,7 +135,9 @@ class ScriptEditor : public PanelContainer {
 		FILE_CLOSE,
 		CLOSE_DOCS,
 		CLOSE_ALL,
+		CLOSE_OTHER_TABS,
 		TOGGLE_SCRIPTS_PANEL,
+		FILE_COPY_PATH,
 		FILE_TOOL_RELOAD,
 		FILE_TOOL_RELOAD_SOFT,
 		DEBUG_NEXT,
@@ -150,10 +152,11 @@ class ScriptEditor : public PanelContainer {
 		SEARCH_WEBSITE,
 		HELP_SEARCH_FIND,
 		HELP_SEARCH_FIND_NEXT,
-		WINDOW_MOVE_LEFT,
-		WINDOW_MOVE_RIGHT,
+		WINDOW_MOVE_UP,
+		WINDOW_MOVE_DOWN,
 		WINDOW_NEXT,
 		WINDOW_PREV,
+		WINDOW_SORT,
 		WINDOW_SELECT_BASE = 100
 	};
 
@@ -173,6 +176,7 @@ class ScriptEditor : public PanelContainer {
 	MenuButton *edit_menu;
 	MenuButton *script_search_menu;
 	MenuButton *debug_menu;
+	PopupMenu *context_menu;
 	Timer *autosave_timer;
 	uint64_t idle;
 
@@ -249,7 +253,10 @@ class ScriptEditor : public PanelContainer {
 	void _close_current_tab();
 	void _close_discard_current_tab(const String &p_str);
 	void _close_docs_tab();
+	void _close_other_tabs();
 	void _close_all_tabs();
+
+	void _copy_script_path();
 
 	void _ask_close_current_unsaved_tab(ScriptEditorBase *current);
 
@@ -292,6 +299,7 @@ class ScriptEditor : public PanelContainer {
 	void _update_members_overview_visibility();
 	void _update_members_overview();
 	void _update_script_names();
+	bool _sort_list_on_update;
 
 	void _members_overview_selected(int p_idx);
 	void _script_selected(int p_idx);
@@ -306,7 +314,14 @@ class ScriptEditor : public PanelContainer {
 
 	void _script_split_dragged(float);
 
+	Variant get_drag_data_fw(const Point2 &p_point, Control *p_from);
+	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
+	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
+
 	void _unhandled_input(const Ref<InputEvent> &p_event);
+
+	void _script_list_gui_input(const Ref<InputEvent> &ev);
+	void _make_script_list_context_menu();
 
 	void _help_search(String p_text);
 	void _help_index(String p_text);
@@ -345,6 +360,7 @@ public:
 
 	void ensure_focus_current();
 	void apply_scripts() const;
+	void open_script_create_dialog(const String &p_base_name, const String &p_base_path);
 
 	void ensure_select_current();
 

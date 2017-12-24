@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="ARVRController" inherits="Spatial" category="Core" version="3.0.alpha.custom_build">
+<class name="ARVRController" inherits="Spatial" category="Core" version="3.0-beta">
 	<brief_description>
 		A spatial node representing a spatially tracked controller.
 	</brief_description>
@@ -13,13 +13,6 @@
 	<demos>
 	</demos>
 	<methods>
-		<method name="get_controller_id" qualifiers="const">
-			<return type="int">
-			</return>
-			<description>
-				Returns the controller id currently assigned to this node.
-			</description>
-		</method>
 		<method name="get_controller_name" qualifiers="const">
 			<return type="String">
 			</return>
@@ -38,7 +31,7 @@
 			<return type="bool">
 			</return>
 			<description>
-				Returns true if the controller bound to this node is currently active and being tracked.
+				Returns [code]true[/code] if the bound controller is active. ARVR systems attempt to track active controllers.
 			</description>
 		</method>
 		<method name="get_joystick_axis" qualifiers="const">
@@ -63,22 +56,19 @@
 			<argument index="0" name="button" type="int">
 			</argument>
 			<description>
-				Is the given button currently pressed?
-			</description>
-		</method>
-		<method name="set_controller_id">
-			<return type="void">
-			</return>
-			<argument index="0" name="controller_id" type="int">
-			</argument>
-			<description>
-				Changes the id that identifies the controller bound to this node. The first controller that the ARVR Server detects will have id 1, the second id 2, the third id 3, etc. When a controller is turned off that slot is freed ensuring that controllers will keep the same id while it is turned on even when controllers with lower ids are turned off.
+				Returns [code]true[/code] if the button at index [code]button[/code] is pressed.
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="controller_id" type="int" setter="set_controller_id" getter="get_controller_id">
-			The controller's id. The first controller that the [ARVRServer] detects will have id 1, the second id 2, the third id 3, etc. When a controller is turned off, it's slot is freed. This ensures controllers will keep the same id even when controllers with lower ids are turned off.
+			The controller's id.
+			A controller id of 0 is unbound and will always result in an inactive node. Controller id 1 is reserved for the first controller that identifies itself as the left hand controller and id 2 is reserved for the first controller that identifies itself as the right hand controller.
+			For any other controller that the [ARVRServer] detects we continue with controller id 3.
+			When a controller is turned off, its slot is freed. This ensures controllers will keep the same id even when controllers with lower ids are turned off.
+		</member>
+		<member name="rumble" type="float" setter="set_rumble" getter="get_rumble">
+			The degree to which the tracker rumbles. Ranges from [code]0.0[/code] to [code]1.0[/code] with precision [code].01[/code]. If changed, updates [member ARVRPositionalTracker.rumble] accordingly.
 		</member>
 	</members>
 	<signals>
@@ -86,14 +76,14 @@
 			<argument index="0" name="button" type="int">
 			</argument>
 			<description>
-				When a button on this controller is pressed, this signal is given.
+				Emitted when a button on this controller is pressed.
 			</description>
 		</signal>
 		<signal name="button_release">
 			<argument index="0" name="button" type="int">
 			</argument>
 			<description>
-				When a button on this controller is released, this signal is given.
+				Emitted when a button on this controller is released.
 			</description>
 		</signal>
 	</signals>

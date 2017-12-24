@@ -36,8 +36,6 @@
 extern "C" {
 #endif
 
-void _vector2_api_anchor() {}
-
 void GDAPI godot_vector2_new(godot_vector2 *r_dest, const godot_real p_x, const godot_real p_y) {
 
 	Vector2 *dest = (Vector2 *)r_dest;
@@ -209,7 +207,7 @@ godot_vector2 GDAPI godot_vector2_operator_add(const godot_vector2 *p_self, cons
 	return raw_dest;
 }
 
-godot_vector2 GDAPI godot_vector2_operator_substract(const godot_vector2 *p_self, const godot_vector2 *p_b) {
+godot_vector2 GDAPI godot_vector2_operator_subtract(const godot_vector2 *p_self, const godot_vector2 *p_b) {
 	godot_vector2 raw_dest;
 	Vector2 *dest = (Vector2 *)&raw_dest;
 	const Vector2 *self = (const Vector2 *)p_self;

@@ -88,10 +88,11 @@ class SpatialEditorViewport : public Control {
 		VIEW_AUDIO_DOPPLER,
 		VIEW_GIZMOS,
 		VIEW_INFORMATION,
+		VIEW_FPS,
 		VIEW_DISPLAY_NORMAL,
 		VIEW_DISPLAY_WIREFRAME,
 		VIEW_DISPLAY_OVERDRAW,
-		VIEW_DISPLAY_SHADELESS,
+		VIEW_DISPLAY_SHADELESS
 	};
 
 public:
@@ -105,10 +106,9 @@ private:
 	int index;
 	String name;
 	void _menu_option(int p_option);
-	Size2 prev_size;
 
 	Spatial *preview_node;
-	Rect3 *preview_bounds;
+	AABB *preview_bounds;
 	Vector<String> selected_files;
 	AcceptDialog *accept;
 
@@ -135,8 +135,8 @@ private:
 	bool freelook_active;
 	real_t freelook_speed;
 
-	PanelContainer *info;
 	Label *info_label;
+	Label *fps_label;
 
 	struct _RayResult {
 
@@ -165,6 +165,11 @@ private:
 
 	void _select_region();
 	bool _gizmo_select(const Vector2 &p_screenpos, bool p_highlight_only = false);
+
+	void _nav_pan(Ref<InputEventWithModifiers> p_event, const Vector2 &p_relative);
+	void _nav_zoom(Ref<InputEventWithModifiers> p_event, const Vector2 &p_relative);
+	void _nav_orbit(Ref<InputEventWithModifiers> p_event, const Vector2 &p_relative);
+	void _nav_look(Ref<InputEventWithModifiers> p_event, const Vector2 &p_relative);
 
 	float get_znear() const;
 	float get_zfar() const;
@@ -255,7 +260,7 @@ private:
 
 	real_t zoom_indicator_delay;
 
-	RID move_gizmo_instance[3], move_plane_gizmo_instance[3], rotate_gizmo_instance[3], scale_gizmo_instance[3];
+	RID move_gizmo_instance[3], move_plane_gizmo_instance[3], rotate_gizmo_instance[3], scale_gizmo_instance[3], scale_plane_gizmo_instance[3];
 
 	String last_message;
 	String message;
@@ -287,7 +292,7 @@ private:
 	Point2i _get_warped_mouse_motion(const Ref<InputEventMouseMotion> &p_ev_mouse_motion) const;
 
 	Vector3 _get_instance_position(const Point2 &p_pos) const;
-	static Rect3 _calculate_spatial_bounds(const Spatial *p_parent, const Rect3 p_bounds);
+	static AABB _calculate_spatial_bounds(const Spatial *p_parent, const AABB p_bounds);
 	void _create_preview(const Vector<String> &files) const;
 	void _remove_preview();
 	bool _cyclical_dependency_exists(const String &p_target_scene_path, Node *p_desired_node);
@@ -302,6 +307,7 @@ protected:
 	static void _bind_methods();
 
 public:
+	void update_surface() { surface->update(); }
 	void update_transform_gizmo_view();
 
 	void set_can_preview(Camera *p_preview);
@@ -314,7 +320,7 @@ public:
 
 	void assign_pending_data_pointers(
 			Spatial *p_preview_node,
-			Rect3 *p_preview_bounds,
+			AABB *p_preview_bounds,
 			AcceptDialog *p_accept);
 
 	Viewport *get_viewport_node() { return viewport; }
@@ -327,7 +333,7 @@ class SpatialEditorSelectedItem : public Object {
 	GDCLASS(SpatialEditorSelectedItem, Object);
 
 public:
-	Rect3 aabb;
+	AABB aabb;
 	Transform original; // original location when moving
 	Transform original_local;
 	Transform last_xform; // last transform
@@ -380,6 +386,8 @@ class SpatialEditor : public VBoxContainer {
 	GDCLASS(SpatialEditor, VBoxContainer);
 
 public:
+	static const unsigned int VIEWPORTS_COUNT = 4;
+
 	enum ToolMode {
 
 		TOOL_MODE_SELECT,
@@ -387,13 +395,21 @@ public:
 		TOOL_MODE_ROTATE,
 		TOOL_MODE_SCALE,
 		TOOL_MODE_LIST_SELECT,
+		TOOL_LOCK_SELECTED,
+		TOOL_UNLOCK_SELECTED,
 		TOOL_MAX
 
 	};
 
-private:
-	static const unsigned int VIEWPORTS_COUNT = 4;
+	enum ToolOptions {
 
+		TOOL_OPT_LOCAL_COORDS,
+		TOOL_OPT_USE_SNAP,
+		TOOL_OPT_MAX
+
+	};
+
+private:
 	EditorNode *editor;
 	EditorSelection *editor_selection;
 
@@ -418,7 +434,7 @@ private:
 	bool grid_enable[3]; //should be always visible if true
 	bool grid_enabled;
 
-	Ref<ArrayMesh> move_gizmo[3], move_plane_gizmo[3], rotate_gizmo[3], scale_gizmo[3];
+	Ref<ArrayMesh> move_gizmo[3], move_plane_gizmo[3], rotate_gizmo[3], scale_gizmo[3], scale_plane_gizmo[3];
 	Ref<SpatialMaterial> gizmo_color[3];
 	Ref<SpatialMaterial> plane_gizmo_color[3];
 	Ref<SpatialMaterial> gizmo_hl;
@@ -435,19 +451,8 @@ private:
 
 	// Scene drag and drop support
 	Spatial *preview_node;
-	Rect3 preview_bounds;
+	AABB preview_bounds;
 
-	/*
-	struct Selected {
-		AABB aabb;
-		Transform original; // original location when moving
-		Transform last_xform; // last transform
-		Spatial *sp;
-		RID poly_instance;
-	};
-
-	Map<uint32_t,Selected> selected;
-*/
 	struct Gizmo {
 
 		bool visible;
@@ -462,9 +467,9 @@ private:
 		MENU_TOOL_ROTATE,
 		MENU_TOOL_SCALE,
 		MENU_TOOL_LIST_SELECT,
-		MENU_TRANSFORM_USE_SNAP,
+		MENU_TOOL_LOCAL_COORDS,
+		MENU_TOOL_USE_SNAP,
 		MENU_TRANSFORM_CONFIGURE_SNAP,
-		MENU_TRANSFORM_LOCAL_COORDS,
 		MENU_TRANSFORM_DIALOG,
 		MENU_VIEW_USE_1_VIEWPORT,
 		MENU_VIEW_USE_2_VIEWPORTS,
@@ -475,13 +480,19 @@ private:
 		MENU_VIEW_ORIGIN,
 		MENU_VIEW_GRID,
 		MENU_VIEW_CAMERA_SETTINGS,
-
+		MENU_LOCK_SELECTED,
+		MENU_UNLOCK_SELECTED,
+		MENU_VISIBILITY_SKELETON
 	};
 
 	Button *tool_button[TOOL_MAX];
+	Button *tool_option_button[TOOL_OPT_MAX];
 
 	MenuButton *transform_menu;
 	MenuButton *view_menu;
+
+	ToolButton *lock_button;
+	ToolButton *unlock_button;
 
 	AcceptDialog *accept;
 
@@ -507,11 +518,10 @@ private:
 
 	void _xform_dialog_action();
 	void _menu_item_pressed(int p_option);
+	void _menu_item_toggled(bool pressed, int p_option);
 
 	HBoxContainer *hbc_menu;
 
-	//
-	//
 	void _generate_selection_box();
 	UndoRedo *undo_redo;
 
@@ -539,6 +549,8 @@ private:
 
 	bool is_any_freelook_active() const;
 
+	void _refresh_menu_icons();
+
 protected:
 	void _notification(int p_what);
 	//void _gui_input(InputEvent p_event);
@@ -560,19 +572,22 @@ public:
 	bool is_gizmo_visible() const { return gizmo.visible; }
 
 	ToolMode get_tool_mode() const { return tool_mode; }
+	bool are_local_coords_enabled() const { return tool_option_button[SpatialEditor::TOOL_OPT_LOCAL_COORDS]->is_pressed(); }
 	bool is_snap_enabled() const { return snap_enabled; }
 	float get_translate_snap() const { return snap_translate->get_text().to_double(); }
 	float get_rotate_snap() const { return snap_rotate->get_text().to_double(); }
 	float get_scale_snap() const { return snap_scale->get_text().to_double(); }
 
-	bool are_local_coords_enabled() const { return transform_menu->get_popup()->is_item_checked(transform_menu->get_popup()->get_item_index(SpatialEditor::MENU_TRANSFORM_LOCAL_COORDS)); }
-
 	Ref<ArrayMesh> get_move_gizmo(int idx) const { return move_gizmo[idx]; }
 	Ref<ArrayMesh> get_move_plane_gizmo(int idx) const { return move_plane_gizmo[idx]; }
 	Ref<ArrayMesh> get_rotate_gizmo(int idx) const { return rotate_gizmo[idx]; }
 	Ref<ArrayMesh> get_scale_gizmo(int idx) const { return scale_gizmo[idx]; }
+	Ref<ArrayMesh> get_scale_plane_gizmo(int idx) const { return scale_plane_gizmo[idx]; }
+
+	int get_skeleton_visibility_state() const;
 
 	void update_transform_gizmo();
+	void update_all_gizmos();
 
 	void select_gizmo_highlight_axis(int p_axis);
 	void set_custom_camera(Node *p_camera) { custom_camera = p_camera; }

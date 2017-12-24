@@ -64,7 +64,7 @@ int AudioStreamPlaybackOGGVorbis::_ov_seek_func(void *_f, ogg_int64_t offs, int 
 		fa->seek_end(offs);
 	} else {
 
-		ERR_PRINT("BUG, wtf was whence set to?\n");
+		ERR_PRINT("Vorbis seek function failure: Unexpected value in _whence\n");
 	}
 	int ret = fa->eof_reached() ? -1 : 0;
 	//printf("returning %i\n",ret);
@@ -105,8 +105,6 @@ int AudioStreamPlaybackOGGVorbis::mix(int16_t *p_buffer, int p_frames) {
 		if (todo == 0 || todo < MIN_MIX) {
 			break;
 		}
-
-//printf("to mix %i - mix me %i bytes\n",to_mix,to_mix*stream_channels*sizeof(int16_t));
 
 #ifdef BIG_ENDIAN_ENABLED
 		long ret = ov_read(&vf, (char *)p_buffer, todo * stream_channels * sizeof(int16_t), 1, 2, 1, &current_section);
@@ -359,7 +357,7 @@ void AudioStreamPlaybackOGGVorbis::set_paused(bool p_paused) {
 	paused = p_paused;
 }
 
-bool AudioStreamPlaybackOGGVorbis::is_paused(bool p_paused) const {
+bool AudioStreamPlaybackOGGVorbis::is_paused() const {
 
 	return paused;
 }

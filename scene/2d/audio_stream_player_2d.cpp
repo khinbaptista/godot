@@ -21,7 +21,7 @@ void AudioStreamPlayer2D::_mix_audio() {
 	}
 
 	//get data
-	AudioFrame *buffer = mix_buffer.ptr();
+	AudioFrame *buffer = mix_buffer.ptrw();
 	int buffer_size = mix_buffer.size();
 
 	//mix
@@ -134,7 +134,7 @@ void AudioStreamPlayer2D::_notification(int p_what) {
 
 			Physics2DDirectSpaceState::ShapeResult sr[MAX_INTERSECT_AREAS];
 
-			int areas = space_state->intersect_point(global_pos, sr, MAX_INTERSECT_AREAS, Set<RID>(), area_mask, Physics2DDirectSpaceState::TYPE_MASK_AREA);
+			int areas = space_state->intersect_point(global_pos, sr, MAX_INTERSECT_AREAS, Set<RID>(), area_mask);
 
 			for (int i = 0; i < areas; i++) {
 

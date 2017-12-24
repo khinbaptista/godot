@@ -115,8 +115,6 @@ typedef enum {
 	GODOT_ERR_HELP, ///< user requested help!!
 	GODOT_ERR_BUG, ///< a bug in the software certainly happened, due to a double check failing or unexpected behavior.
 	GODOT_ERR_PRINTER_ON_FIRE, /// the parallel port printer is engulfed in flames
-	GODOT_ERR_OMFG_THIS_IS_VERY_VERY_BAD, ///< shit happens, has never been used, though
-	GODOT_ERR_WTF = GODOT_ERR_OMFG_THIS_IS_VERY_VERY_BAD ///< short version of the above
 } godot_error;
 
 ////// bool
@@ -169,9 +167,9 @@ typedef void godot_object;
 
 #include <gdnative/quat.h>
 
-/////// Rect3
+/////// AABB
 
-#include <gdnative/rect3.h>
+#include <gdnative/aabb.h>
 
 /////// Basis
 
@@ -214,10 +212,6 @@ void GDAPI godot_object_destroy(godot_object *p_o);
 
 godot_object GDAPI *godot_global_get_singleton(char *p_name); // result shouldn't be freed
 
-////// OS API
-
-void GDAPI *godot_get_stack_bottom(); //  returns stack bottom of the main thread
-
 ////// MethodBind API
 
 typedef struct {
@@ -229,15 +223,30 @@ void GDAPI godot_method_bind_ptrcall(godot_method_bind *p_method_bind, godot_obj
 godot_variant GDAPI godot_method_bind_call(godot_method_bind *p_method_bind, godot_object *p_instance, const godot_variant **p_args, const int p_arg_count, godot_variant_call_error *p_call_error);
 ////// Script API
 
-struct godot_gdnative_api_struct; // Forward declaration
+typedef struct godot_gdnative_api_version {
+	unsigned int major;
+	unsigned int minor;
+} godot_gdnative_api_version;
+
+typedef struct godot_gdnative_api_struct godot_gdnative_api_struct;
+
+struct godot_gdnative_api_struct {
+	unsigned int type;
+	godot_gdnative_api_version version;
+	const godot_gdnative_api_struct *next;
+};
+
+#define GDNATIVE_VERSION_COMPATIBLE(want, have) (want.major == have.major && want.minor <= have.minor)
 
 typedef struct {
 	godot_bool in_editor;
 	uint64_t core_api_hash;
 	uint64_t editor_api_hash;
 	uint64_t no_api_hash;
+	void (*report_version_mismatch)(const godot_object *p_library, const char *p_what, godot_gdnative_api_version p_want, godot_gdnative_api_version p_have);
+	void (*report_loading_error)(const godot_object *p_library, const char *p_what);
 	godot_object *gd_native_library; // pointer to GDNativeLibrary that is being initialized
-	const struct godot_gdnative_api_struct *api_struct;
+	const struct godot_gdnative_core_api_struct *api_struct;
 	const godot_string *active_library_path;
 } godot_gdnative_init_options;
 
@@ -258,6 +267,9 @@ typedef void (*godot_gdnative_terminate_fn)(godot_gdnative_terminate_options *);
 typedef godot_variant (*godot_gdnative_procedure_fn)(godot_array *);
 
 ////// System Functions
+
+typedef godot_variant (*native_call_cb)(void *, godot_array *);
+void GDAPI godot_register_native_call_type(const char *p_call_type, native_call_cb p_callback);
 
 //using these will help Godot track how much memory is in use in debug mode
 void GDAPI *godot_alloc(int p_bytes);

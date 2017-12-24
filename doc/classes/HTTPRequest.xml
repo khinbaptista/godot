@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="HTTPRequest" inherits="Node" category="Core" version="3.0.alpha.custom_build">
+<class name="HTTPRequest" inherits="Node" category="Core" version="3.0-beta">
 	<brief_description>
-		A Node with the ability to send HTTP requests.
+		A node with the ability to send HTTP requests.
 	</brief_description>
 	<description>
-		A Node with the ability to send HTTP requests. Uses a [HTTPClient] internally, supports HTTPS.
-		Can be used to make HTTP requests or download files via HTTP.
+		A node with the ability to send HTTP requests. Uses [HTTPClient] internally.
+		Can be used to make HTTP requests, i.e. download or upload files or web content via HTTP.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -16,56 +16,35 @@
 			<return type="void">
 			</return>
 			<description>
-				Cancel the current request.
+				Cancels the current request.
 			</description>
 		</method>
 		<method name="get_body_size" qualifiers="const">
 			<return type="int">
 			</return>
 			<description>
-				Return the response body length.
-			</description>
-		</method>
-		<method name="get_body_size_limit" qualifiers="const">
-			<return type="int">
-			</return>
-			<description>
-				Return current body size limit.
+				Returns the response body length.
 			</description>
 		</method>
 		<method name="get_download_file" qualifiers="const">
 			<return type="String">
 			</return>
 			<description>
-				Return the file this request will download into.
+				Returns the file this request will download into.
 			</description>
 		</method>
 		<method name="get_downloaded_bytes" qualifiers="const">
 			<return type="int">
 			</return>
 			<description>
-				Return the amount of bytes this HTTPRequest downloaded.
+				Returns the amount of bytes this HTTPRequest downloaded.
 			</description>
 		</method>
 		<method name="get_http_client_status" qualifiers="const">
 			<return type="int" enum="HTTPClient.Status">
 			</return>
 			<description>
-				Return the current status of the underlying [HTTPClient].
-			</description>
-		</method>
-		<method name="get_max_redirects" qualifiers="const">
-			<return type="int">
-			</return>
-			<description>
-				Return the maximum amount of redirects that will be followed.
-			</description>
-		</method>
-		<method name="is_using_threads" qualifiers="const">
-			<return type="bool">
-			</return>
-			<description>
-				Whether this request is using threads.
+				Returns the current status of the underlying [HTTPClient]. See [code]STATUS_*[/code] enum on [HTTPClient].
 			</description>
 		</method>
 		<method name="request">
@@ -84,49 +63,25 @@
 			<description>
 			</description>
 		</method>
-		<method name="set_body_size_limit">
-			<return type="void">
-			</return>
-			<argument index="0" name="bytes" type="int">
-			</argument>
-			<description>
-				Set the response body size limit.
-			</description>
-		</method>
 		<method name="set_download_file">
 			<return type="void">
 			</return>
 			<argument index="0" name="path" type="String">
 			</argument>
 			<description>
-				Set the file to download into. Outputs the response body into the file.
-			</description>
-		</method>
-		<method name="set_max_redirects">
-			<return type="void">
-			</return>
-			<argument index="0" name="amount" type="int">
-			</argument>
-			<description>
-				Set the maximum amount of redirects the request will follow.
-			</description>
-		</method>
-		<method name="set_use_threads">
-			<return type="void">
-			</return>
-			<argument index="0" name="enable" type="bool">
-			</argument>
-			<description>
-				Make this HTTPRequest use threads.
+				Sets the file to download into. Outputs the response body into the file if set.
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="body_size_limit" type="int" setter="set_body_size_limit" getter="get_body_size_limit">
+			Maximum allowed size for response bodies.
 		</member>
 		<member name="max_redirects" type="int" setter="set_max_redirects" getter="get_max_redirects">
+			Maximum number of allowed redirects.
 		</member>
 		<member name="use_threads" type="bool" setter="set_use_threads" getter="is_using_threads">
+			If [code]true[/code] multithreading is used to improve performance.
 		</member>
 	</members>
 	<signals>
@@ -145,39 +100,39 @@
 		</signal>
 	</signals>
 	<constants>
-		<constant name="RESULT_SUCCESS" value="0">
+		<constant name="RESULT_SUCCESS" value="0" enum="Result">
 			Request successful.
 		</constant>
-		<constant name="RESULT_CHUNKED_BODY_SIZE_MISMATCH" value="1">
+		<constant name="RESULT_CHUNKED_BODY_SIZE_MISMATCH" value="1" enum="Result">
 		</constant>
-		<constant name="RESULT_CANT_CONNECT" value="2">
+		<constant name="RESULT_CANT_CONNECT" value="2" enum="Result">
 			Request failed while connecting.
 		</constant>
-		<constant name="RESULT_CANT_RESOLVE" value="3">
+		<constant name="RESULT_CANT_RESOLVE" value="3" enum="Result">
 			Request failed while resolving.
 		</constant>
-		<constant name="RESULT_CONNECTION_ERROR" value="4">
+		<constant name="RESULT_CONNECTION_ERROR" value="4" enum="Result">
 			Request failed due to connection(read/write) error.
 		</constant>
-		<constant name="RESULT_SSL_HANDSHAKE_ERROR" value="5">
+		<constant name="RESULT_SSL_HANDSHAKE_ERROR" value="5" enum="Result">
 			Request failed on SSL handshake.
 		</constant>
-		<constant name="RESULT_NO_RESPONSE" value="6">
+		<constant name="RESULT_NO_RESPONSE" value="6" enum="Result">
 			Request does not have a response(yet).
 		</constant>
-		<constant name="RESULT_BODY_SIZE_LIMIT_EXCEEDED" value="7">
+		<constant name="RESULT_BODY_SIZE_LIMIT_EXCEEDED" value="7" enum="Result">
 			Request exceeded its maximum size limit, see [method set_body_size_limit].
 		</constant>
-		<constant name="RESULT_REQUEST_FAILED" value="8">
-			Request failed. (unused)
+		<constant name="RESULT_REQUEST_FAILED" value="8" enum="Result">
+			Request failed. (Unused)
 		</constant>
-		<constant name="RESULT_DOWNLOAD_FILE_CANT_OPEN" value="9">
+		<constant name="RESULT_DOWNLOAD_FILE_CANT_OPEN" value="9" enum="Result">
 			HTTPRequest couldn't open the download file.
 		</constant>
-		<constant name="RESULT_DOWNLOAD_FILE_WRITE_ERROR" value="10">
+		<constant name="RESULT_DOWNLOAD_FILE_WRITE_ERROR" value="10" enum="Result">
 			HTTPRequest couldn't write to the download file.
 		</constant>
-		<constant name="RESULT_REDIRECT_LIMIT_REACHED" value="11">
+		<constant name="RESULT_REDIRECT_LIMIT_REACHED" value="11" enum="Result">
 			Request reached its maximum redirect limit, see [method set_max_redirects].
 		</constant>
 	</constants>

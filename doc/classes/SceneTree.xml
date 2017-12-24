@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="SceneTree" inherits="MainLoop" category="Core" version="3.0.alpha.custom_build">
+<class name="SceneTree" inherits="MainLoop" category="Core" version="3.0-beta">
 	<brief_description>
 	</brief_description>
 	<description>
@@ -165,6 +165,12 @@
 			<description>
 			</description>
 		</method>
+		<method name="is_using_font_oversampling" qualifiers="const">
+			<return type="bool">
+			</return>
+			<description>
+			</description>
+		</method>
 		<method name="notify_group">
 			<return type="void">
 			</return>
@@ -318,6 +324,14 @@
 			<description>
 			</description>
 		</method>
+		<method name="set_use_font_oversampling">
+			<return type="void">
+			</return>
+			<argument index="0" name="enable" type="bool">
+			</argument>
+			<description>
+			</description>
+		</method>
 	</methods>
 	<signals>
 		<signal name="connected_to_server">
@@ -388,29 +402,29 @@
 		</signal>
 	</signals>
 	<constants>
-		<constant name="GROUP_CALL_DEFAULT" value="0">
+		<constant name="GROUP_CALL_DEFAULT" value="0" enum="CallGroupFlags">
 		</constant>
-		<constant name="GROUP_CALL_REVERSE" value="1">
+		<constant name="GROUP_CALL_REVERSE" value="1" enum="CallGroupFlags">
 		</constant>
-		<constant name="GROUP_CALL_REALTIME" value="2">
+		<constant name="GROUP_CALL_REALTIME" value="2" enum="CallGroupFlags">
 		</constant>
-		<constant name="GROUP_CALL_UNIQUE" value="4">
+		<constant name="GROUP_CALL_UNIQUE" value="4" enum="CallGroupFlags">
 		</constant>
-		<constant name="STRETCH_MODE_DISABLED" value="0">
+		<constant name="STRETCH_MODE_DISABLED" value="0" enum="StretchMode">
 		</constant>
-		<constant name="STRETCH_MODE_2D" value="1">
+		<constant name="STRETCH_MODE_2D" value="1" enum="StretchMode">
 		</constant>
-		<constant name="STRETCH_MODE_VIEWPORT" value="2">
+		<constant name="STRETCH_MODE_VIEWPORT" value="2" enum="StretchMode">
 		</constant>
-		<constant name="STRETCH_ASPECT_IGNORE" value="0">
+		<constant name="STRETCH_ASPECT_IGNORE" value="0" enum="StretchAspect">
 		</constant>
-		<constant name="STRETCH_ASPECT_KEEP" value="1">
+		<constant name="STRETCH_ASPECT_KEEP" value="1" enum="StretchAspect">
 		</constant>
-		<constant name="STRETCH_ASPECT_KEEP_WIDTH" value="2">
+		<constant name="STRETCH_ASPECT_KEEP_WIDTH" value="2" enum="StretchAspect">
 		</constant>
-		<constant name="STRETCH_ASPECT_KEEP_HEIGHT" value="3">
+		<constant name="STRETCH_ASPECT_KEEP_HEIGHT" value="3" enum="StretchAspect">
 		</constant>
-		<constant name="STRETCH_ASPECT_EXPAND" value="4">
+		<constant name="STRETCH_ASPECT_EXPAND" value="4" enum="StretchAspect">
 		</constant>
 	</constants>
 </class>

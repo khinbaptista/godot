@@ -225,6 +225,9 @@ private:
 
 	Align default_align;
 
+	ItemMeta *meta_hovering;
+	Variant current_meta;
+
 	void _invalidate_current_line(ItemFrame *p_frame);
 	void _validate_line_caches(ItemFrame *p_frame);
 
@@ -253,8 +256,8 @@ private:
 		Item *to;
 		int to_char;
 
-		bool active;
-		bool enabled;
+		bool active; // anything selected? i.e. from, to, etc. valid?
+		bool enabled; // allow selections?
 	};
 
 	Selection selection;

@@ -247,16 +247,16 @@ SpriteFrames::SpriteFrames() {
 	add_animation(SceneStringNames::get_singleton()->_default);
 }
 
-void AnimatedSprite::edit_set_pivot(const Point2 &p_pivot) {
+void AnimatedSprite::_edit_set_pivot(const Point2 &p_pivot) {
 
 	set_offset(p_pivot);
 }
 
-Point2 AnimatedSprite::edit_get_pivot() const {
+Point2 AnimatedSprite::_edit_get_pivot() const {
 
 	return get_offset();
 }
-bool AnimatedSprite::edit_has_pivot() const {
+bool AnimatedSprite::_edit_use_pivot() const {
 
 	return true;
 }
@@ -355,37 +355,20 @@ void AnimatedSprite::_notification(int p_what) {
 
 		case NOTIFICATION_DRAW: {
 
-			if (frames.is_null()) {
-				print_line("no draw no faemos");
+			if (frames.is_null())
 				return;
-			}
-
-			if (frame < 0) {
-				print_line("no draw frame <0");
+			if (frame < 0)
 				return;
-			}
-
-			if (!frames->has_animation(animation)) {
-				print_line("no draw no anim: " + String(animation));
+			if (!frames->has_animation(animation))
 				return;
-			}
 
 			Ref<Texture> texture = frames->get_frame(animation, frame);
-			if (texture.is_null()) {
-				print_line("no draw texture is null");
+			if (texture.is_null())
 				return;
-			}
 
 			Ref<Texture> normal = frames->get_normal_frame(animation, frame);
 
-			//print_line("DECIDED TO DRAW");
-
 			RID ci = get_canvas_item();
-
-			/*
-			texture->draw(ci,Point2());
-			break;
-			*/
 
 			Size2i s;
 			s = texture->get_size();
@@ -403,9 +386,7 @@ void AnimatedSprite::_notification(int p_what) {
 			if (vflip)
 				dst_rect.size.y = -dst_rect.size.y;
 
-			//texture->draw_rect(ci,dst_rect,false,modulate);
 			texture->draw_rect_region(ci, dst_rect, Rect2(Vector2(), texture->get_size()), Color(1, 1, 1), false, normal);
-			//VisualServer::get_singleton()->canvas_item_add_texture_rect_region(ci,dst_rect,texture->get_rid(),src_rect,modulate);
 
 		} break;
 	}
@@ -509,17 +490,17 @@ bool AnimatedSprite::is_flipped_v() const {
 	return vflip;
 }
 
-Rect2 AnimatedSprite::get_item_rect() const {
+Rect2 AnimatedSprite::_edit_get_rect() const {
 
 	if (!frames.is_valid() || !frames->has_animation(animation) || frame < 0 || frame >= frames->get_frame_count(animation)) {
-		return Node2D::get_item_rect();
+		return Node2D::_edit_get_rect();
 	}
 
 	Ref<Texture> t;
 	if (animation)
 		t = frames->get_frame(animation, frame);
 	if (t.is_null())
-		return Node2D::get_item_rect();
+		return Node2D::_edit_get_rect();
 	Size2i s = t->get_size();
 
 	Point2 ofs = offset;
@@ -568,7 +549,7 @@ void AnimatedSprite::stop() {
 
 bool AnimatedSprite::is_playing() const {
 
-	return is_processing();
+	return playing;
 }
 
 void AnimatedSprite::_reset_timeout() {

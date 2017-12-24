@@ -38,8 +38,6 @@
 extern "C" {
 #endif
 
-void _dictionary_api_anchor() {}
-
 void GDAPI godot_dictionary_new(godot_dictionary *r_dest) {
 	Dictionary *dest = (Dictionary *)r_dest;
 	memnew_placement(dest, Dictionary);
@@ -128,6 +126,12 @@ godot_variant GDAPI *godot_dictionary_operator_index(godot_dictionary *p_self, c
 	Dictionary *self = (Dictionary *)p_self;
 	const Variant *key = (const Variant *)p_key;
 	return (godot_variant *)&self->operator[](*key);
+}
+
+const godot_variant GDAPI *godot_dictionary_operator_index_const(const godot_dictionary *p_self, const godot_variant *p_key) {
+	const Dictionary *self = (const Dictionary *)p_self;
+	const Variant *key = (const Variant *)p_key;
+	return (const godot_variant *)&self->operator[](*key);
 }
 
 godot_variant GDAPI *godot_dictionary_next(const godot_dictionary *p_self, const godot_variant *p_key) {

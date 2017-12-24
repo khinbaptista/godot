@@ -58,6 +58,7 @@ static Error _parse_material_library(const String &p_path, Map<String, Ref<Spati
 
 			current_name = l.replace("newmtl", "").strip_edges();
 			current.instance();
+			current->set_name(current_name);
 			material_map[current_name] = current;
 		} else if (l.begins_with("Ka ")) {
 			//uv
@@ -413,6 +414,7 @@ Node *EditorOBJImporter::import_scene(const String &p_path, uint32_t p_flags, in
 	for (List<Ref<Mesh> >::Element *E = meshes.front(); E; E = E->next()) {
 
 		MeshInstance *mi = memnew(MeshInstance);
+		mi->set_mesh(E->get());
 		mi->set_name(E->get()->get_name());
 		scene->add_child(mi);
 		mi->set_owner(scene);
@@ -424,7 +426,7 @@ Node *EditorOBJImporter::import_scene(const String &p_path, uint32_t p_flags, in
 
 	return scene;
 }
-Ref<Animation> EditorOBJImporter::import_animation(const String &p_path, uint32_t p_flags) {
+Ref<Animation> EditorOBJImporter::import_animation(const String &p_path, uint32_t p_flags, int p_bake_fps) {
 
 	return Ref<Animation>();
 }

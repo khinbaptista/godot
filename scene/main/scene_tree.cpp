@@ -38,6 +38,7 @@
 #include "os/os.h"
 #include "print_string.h"
 #include "project_settings.h"
+#include "scene/resources/dynamic_font.h"
 #include "scene/resources/material.h"
 #include "scene/resources/mesh.h"
 #include "scene/resources/packed_scene.h"
@@ -127,7 +128,7 @@ void SceneTree::remove_from_group(const StringName &p_group, Node *p_node) {
 		group_map.erase(E);
 }
 
-void SceneTree::_flush_transform_notifications() {
+void SceneTree::flush_transform_notifications() {
 
 	SelfList<Node> *n = xform_change_list.first();
 	while (n) {
@@ -418,12 +419,12 @@ void SceneTree::input_event(const Ref<InputEvent> &p_event) {
 
 	if (!input_handled) {
 		call_group_flags(GROUP_CALL_REALTIME, "_viewports", "_vp_unhandled_input", ev); //special one for GUI, as controls use their own process check
-		input_handled = true;
 		_flush_ugc();
+		//		input_handled = true; - no reason to set this as handled
 		root_lock--;
 		//MessageQueue::get_singleton()->flush(); //flushing here causes UI and other places slowness
 	} else {
-		input_handled = true;
+		//		input_handled = true; - no reason to set this as handled
 		root_lock--;
 	}
 
@@ -448,7 +449,7 @@ bool SceneTree::iteration(float p_time) {
 
 	current_frame++;
 
-	_flush_transform_notifications();
+	flush_transform_notifications();
 
 	MainLoop::iteration(p_time);
 	physics_process_time = p_time;
@@ -459,7 +460,7 @@ bool SceneTree::iteration(float p_time) {
 	_notify_group_pause("physics_process", Node::NOTIFICATION_PHYSICS_PROCESS);
 	_flush_ugc();
 	MessageQueue::get_singleton()->flush(); //small little hack
-	_flush_transform_notifications();
+	flush_transform_notifications();
 	call_group_flags(GROUP_CALL_REALTIME, "_viewports", "update_worlds");
 	root_lock--;
 
@@ -487,13 +488,18 @@ bool SceneTree::idle(float p_time) {
 
 	MessageQueue::get_singleton()->flush(); //small little hack
 
-	_flush_transform_notifications();
+	flush_transform_notifications();
 
 	_notify_group_pause("idle_process_internal", Node::NOTIFICATION_INTERNAL_PROCESS);
 	_notify_group_pause("idle_process", Node::NOTIFICATION_PROCESS);
 
 	Size2 win_size = Size2(OS::get_singleton()->get_video_mode().width, OS::get_singleton()->get_video_mode().height);
 	if (win_size != last_screen_size) {
+
+		if (use_font_oversampling) {
+			DynamicFontAtSize::font_oversampling = OS::get_singleton()->get_window_size().width / root->get_visible_rect().size.width;
+			DynamicFont::update_oversampling();
+		}
 
 		last_screen_size = win_size;
 		_update_root_rect();
@@ -503,7 +509,7 @@ bool SceneTree::idle(float p_time) {
 
 	_flush_ugc();
 	MessageQueue::get_singleton()->flush(); //small little hack
-	_flush_transform_notifications(); //transforms after world update, to avoid unnecessary enter/exit notifications
+	flush_transform_notifications(); //transforms after world update, to avoid unnecessary enter/exit notifications
 	call_group_flags(GROUP_CALL_REALTIME, "_viewports", "update_worlds");
 
 	root_lock--;
@@ -794,6 +800,7 @@ Ref<ArrayMesh> SceneTree::get_debug_contact_mesh() {
 		Vector3(0, 0, 1)
 	};
 
+	/* clang-format off */
 	int diamond_faces[8 * 3] = {
 		0, 2, 4,
 		0, 3, 4,
@@ -804,6 +811,7 @@ Ref<ArrayMesh> SceneTree::get_debug_contact_mesh() {
 		1, 2, 5,
 		1, 3, 5,
 	};
+	/* clang-format on */
 
 	PoolVector<int> indices;
 	for (int i = 0; i < 8 * 3; i++)
@@ -1001,7 +1009,7 @@ Array SceneTree::_get_nodes_in_group(const StringName &p_group) {
 
 	ret.resize(nc);
 
-	Node **ptr = E->get().nodes.ptr();
+	Node **ptr = E->get().nodes.ptrw();
 	for (int i = 0; i < nc; i++) {
 
 		ret[i] = ptr[i];
@@ -1024,7 +1032,7 @@ void SceneTree::get_nodes_in_group(const StringName &p_group, List<Node *> *p_li
 	int nc = E->get().nodes.size();
 	if (nc == 0)
 		return;
-	Node **ptr = E->get().nodes.ptr();
+	Node **ptr = E->get().nodes.ptrw();
 	for (int i = 0; i < nc; i++) {
 
 		p_list->push_back(ptr[i]);
@@ -1997,9 +2005,9 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 
 				Variant::CallError ce;
 
-				node->call(name, argp.ptr(), argc, ce);
+				node->call(name, (const Variant **)argp.ptr(), argc, ce);
 				if (ce.error != Variant::CallError::CALL_OK) {
-					String error = Variant::get_call_error_text(node, name, argp.ptr(), argc, ce);
+					String error = Variant::get_call_error_text(node, name, (const Variant **)argp.ptr(), argc, ce);
 					error = "RPC - " + error;
 					ERR_PRINTS(error);
 				}
@@ -2193,6 +2201,9 @@ void SceneTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_connection_failed"), &SceneTree::_connection_failed);
 	ClassDB::bind_method(D_METHOD("_server_disconnected"), &SceneTree::_server_disconnected);
 
+	ClassDB::bind_method(D_METHOD("set_use_font_oversampling", "enable"), &SceneTree::set_use_font_oversampling);
+	ClassDB::bind_method(D_METHOD("is_using_font_oversampling"), &SceneTree::is_using_font_oversampling);
+
 	ADD_SIGNAL(MethodInfo("tree_changed"));
 	ADD_SIGNAL(MethodInfo("node_added", PropertyInfo(Variant::OBJECT, "node")));
 	ADD_SIGNAL(MethodInfo("node_removed", PropertyInfo(Variant::OBJECT, "node")));
@@ -2240,6 +2251,20 @@ void SceneTree::_call_idle_callbacks() {
 void SceneTree::add_idle_callback(IdleCallback p_callback) {
 	ERR_FAIL_COND(idle_callback_count >= MAX_IDLE_CALLBACKS);
 	idle_callbacks[idle_callback_count++] = p_callback;
+}
+
+void SceneTree::set_use_font_oversampling(bool p_oversampling) {
+
+	use_font_oversampling = p_oversampling;
+	if (use_font_oversampling) {
+		DynamicFontAtSize::font_oversampling = OS::get_singleton()->get_window_size().width / root->get_visible_rect().size.width;
+	} else {
+		DynamicFontAtSize::font_oversampling = 1.0;
+	}
+}
+
+bool SceneTree::is_using_font_oversampling() const {
+	return use_font_oversampling;
 }
 
 SceneTree::SceneTree() {
@@ -2325,7 +2350,7 @@ SceneTree::SceneTree() {
 					ProjectSettings::get_singleton()->set("rendering/environment/default_environment", "");
 				} else {
 					//file was erased, notify user.
-					ERR_PRINTS(RTR("Default Environment as specified in Project Setings (Rendering -> Viewport -> Default Environment) could not be loaded."));
+					ERR_PRINTS(RTR("Default Environment as specified in Project Setings (Rendering -> Environment -> Default Environment) could not be loaded."));
 				}
 			}
 		}
@@ -2378,6 +2403,8 @@ SceneTree::SceneTree() {
 	last_send_cache_id = 1;
 
 #endif
+
+	use_font_oversampling = false;
 }
 
 SceneTree::~SceneTree() {

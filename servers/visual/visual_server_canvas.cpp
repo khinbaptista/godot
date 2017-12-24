@@ -182,7 +182,7 @@ void VisualServerCanvas::render_canvas(Canvas *p_canvas, const Transform2D &p_tr
 	}
 
 	int l = p_canvas->child_items.size();
-	Canvas::ChildItem *ci = p_canvas->child_items.ptr();
+	Canvas::ChildItem *ci = p_canvas->child_items.ptrw();
 
 	bool has_mirror = false;
 	for (int i = 0; i < l; i++) {
@@ -416,6 +416,7 @@ void VisualServerCanvas::canvas_item_add_polyline(RID p_item, const Vector<Point
 	ERR_FAIL_COND(!pline);
 
 	pline->antialiased = p_antialiased;
+	pline->multiline = false;
 
 	if (p_width <= 1) {
 		pline->lines = p_points;
@@ -482,6 +483,30 @@ void VisualServerCanvas::canvas_item_add_polyline(RID p_item, const Vector<Point
 			prev_t = t;
 		}
 	}
+	canvas_item->rect_dirty = true;
+	canvas_item->commands.push_back(pline);
+}
+
+void VisualServerCanvas::canvas_item_add_multiline(RID p_item, const Vector<Point2> &p_points, const Vector<Color> &p_colors, float p_width, bool p_antialiased) {
+
+	ERR_FAIL_COND(p_points.size() < 2);
+	Item *canvas_item = canvas_item_owner.getornull(p_item);
+	ERR_FAIL_COND(!canvas_item);
+
+	Item::CommandPolyLine *pline = memnew(Item::CommandPolyLine);
+	ERR_FAIL_COND(!pline);
+
+	pline->antialiased = false; //todo
+	pline->multiline = true;
+
+	pline->lines = p_points;
+	pline->line_colors = p_colors;
+	if (pline->line_colors.size() == 0) {
+		pline->line_colors.push_back(Color(1, 1, 1, 1));
+	} else if (pline->line_colors.size() > 1 && pline->line_colors.size() != pline->lines.size()) {
+		pline->line_colors.resize(1);
+	}
+
 	canvas_item->rect_dirty = true;
 	canvas_item->commands.push_back(pline);
 }

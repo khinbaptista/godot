@@ -346,7 +346,7 @@ static String variant_type_to_managed_name(const String &p_var_type_name) {
 			Variant::TRANSFORM2D,
 			Variant::PLANE,
 			Variant::QUAT,
-			Variant::RECT3,
+			Variant::AABB,
 			Variant::BASIS,
 			Variant::TRANSFORM,
 			Variant::COLOR,
@@ -1332,7 +1332,7 @@ bool CSharpScript::_update_exports() {
 		while (top && top != native) {
 			const Vector<GDMonoField *> &fields = top->get_all_fields();
 
-			for (int i = 0; i < fields.size(); i++) {
+			for (int i = fields.size() - 1; i >= 0; i--) {
 				GDMonoField *field = fields[i];
 
 				if (field->is_static()) {
@@ -1382,7 +1382,7 @@ bool CSharpScript::_update_exports() {
 					PropertyInfo prop_info = PropertyInfo(type, name, hint, hint_string, PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_SCRIPT_VARIABLE);
 
 					member_info[cname] = prop_info;
-					exported_members_cache.push_back(prop_info);
+					exported_members_cache.push_front(prop_info);
 
 					if (tmp_object) {
 						exported_members_defval_cache[cname] = GDMonoMarshal::mono_object_to_variant(field->get_value(tmp_object));
@@ -1885,8 +1885,8 @@ StringName CSharpScript::get_script_name() const {
 	return name;
 }
 
-CSharpScript::CSharpScript()
-	: script_list(this) {
+CSharpScript::CSharpScript() :
+		script_list(this) {
 
 	_clear();
 

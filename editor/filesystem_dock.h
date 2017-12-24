@@ -70,6 +70,7 @@ private:
 		FILE_MOVE,
 		FILE_RENAME,
 		FILE_REMOVE,
+		FILE_DUPLICATE,
 		FILE_REIMPORT,
 		FILE_INFO,
 		FILE_NEW_FOLDER,
@@ -120,6 +121,8 @@ private:
 	EditorDirDialog *move_dialog;
 	ConfirmationDialog *rename_dialog;
 	LineEdit *rename_dialog_text;
+	ConfirmationDialog *duplicate_dialog;
+	LineEdit *duplicate_dialog_text;
 	ConfirmationDialog *make_dir_dialog;
 	LineEdit *make_dir_dialog_text;
 
@@ -128,12 +131,15 @@ private:
 		String path;
 		bool is_file;
 
-		FileOrFolder()
-			: path(""), is_file(false) {}
-		FileOrFolder(const String &p_path, bool p_is_file)
-			: path(p_path), is_file(p_is_file) {}
+		FileOrFolder() :
+				path(""),
+				is_file(false) {}
+		FileOrFolder(const String &p_path, bool p_is_file) :
+				path(p_path),
+				is_file(p_is_file) {}
 	};
 	FileOrFolder to_rename;
+	FileOrFolder to_duplicate;
 	Vector<FileOrFolder> to_move;
 
 	Vector<String> history;
@@ -147,6 +153,7 @@ private:
 	bool updating_tree;
 	Tree *tree; //directories
 	ItemList *files;
+	bool import_dock_needs_update;
 
 	bool _create_tree(TreeItem *p_parent, EditorFileSystemDirectory *p_dir, Vector<String> &uncollapsed_paths);
 	void _update_tree(bool keep_collapse_state);
@@ -161,6 +168,7 @@ private:
 
 	void _select_file(int p_idx);
 	void _file_multi_selected(int p_index, bool p_selected);
+	void _update_import_dock();
 
 	void _file_selected();
 	void _dir_selected();
@@ -168,10 +176,12 @@ private:
 	void _get_all_files_in_dir(EditorFileSystemDirectory *efsd, Vector<String> &files) const;
 	void _find_remaps(EditorFileSystemDirectory *efsd, const Map<String, String> &renames, Vector<String> &to_remaps) const;
 	void _try_move_item(const FileOrFolder &p_item, const String &p_new_path, Map<String, String> &p_renames) const;
+	void _try_duplicate_item(const FileOrFolder &p_item, const String &p_new_path) const;
 	void _update_dependencies_after_move(const Map<String, String> &p_renames) const;
 
 	void _make_dir_confirm();
 	void _rename_operation_confirm();
+	void _duplicate_operation_confirm();
 	void _move_operation_confirm(const String &p_to_path);
 
 	void _file_option(int p_option);
@@ -190,6 +200,7 @@ private:
 
 	void _dir_rmb_pressed(const Vector2 &p_pos);
 	void _files_list_rmb_select(int p_item, const Vector2 &p_pos);
+	void _rmb_pressed(const Vector2 &p_pos);
 
 	struct FileInfo {
 		String name;
@@ -209,6 +220,7 @@ private:
 	Variant get_drag_data_fw(const Point2 &p_point, Control *p_from);
 	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
 	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
+	String _get_drag_target_folder(const Point2 &p_point, Control *p_from) const;
 
 	void _preview_invalidated(const String &p_path);
 	void _thumbnail_done(const String &p_path, const Ref<Texture> &p_preview, const Variant &p_udata);

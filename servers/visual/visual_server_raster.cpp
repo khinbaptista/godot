@@ -92,7 +92,7 @@ void VisualServerRaster::request_frame_drawn_callback(Object *p_where, const Str
 	frame_drawn_callbacks.push_back(fdc);
 }
 
-void VisualServerRaster::draw() {
+void VisualServerRaster::draw(bool p_swap_buffers) {
 
 	changes = 0;
 
@@ -103,7 +103,7 @@ void VisualServerRaster::draw() {
 	VSG::viewport->draw_viewports();
 	VSG::scene->render_probes();
 	_draw_margins();
-	VSG::rasterizer->end_frame();
+	VSG::rasterizer->end_frame(p_swap_buffers);
 
 	while (frame_drawn_callbacks.front()) {
 
@@ -120,6 +120,8 @@ void VisualServerRaster::draw() {
 
 		frame_drawn_callbacks.pop_front();
 	}
+
+	emit_signal("frame_drawn_in_thread");
 }
 void VisualServerRaster::sync() {
 }
@@ -177,6 +179,10 @@ bool VisualServerRaster::has_os_feature(const String &p_feature) const {
 void VisualServerRaster::set_debug_generate_wireframes(bool p_generate) {
 
 	VSG::storage->set_debug_generate_wireframes(p_generate);
+}
+
+void VisualServerRaster::call_set_use_vsync(bool p_enable) {
+	OS::get_singleton()->_set_use_vsync(p_enable);
 }
 
 VisualServerRaster::VisualServerRaster() {

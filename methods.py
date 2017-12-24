@@ -1155,24 +1155,28 @@ def build_vulkan_headers(target, source, env):
 	for x in source:
 		build_vulkan_header(str(x), include="drivers/vulkan/shader_vulkan.h", class_suffix="VK", output_attribs=True)
 
-def update_version():
+def add_module_version_string(self,s):
+    self.module_version_string += "." + s
 
-    rev = "custom_build"
+def update_version(module_version_string=""):
 
-    if (os.getenv("BUILD_REVISION") != None):
-        rev = os.getenv("BUILD_REVISION")
-        print("Using custom revision: " + rev)
+    build_name = "custom_build"
+    if (os.getenv("BUILD_NAME") != None):
+        build_name = os.getenv("BUILD_NAME")
+        print("Using custom build name: " + build_name)
+
     import version
 
     f = open("core/version_generated.gen.h", "w")
-    f.write("#define VERSION_SHORT_NAME " + str(version.short_name) + "\n")
-    f.write("#define VERSION_NAME " + str(version.name) + "\n")
+    f.write("#define VERSION_SHORT_NAME \"" + str(version.short_name) + "\"\n")
+    f.write("#define VERSION_NAME \"" + str(version.name) + "\"\n")
     f.write("#define VERSION_MAJOR " + str(version.major) + "\n")
     f.write("#define VERSION_MINOR " + str(version.minor) + "\n")
     if (hasattr(version, 'patch')):
         f.write("#define VERSION_PATCH " + str(version.patch) + "\n")
-    f.write("#define VERSION_REVISION " + str(rev) + "\n")
-    f.write("#define VERSION_STATUS " + str(version.status) + "\n")
+    f.write("#define VERSION_STATUS \"" + str(version.status) + "\"\n")
+    f.write("#define VERSION_BUILD \"" + str(build_name) + "\"\n")
+    f.write("#define VERSION_MODULE_CONFIG \"" + str(version.module_config) + module_version_string + "\"\n")
     import datetime
     f.write("#define VERSION_YEAR " + str(datetime.datetime.now().year) + "\n")
     f.close()
@@ -1295,21 +1299,15 @@ def detect_modules():
 // modules.cpp - THIS FILE IS GENERATED, DO NOT EDIT!!!!!!!
 #include "register_module_types.h"
 
-
 """ + includes_cpp + """
 
 void register_module_types() {
-
 """ + register_cpp + """
-
 }
 
 void unregister_module_types() {
-
 """ + unregister_cpp + """
-
 }
-
 """
 
     f = open("modules/register_module_types.gen.cpp", "w")
@@ -1503,26 +1501,27 @@ def split_lib(self, libname):
         base = string.join(fname.split("/")[:2], "/")
         if base != cur_base and len(list) > max_src:
             if num > 0:
-                lib = env.Library(libname + str(num), list)
+                lib = env.add_library(libname + str(num), list)
                 lib_list.append(lib)
                 list = []
             num = num + 1
         cur_base = base
         list.append(f)
 
-    lib = env.Library(libname + str(num), list)
+    lib = env.add_library(libname + str(num), list)
     lib_list.append(lib)
 
     if len(lib_list) > 0:
         import os, sys
         if os.name == 'posix' and sys.platform == 'msys':
             env.Replace(ARFLAGS=['rcsT'])
-            lib = env.Library(libname + "_collated", lib_list)
+            lib = env.add_library(libname + "_collated", lib_list)
             lib_list = [lib]
 
     lib_base = []
     env.add_source_files(lib_base, "*.cpp")
-    lib_list.insert(0, env.Library(libname, lib_base))
+    lib = env.add_library(libname, lib_base)
+    lib_list.insert(0, lib)
 
     env.Prepend(LIBS=lib_list)
 
@@ -1694,6 +1693,17 @@ def find_visual_c_batch_file(env):
     (host_platform, target_platform,req_target_platform) = get_host_target(env)
     return find_batch_file(env, version, host_platform, target_platform)[0]
 
+def generate_cpp_hint_file(filename):
+    import os.path
+    if os.path.isfile(filename):
+        # Don't overwrite an existing hint file since the user may have customized it.
+        pass
+    else:
+        try:
+            fd = open(filename, "w")
+            fd.write("#define GDCLASS(m_class, m_inherits)\n")
+        except IOError:
+            print("Could not write cpp.hint file.")
 
 def generate_vs_project(env, num_jobs):
     batch_file = find_visual_c_batch_file(env)
@@ -1720,9 +1730,9 @@ def generate_vs_project(env, num_jobs):
         # to double quote off the directory. However, the path ends
         # in a backslash, so we need to remove this, lest it escape the
         # last double quote off, confusing MSBuild
-        env['MSVSBUILDCOM'] = build_commandline('scons --directory="$(ProjectDir.TrimEnd(\'\\\'))" platform=windows target=$(Configuration) tools=!tools! -j' + str(num_jobs))
-        env['MSVSREBUILDCOM'] = build_commandline('scons --directory="$(ProjectDir.TrimEnd(\'\\\'))" platform=windows target=$(Configuration) tools=!tools! vsproj=yes -j' + str(num_jobs))
-        env['MSVSCLEANCOM'] = build_commandline('scons --directory="$(ProjectDir.TrimEnd(\'\\\'))" --clean platform=windows target=$(Configuration) tools=!tools! -j' + str(num_jobs))
+        env['MSVSBUILDCOM'] = build_commandline('scons --directory="$(ProjectDir.TrimEnd(\'\\\'))" platform=windows progress=no target=$(Configuration) tools=!tools! -j' + str(num_jobs))
+        env['MSVSREBUILDCOM'] = build_commandline('scons --directory="$(ProjectDir.TrimEnd(\'\\\'))" platform=windows progress=no target=$(Configuration) tools=!tools! vsproj=yes -j' + str(num_jobs))
+        env['MSVSCLEANCOM'] = build_commandline('scons --directory="$(ProjectDir.TrimEnd(\'\\\'))" --clean platform=windows progress=no target=$(Configuration) tools=!tools! -j' + str(num_jobs))
 
         # This version information (Win32, x64, Debug, Release, Release_Debug seems to be
         # required for Visual Studio to understand that it needs to generate an NMAKE
@@ -1748,4 +1758,19 @@ def generate_vs_project(env, num_jobs):
 def precious_program(env, program, sources, **args):
     program = env.ProgramOriginal(program, sources, **args)
     env.Precious(program)
+    return program
+
+def add_shared_library(env, name, sources, **args):
+    library = env.SharedLibrary(name, sources, **args)
+    env.NoCache(library)
+    return library
+
+def add_library(env, name, sources, **args):
+    library = env.Library(name, sources, **args)
+    env.NoCache(library)
+    return library
+
+def add_program(env, name, sources, **args):
+    program = env.Program(name, sources, **args)
+    env.NoCache(program)
     return program

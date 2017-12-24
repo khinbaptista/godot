@@ -215,6 +215,13 @@ bool ShaderMaterial::_can_do_next_pass() const {
 	return shader.is_valid() && shader->get_mode() == Shader::MODE_SPATIAL;
 }
 
+Shader::Mode ShaderMaterial::get_shader_mode() const {
+	if (shader.is_valid())
+		return shader->get_mode();
+	else
+		return Shader::MODE_SPATIAL;
+}
+
 ShaderMaterial::ShaderMaterial() {
 }
 
@@ -638,7 +645,7 @@ void SpatialMaterial::_update_shader() {
 		code += "\tvec2 base_uv = UV;\n";
 	}
 
-	if ((features[FEATURE_DETAIL] && detail_uv == DETAIL_UV_2) || (features[FEATURE_AMBIENT_OCCLUSION] && flags[FLAG_AO_ON_UV2])) {
+	if ((features[FEATURE_DETAIL] && detail_uv == DETAIL_UV_2) || (features[FEATURE_AMBIENT_OCCLUSION] && flags[FLAG_AO_ON_UV2]) || (features[FEATURE_EMISSION] && flags[FLAG_EMISSION_ON_UV2])) {
 		code += "\tvec2 base_uv2 = UV2;\n";
 	}
 
@@ -653,16 +660,16 @@ void SpatialMaterial::_update_shader() {
 			code += "\t\tvec2 P = view_dir.xy * depth_scale;\n";
 			code += "\t\tvec2 delta = P / num_layers;\n";
 			code += "\t\tvec2  ofs = base_uv;\n";
-			code += "\t\tfloat depth = texture(texture_depth, ofs).r;\n";
+			code += "\t\tfloat depth = textureLod(texture_depth, ofs,0.0).r;\n";
 			code += "\t\tfloat current_depth = 0.0;\n";
 			code += "\t\twhile(current_depth < depth) {\n";
 			code += "\t\t\tofs -= delta;\n";
-			code += "\t\t\tdepth = texture(texture_depth, ofs).r;\n";
+			code += "\t\t\tdepth = textureLod(texture_depth, ofs,0.0).r;\n";
 			code += "\t\t\tcurrent_depth += layer_depth;\n";
 			code += "\t\t}\n";
 			code += "\t\tvec2 prev_ofs = ofs + delta;\n";
 			code += "\t\tfloat after_depth  = depth - current_depth;\n";
-			code += "\t\tfloat before_depth = texture(texture_depth, prev_ofs).r - current_depth + layer_depth;\n";
+			code += "\t\tfloat before_depth = textureLod(texture_depth, prev_ofs, 0.0).r - current_depth + layer_depth;\n";
 			code += "\t\tfloat weight = after_depth / (after_depth - before_depth);\n";
 			code += "\t\tofs = mix(ofs,prev_ofs,weight);\n";
 
@@ -687,6 +694,10 @@ void SpatialMaterial::_update_shader() {
 		} else {
 			code += "\tvec4 albedo_tex = texture(texture_albedo,base_uv);\n";
 		}
+	}
+
+	if (flags[FLAG_ALBEDO_TEXTURE_FORCE_SRGB]) {
+		code += "\talbedo_tex.rgb = mix(pow((albedo_tex.rgb + vec3(0.055)) * (1.0 / (1.0 + 0.055)),vec3(2.4)),albedo_tex.rgb.rgb * (1.0 / 12.92),lessThan(albedo_tex.rgb,vec3(0.04045)));\n";
 	}
 
 	if (flags[FLAG_ALBEDO_FROM_VERTEX_COLOR]) {
@@ -718,12 +729,25 @@ void SpatialMaterial::_update_shader() {
 	}
 
 	if (features[FEATURE_EMISSION]) {
-		if (flags[FLAG_UV1_USE_TRIPLANAR]) {
-			code += "\tvec3 emission_tex = triplanar_texture(texture_emission,uv1_power_normal,uv1_triplanar_pos).rgb;\n";
+		if (flags[FLAG_EMISSION_ON_UV2]) {
+			if (flags[FLAG_UV2_USE_TRIPLANAR]) {
+				code += "\tvec3 emission_tex = triplanar_texture(texture_emission,uv2_power_normal,uv2_triplanar_pos).rgb;\n";
+			} else {
+				code += "\tvec3 emission_tex = texture(texture_emission,base_uv2).rgb;\n";
+			}
 		} else {
-			code += "\tvec3 emission_tex = texture(texture_emission,base_uv).rgb;\n";
+			if (flags[FLAG_UV1_USE_TRIPLANAR]) {
+				code += "\tvec3 emission_tex = triplanar_texture(texture_emission,uv1_power_normal,uv1_triplanar_pos).rgb;\n";
+			} else {
+				code += "\tvec3 emission_tex = texture(texture_emission,base_uv).rgb;\n";
+			}
 		}
-		code += "\tEMISSION = (emission.rgb+emission_tex)*emission_energy;\n";
+
+		if (emission_op == EMISSION_OP_ADD) {
+			code += "\tEMISSION = (emission.rgb+emission_tex)*emission_energy;\n";
+		} else {
+			code += "\tEMISSION = (emission.rgb*emission_tex)*emission_energy;\n";
+		}
 	}
 
 	if (features[FEATURE_REFRACTION] && !flags[FLAG_UV1_USE_TRIPLANAR]) { //refraction not supported with triplanar
@@ -1635,10 +1659,28 @@ float SpatialMaterial::get_distance_fade_min_distance() const {
 	return distance_fade_min_distance;
 }
 
+void SpatialMaterial::set_emission_operator(EmissionOperator p_op) {
+
+	if (emission_op == p_op)
+		return;
+	emission_op = p_op;
+	_queue_shader_change();
+}
+
+SpatialMaterial::EmissionOperator SpatialMaterial::get_emission_operator() const {
+
+	return emission_op;
+}
+
 RID SpatialMaterial::get_shader_rid() const {
 
 	ERR_FAIL_COND_V(!shader_map.has(current_key), RID());
 	return shader_map[current_key].shader;
+}
+
+Shader::Mode SpatialMaterial::get_shader_mode() const {
+
+	return Shader::MODE_SPATIAL;
 }
 
 void SpatialMaterial::_bind_methods() {
@@ -1769,6 +1811,9 @@ void SpatialMaterial::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_grow", "amount"), &SpatialMaterial::set_grow);
 	ClassDB::bind_method(D_METHOD("get_grow"), &SpatialMaterial::get_grow);
 
+	ClassDB::bind_method(D_METHOD("set_emission_operator", "operator"), &SpatialMaterial::set_emission_operator);
+	ClassDB::bind_method(D_METHOD("get_emission_operator"), &SpatialMaterial::get_emission_operator);
+
 	ClassDB::bind_method(D_METHOD("set_ao_light_affect", "amount"), &SpatialMaterial::set_ao_light_affect);
 	ClassDB::bind_method(D_METHOD("get_ao_light_affect"), &SpatialMaterial::get_ao_light_affect);
 
@@ -1813,6 +1858,7 @@ void SpatialMaterial::_bind_methods() {
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_use_point_size"), "set_flag", "get_flag", FLAG_USE_POINT_SIZE);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_world_triplanar"), "set_flag", "get_flag", FLAG_TRIPLANAR_USE_WORLD);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_fixed_size"), "set_flag", "get_flag", FLAG_FIXED_SIZE);
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_albedo_tex_force_srgb"), "set_flag", "get_flag", FLAG_ALBEDO_TEXTURE_FORCE_SRGB);
 	ADD_GROUP("Vertex Color", "vertex_color");
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "vertex_color_use_as_albedo"), "set_flag", "get_flag", FLAG_ALBEDO_FROM_VERTEX_COLOR);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "vertex_color_is_srgb"), "set_flag", "get_flag", FLAG_SRGB_VERTEX_COLOR);
@@ -1854,6 +1900,8 @@ void SpatialMaterial::_bind_methods() {
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "emission_enabled"), "set_feature", "get_feature", FEATURE_EMISSION);
 	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "emission", PROPERTY_HINT_COLOR_NO_ALPHA), "set_emission", "get_emission");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "emission_energy", PROPERTY_HINT_RANGE, "0,16,0.01"), "set_emission_energy", "get_emission_energy");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "emission_operator", PROPERTY_HINT_ENUM, "Add,Multiply"), "set_emission_operator", "get_emission_operator");
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "emission_on_uv2"), "set_flag", "get_flag", FLAG_EMISSION_ON_UV2);
 	ADD_PROPERTYI(PropertyInfo(Variant::OBJECT, "emission_texture", PROPERTY_HINT_RESOURCE_TYPE, "Texture"), "set_texture", "get_texture", TEXTURE_EMISSION);
 
 	ADD_GROUP("NormalMap", "normal_");
@@ -1996,8 +2044,10 @@ void SpatialMaterial::_bind_methods() {
 	BIND_ENUM_CONSTANT(FLAG_UV1_USE_TRIPLANAR);
 	BIND_ENUM_CONSTANT(FLAG_UV2_USE_TRIPLANAR);
 	BIND_ENUM_CONSTANT(FLAG_AO_ON_UV2);
+	BIND_ENUM_CONSTANT(FLAG_EMISSION_ON_UV2);
 	BIND_ENUM_CONSTANT(FLAG_USE_ALPHA_SCISSOR);
 	BIND_ENUM_CONSTANT(FLAG_TRIPLANAR_USE_WORLD);
+	BIND_ENUM_CONSTANT(FLAG_ALBEDO_TEXTURE_FORCE_SRGB);
 	BIND_ENUM_CONSTANT(FLAG_MAX);
 
 	BIND_ENUM_CONSTANT(DIFFUSE_BURLEY);
@@ -2022,10 +2072,13 @@ void SpatialMaterial::_bind_methods() {
 	BIND_ENUM_CONSTANT(TEXTURE_CHANNEL_BLUE);
 	BIND_ENUM_CONSTANT(TEXTURE_CHANNEL_ALPHA);
 	BIND_ENUM_CONSTANT(TEXTURE_CHANNEL_GRAYSCALE);
+
+	BIND_ENUM_CONSTANT(EMISSION_OP_ADD);
+	BIND_ENUM_CONSTANT(EMISSION_OP_MULTIPLY);
 }
 
-SpatialMaterial::SpatialMaterial()
-	: element(this) {
+SpatialMaterial::SpatialMaterial() :
+		element(this) {
 
 	//initialize to right values
 	set_albedo(Color(1.0, 1.0, 1.0, 1.0));
@@ -2057,6 +2110,7 @@ SpatialMaterial::SpatialMaterial()
 	set_particles_anim_v_frames(1);
 	set_particles_anim_loop(false);
 	set_alpha_scissor_threshold(0.98);
+	emission_op = EMISSION_OP_ADD;
 
 	proximity_fade_enabled = false;
 	distance_fade_enabled = false;

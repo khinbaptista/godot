@@ -386,7 +386,7 @@ int NetworkedMultiplayerENet::get_available_packet_count() const {
 
 	return incoming_packets.size();
 }
-Error NetworkedMultiplayerENet::get_packet(const uint8_t **r_buffer, int &r_buffer_size) const {
+Error NetworkedMultiplayerENet::get_packet(const uint8_t **r_buffer, int &r_buffer_size) {
 
 	ERR_FAIL_COND_V(incoming_packets.size() == 0, ERR_UNAVAILABLE);
 
@@ -480,7 +480,7 @@ int NetworkedMultiplayerENet::get_max_packet_size() const {
 	return 1 << 24; //anything is good
 }
 
-void NetworkedMultiplayerENet::_pop_current_packet() const {
+void NetworkedMultiplayerENet::_pop_current_packet() {
 
 	if (current_packet.packet) {
 		enet_packet_destroy(current_packet.packet);
@@ -505,7 +505,7 @@ uint32_t NetworkedMultiplayerENet::_gen_unique_id() const {
 		hash = hash_djb2_one_32(
 				(uint32_t)OS::get_singleton()->get_unix_time(), hash);
 		hash = hash_djb2_one_32(
-				(uint32_t)OS::get_singleton()->get_data_dir().hash64(), hash);
+				(uint32_t)OS::get_singleton()->get_user_data_dir().hash64(), hash);
 		/*
 		hash = hash_djb2_one_32(
 					(uint32_t)OS::get_singleton()->get_unique_id().hash64(), hash );
@@ -585,7 +585,7 @@ size_t NetworkedMultiplayerENet::enet_compress(void *context, const ENetBuffer *
 	if (enet->dst_compressor_mem.size() < req_size) {
 		enet->dst_compressor_mem.resize(req_size);
 	}
-	int ret = Compression::compress(enet->dst_compressor_mem.ptr(), enet->src_compressor_mem.ptr(), ofs, mode);
+	int ret = Compression::compress(enet->dst_compressor_mem.ptrw(), enet->src_compressor_mem.ptr(), ofs, mode);
 
 	if (ret < 0)
 		return 0;

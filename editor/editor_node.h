@@ -30,6 +30,7 @@
 #ifndef EDITOR_NODE_H
 #define EDITOR_NODE_H
 
+#include "core/print_string.h"
 #include "editor/connections_dialog.h"
 #include "editor/create_dialog.h"
 #include "editor/editor_about.h"
@@ -151,6 +152,9 @@ private:
 		OBJECT_UNIQUE_RESOURCES,
 		OBJECT_REQUEST_HELP,
 		RUN_PLAY,
+
+		COLLAPSE_ALL,
+		EXPAND_ALL,
 
 		RUN_STOP,
 		RUN_PLAY_SCENE,
@@ -294,10 +298,10 @@ private:
 	ProjectSettingsEditor *project_settings;
 	EditorFileDialog *file;
 	ExportTemplateManager *export_template_manager;
-	FileDialog *file_templates;
-	FileDialog *file_export;
-	FileDialog *file_export_lib;
-	FileDialog *file_script;
+	EditorFileDialog *file_templates;
+	EditorFileDialog *file_export;
+	EditorFileDialog *file_export_lib;
+	EditorFileDialog *file_script;
 	CheckButton *file_export_lib_merge;
 	LineEdit *file_export_password;
 	String current_path;
@@ -343,7 +347,10 @@ private:
 	int dock_popup_selected;
 	Timer *dock_drag_timer;
 	bool docks_visible;
+
+	HBoxContainer *tabbar_container;
 	ToolButton *distraction_free;
+	ToolButton *scene_tab_add;
 
 	bool scene_distraction;
 	bool script_distraction;
@@ -374,6 +381,7 @@ private:
 	Vector<EditorPlugin *> editor_plugins;
 	EditorPlugin *editor_plugin_screen;
 	EditorPluginList *editor_plugins_over;
+	EditorPluginList *editor_plugins_force_over;
 	EditorPluginList *editor_plugins_force_input_forwarding;
 
 	EditorHistory editor_history;
@@ -421,6 +429,9 @@ private:
 
 	void _property_editor_forward();
 	void _property_editor_back();
+
+	void _menu_collapseall();
+	void _menu_expandall();
 
 	void _select_history(int p_idx);
 	void _prepare_history();
@@ -503,7 +514,7 @@ private:
 	void _mark_unsaved_scenes();
 
 	void _find_node_types(Node *p_node, int &count_2d, int &count_3d);
-	void _save_scene_with_preview(String p_file);
+	void _save_scene_with_preview(String p_file, int p_idx = -1);
 
 	Map<String, Set<String> > dependency_errors;
 
@@ -554,6 +565,10 @@ private:
 	void _save_docks_to_config(Ref<ConfigFile> p_layout, const String &p_section);
 	void _load_docks_from_config(Ref<ConfigFile> p_layout, const String &p_section);
 	void _update_dock_slots_visibility();
+
+	bool restoring_scenes;
+	void _save_open_scenes_to_config(Ref<ConfigFile> p_layout, const String &p_section);
+	void _load_open_scenes_from_config(Ref<ConfigFile> p_layout, const String &p_section);
 
 	void _update_layouts_menu();
 	void _layout_menu_option(int p_id);
@@ -610,6 +625,9 @@ private:
 
 	Vector<Ref<EditorResourceConversionPlugin> > resource_conversion_plugins;
 
+	PrintHandlerList print_handler;
+	static void _print_handler(void *p_this, const String &p_string, bool p_error);
+
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
@@ -629,6 +647,7 @@ public:
 
 	EditorPlugin *get_editor_plugin_screen() { return editor_plugin_screen; }
 	EditorPluginList *get_editor_plugins_over() { return editor_plugins_over; }
+	EditorPluginList *get_editor_plugins_force_over() { return editor_plugins_force_over; }
 	EditorPluginList *get_editor_plugins_force_input_forwarding() { return editor_plugins_force_input_forwarding; }
 	PropertyEditor *get_property_editor() { return property_editor; }
 	VBoxContainer *get_property_editor_vb() { return prop_editor_vb; }
@@ -726,8 +745,8 @@ public:
 
 	static void add_io_error(const String &p_error);
 
-	static void progress_add_task(const String &p_task, const String &p_label, int p_steps);
-	static void progress_task_step(const String &p_task, const String &p_state, int p_step = -1, bool p_force_refresh = true);
+	static void progress_add_task(const String &p_task, const String &p_label, int p_steps, bool p_can_cancel = false);
+	static bool progress_task_step(const String &p_task, const String &p_state, int p_step = -1, bool p_force_refresh = true);
 	static void progress_end_task(const String &p_task);
 
 	static void progress_add_task_bg(const String &p_task, const String &p_label, int p_steps);
@@ -765,8 +784,7 @@ public:
 	void remove_bottom_panel_item(Control *p_item);
 
 	Variant drag_resource(const Ref<Resource> &p_res, Control *p_from);
-	Variant drag_files(const Vector<String> &p_files, Control *p_from);
-	Variant drag_files_and_dirs(const Vector<String> &p_files, Control *p_from);
+	Variant drag_files_and_dirs(const Vector<String> &p_paths, Control *p_from);
 
 	void add_tool_menu_item(const String &p_name, Object *p_handler, const String &p_callback, const Variant &p_ud = Variant());
 	void add_tool_submenu_item(const String &p_name, PopupMenu *p_submenu);
@@ -789,9 +807,9 @@ public:
 struct EditorProgress {
 
 	String task;
-	void step(const String &p_state, int p_step = -1, bool p_force_refresh = true) { EditorNode::progress_task_step(task, p_state, p_step, p_force_refresh); }
-	EditorProgress(const String &p_task, const String &p_label, int p_amount) {
-		EditorNode::progress_add_task(p_task, p_label, p_amount);
+	bool step(const String &p_state, int p_step = -1, bool p_force_refresh = true) { return EditorNode::progress_task_step(task, p_state, p_step, p_force_refresh); }
+	EditorProgress(const String &p_task, const String &p_label, int p_amount, bool p_can_cancel = false) {
+		EditorNode::progress_add_task(p_task, p_label, p_amount, p_can_cancel);
 		task = p_task;
 	}
 	~EditorProgress() { EditorNode::progress_end_task(task); }
@@ -814,7 +832,8 @@ public:
 	void edit(Object *p_object);
 	bool forward_gui_input(const Ref<InputEvent> &p_event);
 	bool forward_spatial_gui_input(Camera *p_camera, const Ref<InputEvent> &p_event, bool serve_when_force_input_enabled);
-	void forward_draw_over_canvas(Control *p_canvas);
+	void forward_draw_over_viewport(Control *p_overlay);
+	void forward_force_draw_over_viewport(Control *p_overlay);
 	void add_plugin(EditorPlugin *p_plugin);
 	void clear();
 	bool empty();

@@ -44,15 +44,15 @@
 #include "main/input_default.h"
 #include "power_x11.h"
 #include "servers/audio_server.h"
-#include "servers/physics_2d/physics_2d_server_sw.h"
-#include "servers/physics_2d/physics_2d_server_wrap_mt.h"
-#include "servers/physics_server.h"
 #include "servers/visual/rasterizer.h"
 
 #include <X11/Xcursor/Xcursor.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/keysym.h>
+#ifdef TOUCH_ENABLED
+#include <X11/extensions/XInput2.h>
+#endif
 
 // Hints for X11 fullscreen
 typedef struct {
@@ -125,11 +125,17 @@ class OS_X11 : public OS_Unix {
 	Point2i last_click_pos;
 	uint64_t last_click_ms;
 	uint32_t last_button_state;
+#ifdef TOUCH_ENABLED
+	struct {
+		int opcode;
+		Vector<int> devices;
+		XIEventMask event_mask;
+		Map<int, Vector2> state;
+	} touch;
+#endif
 
-	PhysicsServer *physics_server;
 	unsigned int get_mouse_button_state(unsigned int p_x11_state);
 	void get_key_modifier_state(unsigned int p_x11_state, Ref<InputEventWithModifiers> state);
-	Physics2DServer *physics_2d_server;
 
 	MouseMode mouse_mode;
 	Point2i center;
@@ -187,7 +193,6 @@ class OS_X11 : public OS_Unix {
 protected:
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
-	virtual VideoMode get_default_video_mode() const;
 
 	virtual int get_audio_driver_count() const;
 	virtual const char *get_audio_driver_name(int p_driver) const;
@@ -197,6 +202,8 @@ protected:
 	virtual void finalize();
 
 	virtual void set_main_loop(MainLoop *p_main_loop);
+
+	void _window_changed(XEvent *xevent);
 
 public:
 	virtual String get_name();
@@ -223,6 +230,10 @@ public:
 	virtual void release_rendering_thread();
 	virtual void make_rendering_thread();
 	virtual void swap_buffers();
+
+	virtual String get_config_path() const;
+	virtual String get_data_path() const;
+	virtual String get_cache_path() const;
 
 	virtual String get_system_dir(SystemDir p_dir) const;
 
@@ -252,7 +263,7 @@ public:
 	virtual bool is_window_maximized() const;
 	virtual void request_attention();
 
-	virtual void set_borderless_window(int p_borderless);
+	virtual void set_borderless_window(bool p_borderless);
 	virtual bool get_borderless_window();
 	virtual void set_ime_position(const Point2 &p_pos);
 
@@ -264,8 +275,8 @@ public:
 
 	virtual void set_context(int p_context);
 
-	virtual void set_use_vsync(bool p_enable);
-	virtual bool is_vsync_enabled() const;
+	virtual void _set_use_vsync(bool p_enable);
+	//virtual bool is_vsync_enabled() const;
 
 	virtual OS::PowerState get_power_state();
 	virtual int get_power_seconds_left();
@@ -273,6 +284,7 @@ public:
 
 	virtual bool _check_internal_feature_support(const String &p_feature);
 
+	virtual void force_process_input();
 	void run();
 
 	void disable_crash_handler();

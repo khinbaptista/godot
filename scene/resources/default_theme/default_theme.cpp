@@ -257,6 +257,8 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 
 	// LinkButton
 
+	theme->set_stylebox("focus", "LinkButton", focus);
+
 	theme->set_font("font", "LinkButton", default_font);
 
 	theme->set_color("font_color", "LinkButton", control_font_color);
@@ -310,7 +312,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_stylebox("pressed", "OptionButton", sb_optbutton_pressed);
 	theme->set_stylebox("hover", "OptionButton", sb_optbutton_hover);
 	theme->set_stylebox("disabled", "OptionButton", sb_optbutton_disabled);
-	theme->set_stylebox("focus", "OptionButton", sb_button_focus);
+	theme->set_stylebox("focus", "OptionButton", sb_optbutton_focus);
 
 	theme->set_icon("arrow", "OptionButton", make_icon(option_arrow_png));
 
@@ -328,8 +330,8 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 
 	theme->set_stylebox("normal", "MenuButton", sb_button_normal);
 	theme->set_stylebox("pressed", "MenuButton", sb_button_pressed);
-	theme->set_stylebox("hover", "MenuButton", sb_button_pressed);
-	theme->set_stylebox("disabled", "MenuButton", make_empty_stylebox(0, 0, 0, 0));
+	theme->set_stylebox("hover", "MenuButton", sb_button_hover);
+	theme->set_stylebox("disabled", "MenuButton", sb_button_disabled);
 	theme->set_stylebox("focus", "MenuButton", sb_button_focus);
 
 	theme->set_font("font", "MenuButton", default_font);
@@ -348,15 +350,15 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	// CheckBox
 
 	Ref<StyleBox> cbx_empty = memnew(StyleBoxEmpty);
-	cbx_empty->set_default_margin(MARGIN_LEFT, 22 * scale);
+	cbx_empty->set_default_margin(MARGIN_LEFT, 4 * scale);
 	cbx_empty->set_default_margin(MARGIN_RIGHT, 4 * scale);
 	cbx_empty->set_default_margin(MARGIN_TOP, 4 * scale);
-	cbx_empty->set_default_margin(MARGIN_BOTTOM, 5 * scale);
+	cbx_empty->set_default_margin(MARGIN_BOTTOM, 4 * scale);
 	Ref<StyleBox> cbx_focus = focus;
 	cbx_focus->set_default_margin(MARGIN_LEFT, 4 * scale);
-	cbx_focus->set_default_margin(MARGIN_RIGHT, 22 * scale);
+	cbx_focus->set_default_margin(MARGIN_RIGHT, 4 * scale);
 	cbx_focus->set_default_margin(MARGIN_TOP, 4 * scale);
-	cbx_focus->set_default_margin(MARGIN_BOTTOM, 5 * scale);
+	cbx_focus->set_default_margin(MARGIN_BOTTOM, 4 * scale);
 
 	theme->set_stylebox("normal", "CheckBox", cbx_empty);
 	theme->set_stylebox("pressed", "CheckBox", cbx_empty);
@@ -383,7 +385,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 
 	Ref<StyleBox> cb_empty = memnew(StyleBoxEmpty);
 	cb_empty->set_default_margin(MARGIN_LEFT, 6 * scale);
-	cb_empty->set_default_margin(MARGIN_RIGHT, 70 * scale);
+	cb_empty->set_default_margin(MARGIN_RIGHT, 6 * scale);
 	cb_empty->set_default_margin(MARGIN_TOP, 4 * scale);
 	cb_empty->set_default_margin(MARGIN_BOTTOM, 4 * scale);
 
@@ -448,6 +450,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 
 	theme->set_stylebox("normal", "TextEdit", make_stylebox(tree_bg_png, 3, 3, 3, 3));
 	theme->set_stylebox("focus", "TextEdit", focus);
+	theme->set_stylebox("read_only", "TextEdit", make_stylebox(tree_bg_disabled_png, 4, 4, 4, 4));
 	theme->set_stylebox("completion", "TextEdit", make_stylebox(tree_bg_png, 3, 3, 3, 3));
 
 	theme->set_icon("tab", "TextEdit", make_icon(tab_png));
@@ -465,6 +468,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("selection_color", "TextEdit", font_color_selection);
 	theme->set_color("mark_color", "TextEdit", Color(1.0, 0.4, 0.4, 0.4));
 	theme->set_color("breakpoint_color", "TextEdit", Color(0.8, 0.8, 0.4, 0.2));
+	theme->set_color("code_folding_color", "TextEdit", Color(0.8, 0.8, 0.8, 0.8));
 	theme->set_color("current_line_color", "TextEdit", Color(0.25, 0.25, 0.26, 0.8));
 	theme->set_color("caret_color", "TextEdit", control_font_color);
 	theme->set_color("caret_background_color", "TextEdit", Color::html("000000"));
@@ -556,6 +560,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	// File Dialog
 
 	theme->set_icon("reload", "FileDialog", make_icon(icon_reload_png));
+	theme->set_icon("parent_folder", "FileDialog", make_icon(icon_parent_folder_png));
 
 	// Popup
 
@@ -835,39 +840,6 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_constant("separation", "VSplitContainer", 12 * scale);
 	theme->set_constant("autohide", "HSplitContainer", 1 * scale);
 	theme->set_constant("autohide", "VSplitContainer", 1 * scale);
-
-	// HButtonArray
-	theme->set_stylebox("normal", "HButtonArray", sb_button_normal);
-	theme->set_stylebox("selected", "HButtonArray", sb_button_pressed);
-	theme->set_stylebox("hover", "HButtonArray", sb_button_hover);
-
-	theme->set_font("font", "HButtonArray", default_font);
-	theme->set_font("font_selected", "HButtonArray", default_font);
-
-	theme->set_color("font_color", "HButtonArray", control_font_color_low);
-	theme->set_color("font_color_selected", "HButtonArray", control_font_color_hover);
-
-	theme->set_constant("icon_separator", "HButtonArray", 2 * scale);
-	theme->set_constant("button_separator", "HButtonArray", 4 * scale);
-
-	theme->set_stylebox("focus", "HButtonArray", focus);
-
-	// VButtonArray
-
-	theme->set_stylebox("normal", "VButtonArray", sb_button_normal);
-	theme->set_stylebox("selected", "VButtonArray", sb_button_pressed);
-	theme->set_stylebox("hover", "VButtonArray", sb_button_hover);
-
-	theme->set_font("font", "VButtonArray", default_font);
-	theme->set_font("font_selected", "VButtonArray", default_font);
-
-	theme->set_color("font_color", "VButtonArray", control_font_color_low);
-	theme->set_color("font_color_selected", "VButtonArray", control_font_color_hover);
-
-	theme->set_constant("icon_separator", "VButtonArray", 2 * scale);
-	theme->set_constant("button_separator", "VButtonArray", 4 * scale);
-
-	theme->set_stylebox("focus", "VButtonArray", focus);
 
 	// ReferenceRect
 

@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="Curve" inherits="Resource" category="Core" version="3.0.alpha.custom_build">
+<class name="Curve" inherits="Resource" category="Core" version="3.0-beta">
 	<brief_description>
+		A mathematic curve.
 	</brief_description>
 	<description>
+		A curve that can be saved and re-used for other objects. By default it ranges between [code]0[/code] and [code]1[/code] on the y-axis and positions points relative to the [code]0.5[/code] y-position.
 	</description>
 	<tutorials>
 	</tutorials>
@@ -23,42 +25,28 @@
 			<argument index="4" name="right_mode" type="int" enum="Curve.TangentMode" default="0">
 			</argument>
 			<description>
+				Adds a point to the curve. For each side, if the [code]*_mode[/code] is [code]TANGENT_LINEAR[/code], the [code]*_tangent[/code] angle (in degrees) uses the slope of the curve halfway to the adjacent point. Allows custom assignments to the [code]*_tangent[/code] angle if [code]*_mode[/code] is set to [code]TANGENT_FREE[/code].
 			</description>
 		</method>
 		<method name="bake">
 			<return type="void">
 			</return>
 			<description>
+				Recomputes the baked cache of points for the curve.
 			</description>
 		</method>
 		<method name="clean_dupes">
 			<return type="void">
 			</return>
 			<description>
+				Removes points that are closer than [code]CMP_EPSILON[/code] (0.00001) units to their neighbor on the curve.
 			</description>
 		</method>
 		<method name="clear_points">
 			<return type="void">
 			</return>
 			<description>
-			</description>
-		</method>
-		<method name="get_bake_resolution" qualifiers="const">
-			<return type="int">
-			</return>
-			<description>
-			</description>
-		</method>
-		<method name="get_max_value" qualifiers="const">
-			<return type="float">
-			</return>
-			<description>
-			</description>
-		</method>
-		<method name="get_min_value" qualifiers="const">
-			<return type="float">
-			</return>
-			<description>
+				Removes all points from the curve.
 			</description>
 		</method>
 		<method name="get_point_left_mode" qualifiers="const">
@@ -67,6 +55,7 @@
 			<argument index="0" name="index" type="int">
 			</argument>
 			<description>
+				Returns the left [code]TangentMode[/code] for the point at [code]index[/code].
 			</description>
 		</method>
 		<method name="get_point_left_tangent" qualifiers="const">
@@ -75,6 +64,7 @@
 			<argument index="0" name="index" type="int">
 			</argument>
 			<description>
+				Returns the left tangent angle (in degrees) for the point at [code]index[/code].
 			</description>
 		</method>
 		<method name="get_point_position" qualifiers="const">
@@ -83,6 +73,7 @@
 			<argument index="0" name="index" type="int">
 			</argument>
 			<description>
+				Returns the curve coordinates for the point at [code]index[/code].
 			</description>
 		</method>
 		<method name="get_point_right_mode" qualifiers="const">
@@ -91,6 +82,7 @@
 			<argument index="0" name="index" type="int">
 			</argument>
 			<description>
+				Returns the right [code]TangentMode[/code] for the point at [code]index[/code].
 			</description>
 		</method>
 		<method name="get_point_right_tangent" qualifiers="const">
@@ -99,6 +91,7 @@
 			<argument index="0" name="index" type="int">
 			</argument>
 			<description>
+				Returns the right tangent angle (in degrees) for the point at [code]index[/code].
 			</description>
 		</method>
 		<method name="interpolate" qualifiers="const">
@@ -107,6 +100,7 @@
 			<argument index="0" name="offset" type="float">
 			</argument>
 			<description>
+				Returns the y value for the point that would exist at x-position [code]offset[/code] along the curve.
 			</description>
 		</method>
 		<method name="interpolate_baked">
@@ -115,6 +109,7 @@
 			<argument index="0" name="offset" type="float">
 			</argument>
 			<description>
+				Returns the y value for the point that would exist at x-position [code]offset[/code] along the curve using the baked cache. Bakes the curve's points if not already baked.
 			</description>
 		</method>
 		<method name="remove_point">
@@ -123,30 +118,7 @@
 			<argument index="0" name="index" type="int">
 			</argument>
 			<description>
-			</description>
-		</method>
-		<method name="set_bake_resolution">
-			<return type="void">
-			</return>
-			<argument index="0" name="resolution" type="int">
-			</argument>
-			<description>
-			</description>
-		</method>
-		<method name="set_max_value">
-			<return type="void">
-			</return>
-			<argument index="0" name="max" type="float">
-			</argument>
-			<description>
-			</description>
-		</method>
-		<method name="set_min_value">
-			<return type="void">
-			</return>
-			<argument index="0" name="min" type="float">
-			</argument>
-			<description>
+				Removes the point at [code]index[/code] from the curve.
 			</description>
 		</method>
 		<method name="set_point_left_mode">
@@ -157,6 +129,7 @@
 			<argument index="1" name="mode" type="int" enum="Curve.TangentMode">
 			</argument>
 			<description>
+				Sets the left [code]TangentMode[/code] for the point at [code]index[/code] to [code]mode[/code].
 			</description>
 		</method>
 		<method name="set_point_left_tangent">
@@ -167,6 +140,7 @@
 			<argument index="1" name="tangent" type="float">
 			</argument>
 			<description>
+				Sets the left tangent angle for the point at [code]index[/code] to [code]tangent[/code].
 			</description>
 		</method>
 		<method name="set_point_offset">
@@ -177,6 +151,7 @@
 			<argument index="1" name="offset" type="float">
 			</argument>
 			<description>
+				Sets the offset from [code]0.5[/code]
 			</description>
 		</method>
 		<method name="set_point_right_mode">
@@ -187,6 +162,7 @@
 			<argument index="1" name="mode" type="int" enum="Curve.TangentMode">
 			</argument>
 			<description>
+				Sets the right [code]TangentMode[/code] for the point at [code]index[/code] to [code]mode[/code].
 			</description>
 		</method>
 		<method name="set_point_right_tangent">
@@ -197,6 +173,7 @@
 			<argument index="1" name="tangent" type="float">
 			</argument>
 			<description>
+				Sets the right tangent angle for the point at [code]index[/code] to [code]tangent[/code].
 			</description>
 		</method>
 		<method name="set_point_value">
@@ -207,31 +184,37 @@
 			<argument index="1" name="y" type="float">
 			</argument>
 			<description>
+				Assigns the vertical position [code]y[/code] to the point at [code]index[/code].
 			</description>
 		</method>
 	</methods>
 	<members>
-		<member name="_data" type="Array" setter="_set_data" getter="_get_data">
-		</member>
 		<member name="bake_resolution" type="int" setter="set_bake_resolution" getter="get_bake_resolution">
+			The number of points to include in the baked (i.e. cached) curve data.
 		</member>
 		<member name="max_value" type="float" setter="set_max_value" getter="get_max_value">
+			The maximum value the curve can reach. Default value: [code]1[/code].
 		</member>
 		<member name="min_value" type="float" setter="set_min_value" getter="get_min_value">
+			The minimum value the curve can reach. Default value: [code]0[/code].
 		</member>
 	</members>
 	<signals>
 		<signal name="range_changed">
 			<description>
+				Emitted when [member max_value] or [member min_value] is changed.
 			</description>
 		</signal>
 	</signals>
 	<constants>
-		<constant name="TANGENT_FREE" value="0">
+		<constant name="TANGENT_FREE" value="0" enum="TangentMode">
+			The tangent on this side of the point is user-defined.
 		</constant>
-		<constant name="TANGENT_LINEAR" value="1">
+		<constant name="TANGENT_LINEAR" value="1" enum="TangentMode">
+			The curve calculates the tangent on this side of the point as the slope halfway towards the adjacent point.
 		</constant>
-		<constant name="TANGENT_MODE_COUNT" value="2">
+		<constant name="TANGENT_MODE_COUNT" value="2" enum="TangentMode">
+			The total number of available tangent modes.
 		</constant>
 	</constants>
 </class>

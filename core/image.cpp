@@ -757,22 +757,24 @@ void Image::resize(int p_width, int p_height, Interpolation p_interpolation) {
 
 	_copy_internals_from(dst);
 }
-void Image::crop(int p_width, int p_height) {
 
+void Image::crop_from_point(int p_x, int p_y, int p_width, int p_height) {
 	if (!_can_modify(format)) {
 		ERR_EXPLAIN("Cannot crop in indexed, compressed or custom image formats.");
 		ERR_FAIL();
 	}
+	ERR_FAIL_COND(p_x < 0);
+	ERR_FAIL_COND(p_y < 0);
 	ERR_FAIL_COND(p_width <= 0);
 	ERR_FAIL_COND(p_height <= 0);
-	ERR_FAIL_COND(p_width > MAX_WIDTH);
-	ERR_FAIL_COND(p_height > MAX_HEIGHT);
+	ERR_FAIL_COND(p_x + p_width > MAX_WIDTH);
+	ERR_FAIL_COND(p_y + p_height > MAX_HEIGHT);
 
 	/* to save memory, cropping should be done in-place, however, since this function
 	   will most likely either not be used much, or in critical areas, for now it wont, because
 	   it's a waste of time. */
 
-	if (p_width == width && p_height == height)
+	if (p_width == width && p_height == height && p_x == 0 && p_y == 0)
 		return;
 
 	uint8_t pdata[16]; //largest is 16
@@ -784,9 +786,11 @@ void Image::crop(int p_width, int p_height) {
 		PoolVector<uint8_t>::Read r = data.read();
 		PoolVector<uint8_t>::Write w = dst.data.write();
 
-		for (int y = 0; y < p_height; y++) {
+		int m_h = p_y + p_height;
+		int m_w = p_x + p_width;
+		for (int y = p_y; y < m_h; y++) {
 
-			for (int x = 0; x < p_width; x++) {
+			for (int x = p_x; x < m_w; x++) {
 
 				if ((x >= width || y >= height)) {
 					for (uint32_t i = 0; i < pixel_size; i++)
@@ -795,7 +799,7 @@ void Image::crop(int p_width, int p_height) {
 					_get_pixelb(x, y, pixel_size, r.ptr(), pdata);
 				}
 
-				dst._put_pixelb(x, y, pixel_size, w.ptr(), pdata);
+				dst._put_pixelb(x - p_x, y - p_y, pixel_size, w.ptr(), pdata);
 			}
 		}
 	}
@@ -803,6 +807,11 @@ void Image::crop(int p_width, int p_height) {
 	if (mipmaps > 0)
 		dst.generate_mipmaps();
 	_copy_internals_from(dst);
+}
+
+void Image::crop(int p_width, int p_height) {
+
+	crop_from_point(0, 0, p_width, p_height);
 }
 
 void Image::flip_y() {
@@ -2278,6 +2287,9 @@ void Image::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_pixel", "x", "y", "color"), &Image::set_pixel);
 	ClassDB::bind_method(D_METHOD("get_pixel", "x", "y"), &Image::get_pixel);
 
+	ClassDB::bind_method(D_METHOD("load_png_from_buffer", "buffer"), &Image::load_png_from_buffer);
+	ClassDB::bind_method(D_METHOD("load_jpg_from_buffer", "buffer"), &Image::load_jpg_from_buffer);
+
 	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "_set_data", "_get_data");
 
 	BIND_ENUM_CONSTANT(FORMAT_L8); //luminance
@@ -2494,6 +2506,40 @@ String Image::get_format_name(Format p_format) {
 
 	ERR_FAIL_INDEX_V(p_format, FORMAT_MAX, String());
 	return format_names[p_format];
+}
+
+Error Image::load_png_from_buffer(const PoolVector<uint8_t> &p_array) {
+
+	int buffer_size = p_array.size();
+
+	ERR_FAIL_COND_V(buffer_size == 0, ERR_INVALID_PARAMETER);
+	ERR_FAIL_COND_V(!_png_mem_loader_func, ERR_INVALID_PARAMETER);
+
+	PoolVector<uint8_t>::Read r = p_array.read();
+
+	Ref<Image> image = _png_mem_loader_func(r.ptr(), buffer_size);
+	ERR_FAIL_COND_V(!image.is_valid(), ERR_PARSE_ERROR);
+
+	copy_internals_from(image);
+
+	return OK;
+}
+
+Error Image::load_jpg_from_buffer(const PoolVector<uint8_t> &p_array) {
+
+	int buffer_size = p_array.size();
+
+	ERR_FAIL_COND_V(buffer_size == 0, ERR_INVALID_PARAMETER);
+	ERR_FAIL_COND_V(!_jpg_mem_loader_func, ERR_INVALID_PARAMETER);
+
+	PoolVector<uint8_t>::Read r = p_array.read();
+
+	Ref<Image> image = _jpg_mem_loader_func(r.ptr(), buffer_size);
+	ERR_FAIL_COND_V(!image.is_valid(), ERR_PARSE_ERROR);
+
+	copy_internals_from(image);
+
+	return OK;
 }
 
 Image::Image(const uint8_t *p_mem_png_jpg, int p_len) {

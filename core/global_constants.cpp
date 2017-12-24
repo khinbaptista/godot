@@ -45,15 +45,15 @@ struct _GlobalConstant {
 	_GlobalConstant() {}
 
 #ifdef DEBUG_METHODS_ENABLED
-	_GlobalConstant(const StringName &p_enum_name, const char *p_name, int p_value)
-		: enum_name(p_enum_name),
-		  name(p_name),
-		  value(p_value) {
+	_GlobalConstant(const StringName &p_enum_name, const char *p_name, int p_value) :
+			enum_name(p_enum_name),
+			name(p_name),
+			value(p_value) {
 	}
 #else
-	_GlobalConstant(const char *p_name, int p_value)
-		: name(p_name),
-		  value(p_value) {
+	_GlobalConstant(const char *p_name, int p_value) :
+			name(p_name),
+			value(p_value) {
 	}
 #endif
 };
@@ -435,6 +435,8 @@ void register_global_constants() {
 	BIND_GLOBAL_ENUM_CONSTANT(JOY_AXIS_5);
 	BIND_GLOBAL_ENUM_CONSTANT(JOY_AXIS_6);
 	BIND_GLOBAL_ENUM_CONSTANT(JOY_AXIS_7);
+	BIND_GLOBAL_ENUM_CONSTANT(JOY_AXIS_8);
+	BIND_GLOBAL_ENUM_CONSTANT(JOY_AXIS_9);
 	BIND_GLOBAL_ENUM_CONSTANT(JOY_AXIS_MAX);
 
 	BIND_GLOBAL_ENUM_CONSTANT(JOY_ANALOG_LX);
@@ -489,7 +491,6 @@ void register_global_constants() {
 	BIND_GLOBAL_ENUM_CONSTANT(ERR_BUSY);
 	BIND_GLOBAL_ENUM_CONSTANT(ERR_HELP); ///< user requested help!!
 	BIND_GLOBAL_ENUM_CONSTANT(ERR_BUG); ///< a bug in the software certainly happened ), due to a double check failing or unexpected behavior.
-	BIND_GLOBAL_ENUM_CONSTANT(ERR_WTF);
 
 	BIND_GLOBAL_ENUM_CONSTANT(PROPERTY_HINT_NONE);
 	BIND_GLOBAL_ENUM_CONSTANT(PROPERTY_HINT_RANGE);
@@ -555,7 +556,7 @@ void register_global_constants() {
 	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_TRANSFORM2D", Variant::TRANSFORM2D);
 	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_PLANE", Variant::PLANE);
 	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_QUAT", Variant::QUAT); // 10
-	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_RECT3", Variant::RECT3);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_AABB", Variant::AABB);
 	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_BASIS", Variant::BASIS);
 	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_TRANSFORM", Variant::TRANSFORM);
 	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_COLOR", Variant::COLOR);

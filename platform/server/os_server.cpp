@@ -31,7 +31,6 @@
 //#include "servers/visual/rasterizer_dummy.h"
 #include "os_server.h"
 #include "print_string.h"
-#include "servers/physics/physics_server_sw.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -46,10 +45,6 @@ int OS_Server::get_video_driver_count() const {
 const char *OS_Server::get_video_driver_name(int p_driver) const {
 
 	return "Dummy";
-}
-OS::VideoMode OS_Server::get_default_video_mode() const {
-
-	return OS::VideoMode(800, 600, false);
 }
 
 void OS_Server::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
@@ -75,15 +70,10 @@ void OS_Server::initialize(const VideoMode &p_desired, int p_video_driver, int p
 	ERR_FAIL_COND(!visual_server);
 
 	visual_server->init();
-	//
-	physics_server = memnew(PhysicsServerSW);
-	physics_server->init();
-	physics_2d_server = memnew(Physics2DServerSW);
-	physics_2d_server->init();
 
 	input = memnew(InputDefault);
 
-	_ensure_data_dir();
+	_ensure_user_data_dir();
 }
 void OS_Server::finalize() {
 
@@ -110,12 +100,6 @@ void OS_Server::finalize() {
 	visual_server->finish();
 	memdelete(visual_server);
 	//memdelete(rasterizer);
-
-	physics_server->finish();
-	memdelete(physics_server);
-
-	physics_2d_server->finish();
-	memdelete(physics_2d_server);
 
 	memdelete(input);
 

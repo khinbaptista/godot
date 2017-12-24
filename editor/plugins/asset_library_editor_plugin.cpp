@@ -33,6 +33,8 @@
 #include "editor_settings.h"
 #include "io/json.h"
 
+#include "version_generated.gen.h"
+
 void EditorAssetLibraryItem::configure(const String &p_title, int p_asset_id, const String &p_category, int p_category_id, const String &p_author, int p_author_id, int p_rating, const String &p_cost) {
 
 	title->set_text(p_title);
@@ -45,9 +47,9 @@ void EditorAssetLibraryItem::configure(const String &p_title, int p_asset_id, co
 
 	for (int i = 0; i < 5; i++) {
 		if (i < p_rating)
-			stars[i]->set_texture(get_icon("RatingStar", "EditorIcons"));
+			stars[i]->set_texture(get_icon("Favorites", "EditorIcons"));
 		else
-			stars[i]->set_texture(get_icon("RatingNoStar", "EditorIcons"));
+			stars[i]->set_texture(get_icon("NonFavorite", "EditorIcons"));
 	}
 }
 
@@ -271,15 +273,15 @@ EditorAssetLibraryItemDescription::EditorAssetLibraryItemDescription() {
 
 	HBoxContainer *hbox = memnew(HBoxContainer);
 	vbox->add_child(hbox);
-	vbox->add_constant_override("separation", 15);
+	vbox->add_constant_override("separation", 15 * EDSCALE);
 	VBoxContainer *desc_vbox = memnew(VBoxContainer);
 	hbox->add_child(desc_vbox);
-	hbox->add_constant_override("separation", 15);
+	hbox->add_constant_override("separation", 15 * EDSCALE);
 
 	item = memnew(EditorAssetLibraryItem);
 
 	desc_vbox->add_child(item);
-	desc_vbox->set_custom_minimum_size(Size2(300, 0));
+	desc_vbox->set_custom_minimum_size(Size2(300 * EDSCALE, 0));
 
 	desc_bg = memnew(PanelContainer);
 	desc_vbox->add_child(desc_bg);
@@ -290,12 +292,12 @@ EditorAssetLibraryItemDescription::EditorAssetLibraryItemDescription() {
 	desc_bg->add_child(description);
 
 	preview = memnew(TextureRect);
-	preview->set_custom_minimum_size(Size2(640, 345));
+	preview->set_custom_minimum_size(Size2(640 * EDSCALE, 345 * EDSCALE));
 	hbox->add_child(preview);
 
 	previews_bg = memnew(PanelContainer);
 	vbox->add_child(previews_bg);
-	previews_bg->set_custom_minimum_size(Size2(0, 85));
+	previews_bg->set_custom_minimum_size(Size2(0, 101 * EDSCALE));
 
 	previews = memnew(ScrollContainer);
 	previews_bg->add_child(previews);
@@ -338,7 +340,7 @@ void EditorAssetLibraryItemDownload::_http_download_completed(int p_status, int 
 		} break;
 		case HTTPRequest::RESULT_REQUEST_FAILED: {
 			error_text = TTR("Request failed, return code:") + " " + itos(p_code);
-			status->set_text(TTR("Req. Failed."));
+			status->set_text(TTR("Request Failed."));
 		} break;
 		case HTTPRequest::RESULT_REDIRECT_LIMIT_REACHED: {
 			error_text = TTR("Request failed, too many redirects");
@@ -443,7 +445,7 @@ void EditorAssetLibraryItemDownload::_install() {
 
 void EditorAssetLibraryItemDownload::_make_request() {
 	download->cancel_request();
-	download->set_download_file(EditorSettings::get_singleton()->get_settings_path().plus_file("tmp").plus_file("tmp_asset_" + itos(asset_id)) + ".zip");
+	download->set_download_file(EditorSettings::get_singleton()->get_cache_dir().plus_file("tmp_asset_" + itos(asset_id)) + ".zip");
 
 	Error err = download->request(host);
 	if (err != OK) {
@@ -678,7 +680,7 @@ void EditorAssetLibrary::_image_update(bool use_cache, bool final, const PoolByt
 		PoolByteArray image_data = p_data;
 
 		if (use_cache) {
-			String cache_filename_base = EditorSettings::get_singleton()->get_settings_path().plus_file("tmp").plus_file("assetimage_" + image_queue[p_queue_id].image_url.md5_text());
+			String cache_filename_base = EditorSettings::get_singleton()->get_cache_dir().plus_file("assetimage_" + image_queue[p_queue_id].image_url.md5_text());
 
 			FileAccess *file = FileAccess::open(cache_filename_base + ".data", FileAccess::READ);
 
@@ -700,15 +702,28 @@ void EditorAssetLibrary::_image_update(bool use_cache, bool final, const PoolByt
 		Ref<Image> image = Ref<Image>(memnew(Image(r.ptr(), len)));
 
 		if (!image->empty()) {
-			float max_height = 10000;
 			switch (image_queue[p_queue_id].image_type) {
-				case IMAGE_QUEUE_ICON: max_height = 80; break;
-				case IMAGE_QUEUE_THUMBNAIL: max_height = 80; break;
-				case IMAGE_QUEUE_SCREENSHOT: max_height = 345; break;
-			}
-			float scale_ratio = max_height / image->get_height();
-			if (scale_ratio < 1) {
-				image->resize(image->get_width() * scale_ratio, image->get_height() * scale_ratio, Image::INTERPOLATE_CUBIC);
+				case IMAGE_QUEUE_ICON:
+
+					image->resize(80 * EDSCALE, 80 * EDSCALE, Image::INTERPOLATE_CUBIC);
+
+					break;
+				case IMAGE_QUEUE_THUMBNAIL: {
+					float max_height = 85 * EDSCALE;
+
+					float scale_ratio = max_height / (image->get_height() * EDSCALE);
+					if (scale_ratio < 1) {
+						image->resize(image->get_width() * EDSCALE * scale_ratio, image->get_height() * EDSCALE * scale_ratio, Image::INTERPOLATE_CUBIC);
+					}
+				} break;
+				case IMAGE_QUEUE_SCREENSHOT: {
+					float max_height = 397 * EDSCALE;
+
+					float scale_ratio = max_height / (image->get_height() * EDSCALE);
+					if (scale_ratio < 1) {
+						image->resize(image->get_width() * EDSCALE * scale_ratio, image->get_height() * EDSCALE * scale_ratio, Image::INTERPOLATE_CUBIC);
+					}
+				} break;
 			}
 
 			Ref<ImageTexture> tex;
@@ -736,7 +751,7 @@ void EditorAssetLibrary::_image_request_completed(int p_status, int p_code, cons
 		if (p_code != HTTPClient::RESPONSE_NOT_MODIFIED) {
 			for (int i = 0; i < headers.size(); i++) {
 				if (headers[i].findn("ETag:") == 0) { // Save etag
-					String cache_filename_base = EditorSettings::get_singleton()->get_settings_path().plus_file("tmp").plus_file("assetimage_" + image_queue[p_queue_id].image_url.md5_text());
+					String cache_filename_base = EditorSettings::get_singleton()->get_cache_dir().plus_file("assetimage_" + image_queue[p_queue_id].image_url.md5_text());
 					String new_etag = headers[i].substr(headers[i].find(":") + 1, headers[i].length()).strip_edges();
 					FileAccess *file;
 
@@ -784,7 +799,7 @@ void EditorAssetLibrary::_update_image_queue() {
 	for (Map<int, ImageQueue>::Element *E = image_queue.front(); E; E = E->next()) {
 		if (!E->get().active && current_images < max_images) {
 
-			String cache_filename_base = EditorSettings::get_singleton()->get_settings_path().plus_file("tmp").plus_file("assetimage_" + E->get().image_url.md5_text());
+			String cache_filename_base = EditorSettings::get_singleton()->get_cache_dir().plus_file("assetimage_" + E->get().image_url.md5_text());
 			Vector<String> headers;
 
 			if (FileAccess::exists(cache_filename_base + ".etag") && FileAccess::exists(cache_filename_base + ".data")) {
@@ -867,6 +882,8 @@ void EditorAssetLibrary::_search(int p_page) {
 	}
 	args += String() + "sort=" + sort_key[sort->get_selected()];
 
+	args += "&godot_version=" + itos(VERSION_MAJOR) + "." + itos(VERSION_MINOR);
+
 	String support_list;
 	for (int i = 0; i < SUPPORT_MAX; i++) {
 		if (support->get_popup()->is_item_checked(i)) {
@@ -896,6 +913,11 @@ void EditorAssetLibrary::_search(int p_page) {
 	}
 
 	_api_request("asset", REQUESTING_SEARCH, args);
+}
+
+void EditorAssetLibrary::_search_text_entered(const String &p_text) {
+
+	_search();
 }
 
 HBoxContainer *EditorAssetLibrary::_make_pages(int p_page, int p_page_count, int p_page_len, int p_total_items, int p_current_items) {
@@ -1251,6 +1273,10 @@ void EditorAssetLibrary::_install_external_asset(String p_zip_path, String p_tit
 	emit_signal("install_asset", p_zip_path, p_title);
 }
 
+void EditorAssetLibrary::disable_community_support() {
+	support->get_popup()->set_item_checked(SUPPORT_COMMUNITY, false);
+}
+
 void EditorAssetLibrary::_bind_methods() {
 
 	ClassDB::bind_method("_http_request_completed", &EditorAssetLibrary::_http_request_completed);
@@ -1259,6 +1285,7 @@ void EditorAssetLibrary::_bind_methods() {
 	ClassDB::bind_method("_select_category", &EditorAssetLibrary::_select_category);
 	ClassDB::bind_method("_image_request_completed", &EditorAssetLibrary::_image_request_completed);
 	ClassDB::bind_method("_search", &EditorAssetLibrary::_search, DEFVAL(0));
+	ClassDB::bind_method("_search_text_entered", &EditorAssetLibrary::_search_text_entered);
 	ClassDB::bind_method("_install_asset", &EditorAssetLibrary::_install_asset);
 	ClassDB::bind_method("_manage_plugins", &EditorAssetLibrary::_manage_plugins);
 	ClassDB::bind_method("_asset_open", &EditorAssetLibrary::_asset_open);
@@ -1288,7 +1315,7 @@ EditorAssetLibrary::EditorAssetLibrary(bool p_templates_only) {
 	filter = memnew(LineEdit);
 	search_hb->add_child(filter);
 	filter->set_h_size_flags(SIZE_EXPAND_FILL);
-	filter->connect("text_entered", this, "_search");
+	filter->connect("text_entered", this, "_search_text_entered");
 	search = memnew(Button(TTR("Search")));
 	search->connect("pressed", this, "_search");
 	search_hb->add_child(search);
@@ -1348,13 +1375,11 @@ EditorAssetLibrary::EditorAssetLibrary(bool p_templates_only) {
 	search_hb2->add_child(memnew(Label(TTR("Site:") + " ")));
 	repository = memnew(OptionButton);
 
-	// FIXME: Reenable me once GH-7147 is fixed.
-	/*
 	repository->add_item("godotengine.org");
 	repository->set_item_metadata(0, "https://godotengine.org/asset-library/api");
-	*/
 	repository->add_item("localhost");
-	repository->set_item_metadata(/*1*/ 0, "http://127.0.0.1/asset-library/api");
+	repository->set_item_metadata(1, "http://127.0.0.1/asset-library/api");
+
 	repository->connect("item_selected", this, "_repository_changed");
 
 	search_hb2->add_child(repository);

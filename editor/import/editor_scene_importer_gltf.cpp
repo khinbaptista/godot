@@ -1,5 +1,6 @@
 #include "editor_scene_importer_gltf.h"
 #include "io/json.h"
+#include "math_defs.h"
 #include "os/file_access.h"
 #include "os/os.h"
 #include "scene/3d/camera.h"
@@ -28,7 +29,7 @@ Error EditorSceneImporterGLTF::_parse_json(const String &p_path, GLTFState &stat
 
 	Vector<uint8_t> array;
 	array.resize(f->get_len());
-	f->get_buffer(array.ptr(), array.size());
+	f->get_buffer(array.ptrw(), array.size());
 	String text;
 	text.parse_utf8((const char *)array.ptr(), array.size());
 
@@ -64,7 +65,7 @@ Error EditorSceneImporterGLTF::_parse_glb(const String &p_path, GLTFState &state
 	ERR_FAIL_COND_V(chunk_type != 0x4E4F534A, ERR_PARSE_ERROR); //JSON
 	Vector<uint8_t> json_data;
 	json_data.resize(chunk_length);
-	uint32_t len = f->get_buffer(json_data.ptr(), chunk_length);
+	uint32_t len = f->get_buffer(json_data.ptrw(), chunk_length);
 	ERR_FAIL_COND_V(len != chunk_length, ERR_FILE_CORRUPT);
 
 	String text;
@@ -93,7 +94,7 @@ Error EditorSceneImporterGLTF::_parse_glb(const String &p_path, GLTFState &state
 	ERR_FAIL_COND_V(chunk_type != 0x004E4942, ERR_PARSE_ERROR); //BIN
 
 	state.glb_data.resize(chunk_length);
-	len = f->get_buffer(state.glb_data.ptr(), chunk_length);
+	len = f->get_buffer(state.glb_data.ptrw(), chunk_length);
 	ERR_FAIL_COND_V(len != chunk_length, ERR_FILE_CORRUPT);
 
 	return OK;
@@ -466,9 +467,10 @@ Error EditorSceneImporterGLTF::_decode_buffer_view(GLTFState &state, int p_buffe
 
 	uint32_t offset = bv.byte_offset + byte_offset;
 	Vector<uint8_t> buffer = state.buffers[bv.buffer]; //copy on write, so no performance hit
+	const uint8_t *bufptr = buffer.ptr();
 
 	//use to debug
-	print_line("type " + _get_type_name(type) + " component type: " + _get_component_type_name(component_type) + " stride: " + itos(stride) + " amount " + itos(count));
+	//print_line("type " + _get_type_name(type) + " component type: " + _get_component_type_name(component_type) + " stride: " + itos(stride) + " amount " + itos(count));
 	print_line("accessor offset" + itos(byte_offset) + " view offset: " + itos(bv.byte_offset) + " total buffer len: " + itos(buffer.size()) + " view len " + itos(bv.byte_length));
 
 	int buffer_end = (stride * (count - 1)) + element_size;
@@ -480,7 +482,7 @@ Error EditorSceneImporterGLTF::_decode_buffer_view(GLTFState &state, int p_buffe
 
 	for (int i = 0; i < count; i++) {
 
-		const uint8_t *src = &buffer[offset + i * stride];
+		const uint8_t *src = &bufptr[offset + i * stride];
 
 		for (int j = 0; j < component_count; j++) {
 
@@ -604,7 +606,7 @@ Vector<double> EditorSceneImporterGLTF::_decode_accessor(GLTFState &state, int p
 
 	Vector<double> dst_buffer;
 	dst_buffer.resize(component_count * a.count);
-	double *dst = dst_buffer.ptr();
+	double *dst = dst_buffer.ptrw();
 
 	if (a.buffer_view >= 0) {
 
@@ -627,13 +629,13 @@ Vector<double> EditorSceneImporterGLTF::_decode_accessor(GLTFState &state, int p
 		indices.resize(a.sparse_count);
 		int indices_component_size = _get_component_type_size(a.sparse_indices_component_type);
 
-		Error err = _decode_buffer_view(state, a.sparse_indices_buffer_view, indices.ptr(), 0, 0, indices_component_size, a.sparse_count, TYPE_SCALAR, 1, a.sparse_indices_component_type, indices_component_size, false, a.sparse_indices_byte_offset, false);
+		Error err = _decode_buffer_view(state, a.sparse_indices_buffer_view, indices.ptrw(), 0, 0, indices_component_size, a.sparse_count, TYPE_SCALAR, 1, a.sparse_indices_component_type, indices_component_size, false, a.sparse_indices_byte_offset, false);
 		if (err != OK)
 			return Vector<double>();
 
 		Vector<double> data;
 		data.resize(component_count * a.sparse_count);
-		err = _decode_buffer_view(state, a.sparse_values_buffer_view, data.ptr(), skip_every, skip_bytes, element_size, a.sparse_count, a.type, component_count, a.component_type, component_size, a.normalized, a.sparse_values_byte_offset, p_for_vertex);
+		err = _decode_buffer_view(state, a.sparse_values_buffer_view, data.ptrw(), skip_every, skip_bytes, element_size, a.sparse_count, a.type, component_count, a.component_type, component_size, a.normalized, a.sparse_values_byte_offset, p_for_vertex);
 		if (err != OK)
 			return Vector<double>();
 
@@ -812,6 +814,7 @@ Error EditorSceneImporterGLTF::_parse_meshes(GLTFState &state) {
 	Array meshes = state.json["meshes"];
 	for (int i = 0; i < meshes.size(); i++) {
 
+		print_line("on mesh: " + itos(i));
 		Dictionary d = meshes[i];
 
 		GLTFMesh mesh;
@@ -1378,8 +1381,8 @@ Error EditorSceneImporterGLTF::_parse_skins(GLTFState &state) {
 
 				state.nodes[skin_node]->skeleton_children.push_back(i);
 			}
-			state.skins.push_back(skin);
 		}
+		state.skins.push_back(skin);
 	}
 	print_line("total skins: " + itos(state.skins.size()));
 
@@ -1419,7 +1422,8 @@ Error EditorSceneImporterGLTF::_parse_cameras(GLTFState &state) {
 			camera.perspective = true;
 			if (d.has("perspective")) {
 				Dictionary ppt = d["perspective"];
-				camera.fov_size = ppt["yfov"];
+				// GLTF spec is in radians, Godot's camera is in degrees.
+				camera.fov_size = (double)ppt["yfov"] * 180.0 / Math_PI;
 				camera.zfar = ppt["zfar"];
 				camera.znear = ppt["znear"];
 			} else {
@@ -1593,8 +1597,11 @@ void EditorSceneImporterGLTF::_generate_node(GLTFState &state, int p_node, Node 
 	if (n->mesh >= 0) {
 		ERR_FAIL_INDEX(n->mesh, state.meshes.size());
 		MeshInstance *mi = memnew(MeshInstance);
-		const GLTFMesh &mesh = state.meshes[n->mesh];
+		GLTFMesh &mesh = state.meshes[n->mesh];
 		mi->set_mesh(mesh.mesh);
+		if (mesh.mesh->get_name() == "") {
+			mesh.mesh->set_name(n->name);
+		}
 		for (int i = 0; i < mesh.blend_weights.size(); i++) {
 			mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);
 		}
@@ -2102,7 +2109,7 @@ Node *EditorSceneImporterGLTF::import_scene(const String &p_path, uint32_t p_fla
 	return scene;
 }
 
-Ref<Animation> EditorSceneImporterGLTF::import_animation(const String &p_path, uint32_t p_flags) {
+Ref<Animation> EditorSceneImporterGLTF::import_animation(const String &p_path, uint32_t p_flags, int p_bake_fps) {
 
 	return Ref<Animation>();
 }

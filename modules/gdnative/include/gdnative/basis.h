@@ -97,7 +97,7 @@ void GDAPI godot_basis_new(godot_basis *r_dest);
 void GDAPI godot_basis_new_with_euler_quat(godot_basis *r_dest, const godot_quat *p_euler);
 
 // p_elements is a pointer to an array of 3 (!!) vector3
-void GDAPI godot_basis_get_elements(godot_basis *p_self, godot_vector3 *p_elements);
+void GDAPI godot_basis_get_elements(const godot_basis *p_self, godot_vector3 *p_elements);
 
 godot_vector3 GDAPI godot_basis_get_axis(const godot_basis *p_self, const godot_int p_axis);
 
@@ -111,7 +111,7 @@ godot_bool GDAPI godot_basis_operator_equal(const godot_basis *p_self, const god
 
 godot_basis GDAPI godot_basis_operator_add(const godot_basis *p_self, const godot_basis *p_b);
 
-godot_basis GDAPI godot_basis_operator_substract(const godot_basis *p_self, const godot_basis *p_b);
+godot_basis GDAPI godot_basis_operator_subtract(const godot_basis *p_self, const godot_basis *p_b);
 
 godot_basis GDAPI godot_basis_operator_multiply_vector(const godot_basis *p_self, const godot_basis *p_b);
 

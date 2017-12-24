@@ -38,15 +38,11 @@
 #include "os/input.h"
 #include "power_osx.h"
 #include "servers/audio_server.h"
-#include "servers/physics_2d/physics_2d_server_sw.h"
-#include "servers/physics_2d/physics_2d_server_wrap_mt.h"
-#include "servers/physics_server.h"
 #include "servers/visual/rasterizer.h"
 #include "servers/visual/visual_server_wrap_mt.h"
 #include "servers/visual_server.h"
 #include <ApplicationServices/ApplicationServices.h>
 
-//bitch
 #undef CursorShape
 /**
 	@author Juan Linietsky <reduzio@gmail.com>
@@ -61,9 +57,6 @@ public:
 
 	List<String> args;
 	MainLoop *main_loop;
-
-	PhysicsServer *physics_server;
-	Physics2DServer *physics_2d_server;
 
 	IP_Unix *ip_unix;
 
@@ -126,9 +119,7 @@ public:
 protected:
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
-	virtual VideoMode get_default_video_mode() const;
 
-	virtual void initialize_logger();
 	virtual void initialize_core();
 	virtual void initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
 	virtual void finalize();
@@ -160,6 +151,11 @@ public:
 	virtual void set_icon(const Ref<Image> &p_icon);
 
 	virtual MainLoop *get_main_loop() const;
+
+	virtual String get_config_path() const;
+	virtual String get_data_path() const;
+	virtual String get_cache_path() const;
+	virtual String get_godot_dir_name() const;
 
 	virtual String get_system_dir(SystemDir p_dir) const;
 
@@ -208,7 +204,7 @@ public:
 	virtual void request_attention();
 	virtual String get_joy_guid(int p_device) const;
 
-	virtual void set_borderless_window(int p_borderless);
+	virtual void set_borderless_window(bool p_borderless);
 	virtual bool get_borderless_window();
 	virtual void set_ime_position(const Point2 &p_pos);
 	virtual void set_ime_intermediate_text_callback(ImeCallback p_callback, void *p_inp);
@@ -219,8 +215,8 @@ public:
 
 	virtual bool _check_internal_feature_support(const String &p_feature);
 
-	virtual void set_use_vsync(bool p_enable);
-	virtual bool is_vsync_enabled() const;
+	virtual void _set_use_vsync(bool p_enable);
+	//virtual bool is_vsync_enabled() const;
 
 	void run();
 
@@ -232,7 +228,15 @@ public:
 
 	virtual Error move_to_trash(const String &p_path);
 
+	void force_process_input();
+
 	OS_OSX();
+
+private:
+	Point2 get_native_screen_position(int p_screen) const;
+	Point2 get_native_window_position() const;
+	void set_native_window_position(const Point2 &p_position);
+	Point2 get_screens_origin() const;
 };
 
 #endif

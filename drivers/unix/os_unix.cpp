@@ -133,15 +133,6 @@ void OS_Unix::initialize_core() {
 	}
 }
 
-void OS_Unix::initialize_logger() {
-	Vector<Logger *> loggers;
-	loggers.push_back(memnew(UnixTerminalLogger));
-	// FIXME: Reenable once we figure out how to get this properly in user://
-	// instead of littering the user's working dirs (res:// + pwd) with log files (GH-12277)
-	//loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
-	_set_logger(memnew(CompositeLogger(loggers)));
-}
-
 void OS_Unix::finalize_core() {
 }
 
@@ -150,42 +141,14 @@ void OS_Unix::alert(const String &p_alert, const String &p_title) {
 	fprintf(stderr, "ERROR: %s\n", p_alert.utf8().get_data());
 }
 
-static int has_data(FILE *p_fd, int timeout_usec = 0) {
-
-	fd_set readset;
-	int fd = fileno(p_fd);
-	FD_ZERO(&readset);
-	FD_SET(fd, &readset);
-	timeval time;
-	time.tv_sec = 0;
-	time.tv_usec = timeout_usec;
-	int res = 0; //select(fd + 1, &readset, NULL, NULL, &time);
-	return res > 0;
-};
-
 String OS_Unix::get_stdin_string(bool p_block) {
 
-	String ret;
 	if (p_block) {
 		char buff[1024];
-		ret = stdin_buf + fgets(buff, 1024, stdin);
+		String ret = stdin_buf + fgets(buff, 1024, stdin);
 		stdin_buf = "";
 		return ret;
-	};
-
-	while (has_data(stdin)) {
-
-		char ch;
-		read(fileno(stdin), &ch, 1);
-		if (ch == '\n') {
-			ret = stdin_buf;
-			stdin_buf = "";
-			return ret;
-		} else {
-			char str[2] = { ch, 0 };
-			stdin_buf += str;
-		};
-	};
+	}
 
 	return "";
 }
@@ -203,8 +166,6 @@ uint64_t OS_Unix::get_unix_time() const {
 uint64_t OS_Unix::get_system_time_secs() const {
 	struct timeval tv_now;
 	gettimeofday(&tv_now, NULL);
-	//localtime(&tv_now.tv_usec);
-	//localtime((const long *)&tv_now.tv_usec);
 	return uint64_t(tv_now.tv_sec);
 }
 
@@ -400,7 +361,7 @@ String OS_Unix::get_locale() const {
 	return locale;
 }
 
-Error OS_Unix::open_dynamic_library(const String p_path, void *&p_library_handle) {
+Error OS_Unix::open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path) {
 	p_library_handle = dlopen(p_path.utf8().get_data(), RTLD_NOW);
 	if (!p_library_handle) {
 		ERR_EXPLAIN("Can't open dynamic library: " + p_path + ". Error: " + dlerror());
@@ -454,30 +415,23 @@ int OS_Unix::get_processor_count() const {
 	return sysconf(_SC_NPROCESSORS_CONF);
 }
 
-String OS_Unix::get_data_dir() const {
+String OS_Unix::get_user_data_dir() const {
 
-	String an = get_safe_application_name();
-	if (an != "") {
-
-		if (has_environment("HOME")) {
-
-			bool use_godot = ProjectSettings::get_singleton()->get("application/config/use_shared_user_dir");
-			if (use_godot)
-				return get_environment("HOME") + "/.godot/app_userdata/" + an;
-			else
-				return get_environment("HOME") + "/." + an;
+	String appname = get_safe_dir_name(ProjectSettings::get_singleton()->get("application/config/name"));
+	if (appname != "") {
+		bool use_custom_dir = ProjectSettings::get_singleton()->get("application/config/use_custom_user_dir");
+		if (use_custom_dir) {
+			String custom_dir = get_safe_dir_name(ProjectSettings::get_singleton()->get("application/config/custom_user_dir_name"), true);
+			if (custom_dir == "") {
+				custom_dir = appname;
+			}
+			return get_data_path().plus_file(custom_dir);
+		} else {
+			return get_data_path().plus_file(get_godot_dir_name()).plus_file("app_userdata").plus_file(appname);
 		}
 	}
 
 	return ProjectSettings::get_singleton()->get_resource_path();
-}
-
-String OS_Unix::get_installed_templates_path() const {
-	String p = get_global_settings_path();
-	if (p != "")
-		return p + "/templates/";
-	else
-		return "";
 }
 
 String OS_Unix::get_executable_path() const {
@@ -553,5 +507,11 @@ void UnixTerminalLogger::log_error(const char *p_function, const char *p_file, i
 }
 
 UnixTerminalLogger::~UnixTerminalLogger() {}
+
+OS_Unix::OS_Unix() {
+	Vector<Logger *> loggers;
+	loggers.push_back(memnew(UnixTerminalLogger));
+	_set_logger(memnew(CompositeLogger(loggers)));
+}
 
 #endif

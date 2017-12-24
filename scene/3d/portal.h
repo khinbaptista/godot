@@ -39,7 +39,8 @@
    If a portal is placed next (very close to) a similar, opposing portal, they automatically connect,
    otherwise, a portal connects to the parent room
 */
-//this will be redone and replaced by area portals, left for reference since a new class with this name will have to exist and want to reuse the gizmos
+// FIXME: This will be redone and replaced by area portals, left for reference
+// since a new class with this name will have to exist and want to reuse the gizmos
 #if 0
 class Portal : public VisualInstance {
 
@@ -53,7 +54,7 @@ class Portal : public VisualInstance {
 	Color disabled_color;
 	float connect_range;
 
-	Rect3 aabb;
+	AABB aabb;
 
 protected:
 	bool _set(const StringName &p_name, const Variant &p_value);
@@ -63,7 +64,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	virtual Rect3 get_aabb() const;
+	virtual AABB get_aabb() const;
 	virtual PoolVector<Face3> get_faces(uint32_t p_usage_flags) const;
 
 	void set_enabled(bool p_enabled);

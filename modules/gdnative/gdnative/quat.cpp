@@ -36,8 +36,6 @@
 extern "C" {
 #endif
 
-void _quat_api_anchor() {}
-
 void GDAPI godot_quat_new(godot_quat *r_dest, const godot_real p_x, const godot_real p_y, const godot_real p_z, const godot_real p_w) {
 
 	Quat *dest = (Quat *)r_dest;
@@ -183,7 +181,7 @@ godot_quat GDAPI godot_quat_operator_add(const godot_quat *p_self, const godot_q
 	return raw_dest;
 }
 
-godot_quat GDAPI godot_quat_operator_substract(const godot_quat *p_self, const godot_quat *p_b) {
+godot_quat GDAPI godot_quat_operator_subtract(const godot_quat *p_self, const godot_quat *p_b) {
 	godot_quat raw_dest;
 	Quat *dest = (Quat *)&raw_dest;
 	const Quat *self = (const Quat *)p_self;

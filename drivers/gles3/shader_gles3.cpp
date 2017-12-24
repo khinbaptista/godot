@@ -279,21 +279,6 @@ ShaderGLES3::Version *ShaderGLES3::get_current_version() {
 	strings.push_back("precision highp sampler2DArray;\n");
 #endif
 
-#if 0
-	if (cc) {
-
-		String _code_string = "#define VERTEX_SHADER_CODE "+cc->vertex+"\n";
-		String _code_globals = "#define VERTEX_SHADER_GLOBALS "+cc->vertex_globals+"\n";
-
-		code_string=_code_string.ascii();
-		code_globals=_code_globals.ascii();
-		DEBUG_PRINT( code_globals.get_data() );
-		DEBUG_PRINT( code_string.get_data() );
-		strings.push_back(code_globals);
-		strings.push_back(code_string);
-	}
-#endif
-
 	strings.push_back(vertex_code0.get_data());
 
 	if (cc) {
@@ -343,7 +328,7 @@ ShaderGLES3::Version *ShaderGLES3::get_current_version() {
 			glDeleteProgram(v.id);
 			v.id = 0;
 
-			ERR_PRINT("NO LOG, WTF");
+			ERR_PRINT("Vertex shader compilation failed with empty log");
 		} else {
 
 			if (iloglen == 0) {
@@ -380,21 +365,6 @@ ShaderGLES3::Version *ShaderGLES3::get_current_version() {
 	strings.push_back("precision highp sampler2D;\n");
 	strings.push_back("precision highp samplerCube;\n");
 	strings.push_back("precision highp sampler2DArray;\n");
-#endif
-
-#if 0
-	if (cc) {
-
-		String _code_string = "#define FRAGMENT_SHADER_CODE "+cc->fragment+"\n";
-		String _code_globals = "#define FRAGMENT_SHADER_GLOBALS "+cc->fragment_globals+"\n";
-
-		code_string=_code_string.ascii();
-		code_globals=_code_globals.ascii();
-		DEBUG_PRINT( code_globals.get_data() );
-		DEBUG_PRINT( code_string.get_data() );
-		strings.push_back(code_globals);
-		strings.push_back(code_string);
-	}
 #endif
 
 	strings.push_back(fragment_code0.get_data());
@@ -451,7 +421,7 @@ ShaderGLES3::Version *ShaderGLES3::get_current_version() {
 			glDeleteShader(v.vert_id);
 			glDeleteProgram(v.id);
 			v.id = 0;
-			ERR_PRINT("NO LOG, WTF");
+			ERR_PRINT("Fragment shader compilation failed with empty log");
 		} else {
 
 			if (iloglen == 0) {
@@ -495,7 +465,6 @@ ShaderGLES3::Version *ShaderGLES3::get_current_version() {
 
 			if (feedbacks[i].conditional == -1 || (1 << feedbacks[i].conditional) & conditional_version.version) {
 				//conditional for this feedback is enabled
-				print_line("tf varying: " + itos(feedback.size()) + " " + String(feedbacks[i].name));
 				feedback.push_back(feedbacks[i].name);
 			}
 		}
@@ -624,7 +593,7 @@ void ShaderGLES3::setup(const char **p_conditional_defines, int p_conditional_co
 	feedbacks = p_feedback;
 	feedback_count = p_feedback_count;
 
-	//split vertex and shader code (thank you, retarded shader compiler programmers from you know what company).
+	//split vertex and shader code (thank you, shader compiler programmers from you know what company).
 	{
 		String globals_tag = "\nVERTEX_SHADER_GLOBALS";
 		String material_tag = "\nMATERIAL_UNIFORMS";

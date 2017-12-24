@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="PolygonPathFinder" inherits="Resource" category="Core" version="3.0.alpha.custom_build">
+<class name="PolygonPathFinder" inherits="Resource" category="Core" version="3.0-beta">
 	<brief_description>
 	</brief_description>
 	<description>
@@ -80,10 +80,6 @@
 			</description>
 		</method>
 	</methods>
-	<members>
-		<member name="data" type="Dictionary" setter="_set_data" getter="_get_data">
-		</member>
-	</members>
 	<constants>
 	</constants>
 </class>

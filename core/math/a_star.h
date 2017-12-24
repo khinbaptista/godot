@@ -59,8 +59,8 @@ class AStar : public Reference {
 		Point *prev_point;
 		real_t distance;
 
-		Point()
-			: list(this) {}
+		Point() :
+				list(this) {}
 	};
 
 	Map<int, Point *> points;
@@ -109,6 +109,7 @@ public:
 	void set_point_weight_scale(int p_id, real_t p_weight_scale);
 	void remove_point(int p_id);
 	bool has_point(int p_id) const;
+	PoolVector<int> get_point_connections(int p_id);
 	Array get_points();
 
 	void connect_points(int p_id, int p_with_id, bool bidirectional = true);

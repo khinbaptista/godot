@@ -33,6 +33,7 @@
 #include "input.h"
 #include "os/file_access.h"
 #include "project_settings.h"
+#include "version_generated.gen.h"
 
 #include <stdarg.h>
 
@@ -62,15 +63,21 @@ void OS::debug_break(){
 	// something
 };
 
-void OS::_set_logger(Logger *p_logger) {
+void OS::_set_logger(CompositeLogger *p_logger) {
 	if (_logger) {
 		memdelete(_logger);
 	}
 	_logger = p_logger;
 }
 
-void OS::initialize_logger() {
-	_set_logger(memnew(StdLogger));
+void OS::add_logger(Logger *p_logger) {
+	if (!_logger) {
+		Vector<Logger *> loggers;
+		loggers.push_back(p_logger);
+		_logger = memnew(CompositeLogger(loggers));
+	} else {
+		_logger->add_logger(p_logger);
+	}
 }
 
 void OS::print_error(const char *p_function, const char *p_file, int p_line, const char *p_code, const char *p_rationale, Logger::ErrorType p_type) {
@@ -113,6 +120,16 @@ void OS::set_low_processor_usage_mode(bool p_enabled) {
 bool OS::is_in_low_processor_usage_mode() const {
 
 	return low_processor_usage_mode;
+}
+
+void OS::set_low_processor_usage_mode_sleep_usec(int p_usec) {
+
+	low_processor_usage_mode_sleep_usec = p_usec;
+}
+
+int OS::get_low_processor_usage_mode_sleep_usec() const {
+
+	return low_processor_usage_mode_sleep_usec;
 }
 
 void OS::set_clipboard(const String &p_text) {
@@ -262,29 +279,68 @@ String OS::get_locale() const {
 	return "en";
 }
 
+// Helper function to ensure that a dir name/path will be valid on the OS
+String OS::get_safe_dir_name(const String &p_dir_name, bool p_allow_dir_separator) const {
+
+	Vector<String> invalid_chars = String(": * ? \" < > |").split(" ");
+	if (p_allow_dir_separator) {
+		// Dir separators are allowed, but disallow ".." to avoid going up the filesystem
+		invalid_chars.push_back("..");
+	} else {
+		invalid_chars.push_back("/");
+	}
+
+	String safe_dir_name = p_dir_name.replace("\\", "/").strip_edges();
+	for (int i = 0; i < invalid_chars.size(); i++) {
+		safe_dir_name = safe_dir_name.replace(invalid_chars[i], "-");
+	}
+	return safe_dir_name;
+}
+
+// Path to data, config, cache, etc. OS-specific folders
+
+// Get properly capitalized engine name for system paths
+String OS::get_godot_dir_name() const {
+
+	// Default to lowercase, so only override when different case is needed
+	return String(VERSION_SHORT_NAME).to_lower();
+}
+
+// OS equivalent of XDG_DATA_HOME
+String OS::get_data_path() const {
+
+	return ".";
+}
+
+// OS equivalent of XDG_CONFIG_HOME
+String OS::get_config_path() const {
+
+	return ".";
+}
+
+// OS equivalent of XDG_CACHE_HOME
+String OS::get_cache_path() const {
+
+	return ".";
+}
+
+// OS specific path for user://
+String OS::get_user_data_dir() const {
+
+	return ".";
+};
+
+// Absolute path to res://
 String OS::get_resource_dir() const {
 
 	return ProjectSettings::get_singleton()->get_resource_path();
 }
 
+// Access system-specific dirs like Documents, Downloads, etc.
 String OS::get_system_dir(SystemDir p_dir) const {
 
 	return ".";
 }
-
-String OS::get_safe_application_name() const {
-	String an = ProjectSettings::get_singleton()->get("application/config/name");
-	Vector<String> invalid_char = String("\\ / : * ? \" < > |").split(" ");
-	for (int i = 0; i < invalid_char.size(); i++) {
-		an = an.replace(invalid_char[i], "-");
-	}
-	return an;
-}
-
-String OS::get_data_dir() const {
-
-	return ".";
-};
 
 Error OS::shell_open(String p_uri) {
 	return ERR_UNAVAILABLE;
@@ -374,9 +430,9 @@ OS::ScreenOrientation OS::get_screen_orientation() const {
 	return (OS::ScreenOrientation)_orientation;
 }
 
-void OS::_ensure_data_dir() {
+void OS::_ensure_user_data_dir() {
 
-	String dd = get_data_dir();
+	String dd = get_user_data_dir();
 	DirAccess *da = DirAccess::open(dd);
 	if (da) {
 		memdelete(da);
@@ -480,12 +536,21 @@ String OS::get_joy_guid(int p_device) const {
 
 void OS::set_context(int p_context) {
 }
+
+OS::SwitchVSyncCallbackInThread OS::switch_vsync_function = NULL;
+
 void OS::set_use_vsync(bool p_enable) {
+	_use_vsync = p_enable;
+	if (switch_vsync_function) { //if a function was set, use function
+		switch_vsync_function(p_enable);
+	} else { //otherwise just call here
+		_set_use_vsync(p_enable);
+	}
 }
 
 bool OS::is_vsync_enabled() const {
 
-	return true;
+	return _use_vsync;
 }
 
 OS::PowerState OS::get_power_state() {
@@ -516,15 +581,38 @@ bool OS::has_feature(const String &p_feature) {
 	if (sizeof(void *) == 4 && p_feature == "32") {
 		return true;
 	}
+#if defined(__x86_64) || defined(__x86_64__) || defined(__amd64__)
+	if (p_feature == "x86_64") {
+		return true;
+	}
+#elif (defined(__i386) || defined(__i386__))
+	if (p_feature == "x86") {
+		return true;
+	}
+#elif defined(__aarch64__)
+	if (p_feature == "arm64") {
+		return true;
+	}
+#elif defined(__arm__)
+#if defined(__ARM_ARCH_7A__)
+	if (p_feature == "armv7a" || p_feature == "armv7") {
+		return true;
+	}
+#endif
+#if defined(__ARM_ARCH_7S__)
+	if (p_feature == "armv7s" || p_feature == "armv7") {
+		return true;
+	}
+#endif
+	if (p_feature == "arm") {
+		return true;
+	}
+#endif
 
 	if (_check_internal_feature_support(p_feature))
 		return true;
 
 	return false;
-}
-
-void *OS::get_stack_bottom() const {
-	return _stack_bottom;
 }
 
 OS::OS() {
@@ -534,6 +622,7 @@ OS::OS() {
 	singleton = this;
 	_keep_screen_on = true; // set default value to true, because this had been true before godot 2.0.
 	low_processor_usage_mode = false;
+	low_processor_usage_mode_sleep_usec = 10000;
 	_verbose_stdout = false;
 	_no_window = false;
 	_exit_code = 0;
@@ -545,7 +634,10 @@ OS::OS() {
 	_stack_bottom = (void *)(&stack_bottom);
 
 	_logger = NULL;
-	_set_logger(memnew(StdLogger));
+
+	Vector<Logger *> loggers;
+	loggers.push_back(memnew(StdLogger));
+	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
 OS::~OS() {

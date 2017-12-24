@@ -60,10 +60,14 @@ public:
 	};
 
 private:
+	enum DataFormat {
+		FORMAT_1 = 0,
+		FORMAT_2
+	};
+
 	Ref<TileSet> tile_set;
 	Size2i cell_size;
 	int quadrant_size;
-	bool center_x, center_y;
 	Mode mode;
 	Transform2D custom_transform;
 	HalfOffset half_offset;
@@ -80,6 +84,8 @@ private:
 
 		//using a more precise comparison so the regions can be sorted later
 		bool operator<(const PosKey &p_k) const { return (y == p_k.y) ? x < p_k.x : y < p_k.y; }
+
+		bool operator==(const PosKey &p_k) const { return (y == p_k.y && x == p_k.x); }
 
 		PosKey(int16_t p_x, int16_t p_y) {
 			x = p_x;
@@ -98,13 +104,17 @@ private:
 			bool flip_h : 1;
 			bool flip_v : 1;
 			bool transpose : 1;
+			int16_t autotile_coord_x : 16;
+			int16_t autotile_coord_y : 16;
 		};
 
-		uint32_t _u32t;
-		Cell() { _u32t = 0; }
+		uint64_t _u64t;
+		Cell() { _u64t = 0; }
 	};
 
 	Map<PosKey, Cell> tile_map;
+	List<PosKey> dirty_bitmask;
+
 	struct Quadrant {
 
 		Vector2 pos;
@@ -136,8 +146,8 @@ private:
 			navpoly_ids = q.navpoly_ids;
 			occluder_instances = q.occluder_instances;
 		}
-		Quadrant(const Quadrant &q)
-			: dirty_list(this) {
+		Quadrant(const Quadrant &q) :
+				dirty_list(this) {
 			pos = q.pos;
 			canvas_items = q.canvas_items;
 			body = q.body;
@@ -145,8 +155,8 @@ private:
 			occluder_instances = q.occluder_instances;
 			navpoly_ids = q.navpoly_ids;
 		}
-		Quadrant()
-			: dirty_list(this) {}
+		Quadrant() :
+				dirty_list(this) {}
 	};
 
 	Map<PosKey, Quadrant> quadrant_map;
@@ -161,11 +171,13 @@ private:
 	bool used_size_cache_dirty;
 	bool quadrant_order_dirty;
 	bool y_sort_mode;
+	bool clip_uv;
 	float fp_adjust;
 	float friction;
 	float bounce;
 	uint32_t collision_layer;
 	uint32_t collision_mask;
+	mutable DataFormat format;
 
 	TileOrigin tile_origin;
 
@@ -197,6 +209,10 @@ private:
 	_FORCE_INLINE_ Vector2 _map_to_world(int p_x, int p_y, bool p_ignore_ofs = false) const;
 
 protected:
+	bool _set(const StringName &p_name, const Variant &p_value);
+	bool _get(const StringName &p_name, Variant &r_ret) const;
+	void _get_property_list(List<PropertyInfo> *p_list) const;
+
 	void _notification(int p_what);
 	static void _bind_methods();
 
@@ -214,21 +230,24 @@ public:
 	void set_quadrant_size(int p_size);
 	int get_quadrant_size() const;
 
-	void set_center_x(bool p_enable);
-	bool get_center_x() const;
-	void set_center_y(bool p_enable);
-	bool get_center_y() const;
-
-	void set_cell(int p_x, int p_y, int p_tile, bool p_flip_x = false, bool p_flip_y = false, bool p_transpose = false);
+	void set_cell(int p_x, int p_y, int p_tile, bool p_flip_x = false, bool p_flip_y = false, bool p_transpose = false, Vector2 p_autotile_coord = Vector2());
 	int get_cell(int p_x, int p_y) const;
 	bool is_cell_x_flipped(int p_x, int p_y) const;
 	bool is_cell_y_flipped(int p_x, int p_y) const;
 	bool is_cell_transposed(int p_x, int p_y) const;
+	void set_cell_autotile_coord(int p_x, int p_y, const Vector2 &p_coord);
+	Vector2 get_cell_autotile_coord(int p_x, int p_y) const;
 
 	void set_cellv(const Vector2 &p_pos, int p_tile, bool p_flip_x = false, bool p_flip_y = false, bool p_transpose = false);
 	int get_cellv(const Vector2 &p_pos) const;
 
-	Rect2 get_item_rect() const;
+	Rect2 _edit_get_rect() const;
+
+	void make_bitmask_area_dirty(const Vector2 &p_pos);
+	void update_bitmask_area(const Vector2 &p_pos);
+	void update_bitmask_region(const Vector2 &p_start = Vector2(), const Vector2 &p_end = Vector2());
+	void update_cell_bitmask(int p_x, int p_y);
+	void update_dirty_bitmask();
 
 	void set_collision_layer(uint32_t p_layer);
 	uint32_t get_collision_layer() const;
@@ -284,6 +303,9 @@ public:
 	virtual void set_material(const Ref<Material> &p_material);
 
 	virtual void set_use_parent_material(bool p_use_parent_material);
+
+	void set_clip_uv(bool p_enable);
+	bool get_clip_uv() const;
 
 	void clear();
 
