@@ -45,7 +45,7 @@ Error InstanceVK::setup() {
 
 	//create_render_pass();
 	//ERR_EXPLAIN("Failed to create render pass");
-	//ERR_FAIL_COND_V(!render_pass, ERR_UNCONFIGURED);
+	//ERR_FAIL_COND_V(!renderpass, ERR_UNCONFIGURED);
 
 	//create_framebuffers();
 	//ERR_EXPLAIN("Failed to create framebuffers");
@@ -358,7 +358,7 @@ void InstanceVK::create_swapchain() {
 		swapchain_info.imageColorSpace = surface_format.colorSpace;
 		swapchain_info.imageExtent = swapchain_extent;
 		swapchain_info.imageArrayLayers = 1;
-		swapchain_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+		swapchain_info.imageUsage = vk::ImageUsageFlagBits::eTransferDst;	// won't be redered to directly
 		if (indices.graphics != indices.present) {
 			swapchain_info.imageSharingMode = vk::SharingMode::eConcurrent;
 			swapchain_info.queueFamilyIndexCount = 2;
@@ -396,7 +396,7 @@ void InstanceVK::create_swapchain() {
 }
 
 void InstanceVK::create_framebuffers() {
-	/*framebuffers.resize(swapchain_imageviews.size());
+	swapchain_framebuffers.resize(swapchain_imageviews.size());
 
 	for (size_t i = 0; i < swapchain_imageviews.size(); i++) {
 		std::array<vk::ImageView, 2> attachments = {
@@ -404,15 +404,15 @@ void InstanceVK::create_framebuffers() {
 		};
 
 		vk::FramebufferCreateInfo framebuffer_info;
-		framebuffer_info.renderPass = render_pass;
+		framebuffer_info.renderPass = renderpass;
 		framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
 		framebuffer_info.pAttachments = attachments.data();
 		framebuffer_info.width = swapchain_extent.width;
 		framebuffer_info.height = swapchain_extent.height;
 		framebuffer_info.layers = 1;
 
-		framebuffers[i] = device.createFramebuffer(framebuffer_info);
-	}*/
+		swapchain_framebuffers[i] = device.createFramebuffer(framebuffer_info);
+	}
 }
 
 // #########################
@@ -448,7 +448,7 @@ void InstanceVK::create_command_buffers() {
 		begin_info.pInheritanceInfo = nullptr;
 
 		vk::RenderPassBeginInfo render_info;
-		render_info.renderPass = render_pass;
+		render_info.renderPass = renderpass;
 		render_info.framebuffer = framebuffers[i];
 		render_info.renderArea.offset = { 0, 0 };
 		render_info.renderArea.extent = swapchain_extent;
@@ -543,8 +543,8 @@ InstanceVK::InstanceVK() {
 InstanceVK::~InstanceVK() {
 	device.destroyCommandPool(command_pool);
 
-	for (size_t i = 0; i < framebuffers.size(); i++) {
-		device.destroyFramebuffer(framebuffers[i]);
+	for (size_t i = 0; i < swapchain_framebuffers.size(); i++) {
+		device.destroyFramebuffer(swapchain_framebuffers[i]);
 	}
 
 	for (size_t i = 0; i < swapchain_imageviews.size(); i++) {

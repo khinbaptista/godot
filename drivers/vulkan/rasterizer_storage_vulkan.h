@@ -183,10 +183,6 @@ public:
 		int alloc_width, alloc_height;
 		Image::Format format;
 
-		/*GLenum target;
-		GLenum gl_format_cache;
-		GLenum gl_internal_format_cache;
-		GLenum gl_type_cache;*/
 		int data_size; //original data size, useful for retrieving back
 		bool compressed;
 		bool srgb;
@@ -195,8 +191,10 @@ public:
 
 		int mipmaps;
 
-		bool active;
-		//GLuint tex_id;
+		vk::Format vk_format;
+		vk::Image image;
+		vk::ImageView imageview;
+		vk::DeviceMemory memory;
 
 		bool using_srgb;
 
@@ -222,7 +220,6 @@ public:
 			ignore_mipmaps = false;
 			render_target = NULL;
 			flags = width = height = 0;
-			//tex_id = 0;
 			data_size = 0;
 			format = Image::FORMAT_L8;
 			active = false;
@@ -248,10 +245,25 @@ public:
 
 	mutable RID_Owner<Texture> texture_owner;
 
+	Ref<Image> _get_vk_image_and_format(
+			const Ref<Image> &p_image,
+			Image::Format p_format, uint32_t p_flags,
+			vk::Format &vk_format,
+			bool &r_compressed,
+			bool &srgb);
+
 	virtual RID texture_create();
-	virtual void texture_allocate(RID p_texture, int p_width, int p_height, Image::Format p_format, uint32_t p_flags = VS::TEXTURE_FLAGS_DEFAULT);
-	virtual void texture_set_data(RID p_texture, const Ref<Image> &p_image, VS::CubeMapSide p_cube_side = VS::CUBEMAP_LEFT);
-	virtual Ref<Image> texture_get_data(RID p_texture, VS::CubeMapSide p_cube_side = VS::CUBEMAP_LEFT) const;
+	virtual void texture_allocate(
+			RID p_texture,
+			int p_width, int p_height,
+			Image::Format p_format, uint32_t p_flags = VS::TEXTURE_FLAGS_DEFAULT);
+	virtual void texture_set_data(
+			RID p_texture,
+			const Ref<Image> &p_image,
+			VS::CubeMapSide p_cube_side = VS::CUBEMAP_LEFT);
+	virtual Ref<Image> texture_get_data(
+			RID p_texture,
+			VS::CubeMapSide p_cube_side = VS::CUBEMAP_LEFT) const;
 	virtual void texture_set_flags(RID p_texture, uint32_t p_flags);
 	virtual uint32_t texture_get_flags(RID p_texture) const;
 	virtual Image::Format texture_get_format(RID p_texture) const;
@@ -269,9 +281,18 @@ public:
 
 	virtual RID texture_create_radiance_cubemap(RID p_source, int p_resolution = -1) const;
 
-	virtual void texture_set_detect_3d_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata);
-	virtual void texture_set_detect_srgb_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata);
-	virtual void texture_set_detect_normal_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata);
+	virtual void texture_set_detect_3d_callback(
+			RID p_texture,
+			VisualServer::TextureDetectCallback p_callback,
+			void *p_userdata);
+	virtual void texture_set_detect_srgb_callback(
+			RID p_texture,
+			VisualServer::TextureDetectCallback p_callback,
+			void *p_userdata);
+	virtual void texture_set_detect_normal_callback(
+			RID p_texture,
+			VisualServer::TextureDetectCallback p_callback,
+			void *p_userdata);
 
 	virtual void textures_keep_original(bool p_enable);
 
@@ -394,8 +415,8 @@ public:
 		bool uses_vertex_time;
 		bool uses_fragment_time;
 
-		Shader()
-			: dirty_list(this) {
+		Shader() :
+				dirty_list(this) {
 			//shader = NULL;
 			ubo_size = 0;
 			valid = false;
@@ -472,8 +493,9 @@ public:
 		bool can_cast_shadow_cache;
 		bool is_animated_cache;
 
-		Material()
-			: list(this), dirty_list(this) {
+		Material() :
+				list(this),
+				dirty_list(this) {
 			can_cast_shadow_cache = false;
 			is_animated_cache = false;
 			shader = NULL;
@@ -487,7 +509,7 @@ public:
 		}
 	};
 
-	void _material_create_pipeline(Material*, RenderTarget*);
+	void _material_create_pipeline(Material *, RenderTarget *);
 
 	mutable SelfList<Material>::List _material_dirty_list;
 	void _material_make_dirty(Material *p_material) const;
@@ -701,8 +723,9 @@ public:
 		bool dirty_aabb;
 		bool dirty_data;
 
-		MultiMesh()
-			: update_list(this), mesh_list(this) {
+		MultiMesh() :
+				update_list(this),
+				mesh_list(this) {
 			dirty_aabb = true;
 			dirty_data = true;
 			xform_floats = 0;
@@ -800,8 +823,8 @@ public:
 		SelfList<Skeleton> update_list;
 		Set<RasterizerScene::InstanceBase *> instances; //instances using skeleton
 
-		Skeleton()
-			: update_list(this) {
+		Skeleton() :
+				update_list(this) {
 			size = 0;
 
 			use_2d = false;
@@ -1040,8 +1063,8 @@ public:
 
 		Transform emission_transform;
 
-		Particles()
-			: particle_element(this) {
+		Particles() :
+				particle_element(this) {
 			cycle_number = 0;
 			emitting = false;
 			one_shot = false;

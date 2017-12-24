@@ -81,9 +81,9 @@ protected:
 	vk::Format swapchain_image_format;
 	std::vector<vk::Image> swapchain_images;
 	std::vector<vk::ImageView> swapchain_imageviews;
+	std::vector<vk::Framebuffer> swapchain_framebuffers;
 
 	vk::RenderPass renderpass;
-	std::vector<vk::Framebuffer> framebuffers;
 
 	vk::CommandPool command_pool;
 	//std::vector<vk::CommandBuffer> command_buffers;
