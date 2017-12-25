@@ -34,22 +34,18 @@ Error InstanceVK::setup() {
 	ERR_EXPLAIN("Failed to create swapchain");
 	ERR_FAIL_COND_V(!swapchain, ERR_UNCONFIGURED);
 
-	/*VmaAllocatorCreateInfo alloc_info;
+	VmaAllocatorCreateInfo alloc_info;
 	alloc_info.physicalDevice = physical_device;
 	alloc_info.device = device;
-	vmaCreateAllocator(&alloc_info, nullptr);*/
+	vmaCreateAllocator(&alloc_info, &allocator);
 
-	//create_depth_resources();
-	//ERR_EXPLAIN("Failed to create depth resources");
-	//ERR_FAIL_COND_V(!depth_imageview, ERR_UNCONFIGURED);
+	create_renderpass();
+	ERR_EXPLAIN("Failed to create render pass");
+	ERR_FAIL_COND_V(!renderpass, ERR_UNCONFIGURED);
 
-	//create_render_pass();
-	//ERR_EXPLAIN("Failed to create render pass");
-	//ERR_FAIL_COND_V(!renderpass, ERR_UNCONFIGURED);
-
-	//create_framebuffers();
-	//ERR_EXPLAIN("Failed to create framebuffers");
-	//ERR_FAIL_COND_V(framebuffers.empty(), ERR_UNCONFIGURED);
+	create_framebuffers();
+	ERR_EXPLAIN("Failed to create framebuffers");
+	ERR_FAIL_COND_V(framebuffers.empty(), ERR_UNCONFIGURED);
 
 	create_command_pool();
 	ERR_EXPLAIN("Failed to create command pool");
@@ -305,7 +301,7 @@ void InstanceVK::create_swapchain() {
 			}
 		}
 
-		swapchain_image_format = surface_format.format;
+		swapchain_format = surface_format.format;
 	}
 
 	/*
@@ -339,8 +335,8 @@ void InstanceVK::create_swapchain() {
 		}
 	}
 
-	uint32_t image_count = swapchain_support.capabilities.minImageCount + 1; // if allowed, +1 for triple buffering
-	{ // get image count
+	uint32_t image_count = swapchain_support.capabilities.minImageCount + 1;
+	{ // get image count (if allowed, +1 for triple buffering)
 
 		if (capabilities.maxImageCount > 0 && image_count > capabilities.maxImageCount) {
 			image_count = capabilities.maxImageCount;
@@ -358,7 +354,7 @@ void InstanceVK::create_swapchain() {
 		swapchain_info.imageColorSpace = surface_format.colorSpace;
 		swapchain_info.imageExtent = swapchain_extent;
 		swapchain_info.imageArrayLayers = 1;
-		swapchain_info.imageUsage = vk::ImageUsageFlagBits::eTransferDst;	// won't be redered to directly
+		swapchain_info.imageUsage = vk::ImageUsageFlagBits::eTransferDst; // won't be redered to directly
 		if (indices.graphics != indices.present) {
 			swapchain_info.imageSharingMode = vk::SharingMode::eConcurrent;
 			swapchain_info.queueFamilyIndexCount = 2;
@@ -390,17 +386,76 @@ void InstanceVK::create_swapchain() {
 	for (size_t i = 0; i < swapchain_images.size(); i++) {
 		swapchain_imageviews[i] = vk_CreateImageView(
 				swapchain_images[i],
-				swapchain_image_format,
+				swapchain_format,
 				vk::ImageAspectFlagBits::eColor);
 	}
+}
+
+void InstanceVK::create_renderpass() {
+	vk::AttachmentDescription color_attachment;
+	color_attachment.format = swapchain_format;
+	color_attachment.samples = vk::SampleCountFlagBits::e1;
+	color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+	color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
+	color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+	color_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+	color_attachment.initialLayout = vk::ImageLayout::eUndefined;
+	color_attachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+
+	vk::AttachmentDescription depth_attachment;
+	depth_attachment.format = vk::Format::eD32Sfloat;
+	depth_attachment.samples = vk::SampleCountFlagBits::e1;
+	depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+	depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+	depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+	depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+	depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
+	depth_attachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+	vector<vk::AttachmentDescription> attachments = {
+		color_attachment
+	};
+
+	vk::AttachmentReference color_attachment_reference;
+	color_attachment_reference.attachment = 0;
+	color_attachment_reference.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+	vk::AttachmentReference depth_attachment_reference;
+	depth_attachment_reference.attachment = 1;
+	depth_attachment_reference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+	vk::SubpassDescription subpass;
+	subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &color_attachment_reference;
+	subpass.pDepthStencilAttachment = &depth_attachment_reference;
+
+	vk::SubpassDependency dependency;
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+	dependency.srcAccessMask = (vk::AccessFlagBits)(0);
+	dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+	dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
+							   vk::AccessFlagBits::eColorAttachmentWrite;
+
+	vk::RenderPassCreateInfo renderpass_info;
+	renderpass_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+	renderpass_info.pAttachments = attachments.data();
+	renderpass_info.subpassCount = 1;
+	renderpass_info.pSubpasses = &subpass;
+	renderpass_info.dependencyCount = 1;
+	renderpass_info.pDependencies = &dependency;
+
+	renderpass = device.createRenderPass(renderpass_info);
 }
 
 void InstanceVK::create_framebuffers() {
 	swapchain_framebuffers.resize(swapchain_imageviews.size());
 
 	for (size_t i = 0; i < swapchain_imageviews.size(); i++) {
-		std::array<vk::ImageView, 2> attachments = {
-			swapchain_imageviews[i], depth_imageview
+		std::vector<vk::ImageView> attachments = {
+			swapchain_imageviews[i]
 		};
 
 		vk::FramebufferCreateInfo framebuffer_info;
@@ -495,9 +550,9 @@ vk::Device InstanceVK::get_device() {
 	return device;
 }
 
-/*VmaAllocator *InstanceVK::get_allocator() {
-	return &allocator;
-}*/
+VmaAllocator InstanceVK::get_allocator() {
+	return allocator;
+}
 
 vk::Queue InstanceVK::get_queue_graphics() {
 	return graphics_queue;
@@ -516,7 +571,7 @@ vk::Extent2D InstanceVK::get_swapchain_extent() {
 }
 
 vk::Format InstanceVK::get_swapchain_format() {
-	return swapchain_image_format;
+	return swapchain_format;
 }
 
 // ##################################################
@@ -547,17 +602,15 @@ InstanceVK::~InstanceVK() {
 		device.destroyFramebuffer(swapchain_framebuffers[i]);
 	}
 
+	device.destroyRenderPass(renderpass);
+
 	for (size_t i = 0; i < swapchain_imageviews.size(); i++) {
 		device.destroyImageView(swapchain_imageviews[i]);
 	}
 
-	//device.destroyImageView(depth_imageview);
-	//device.destroyImage(depth_image);
-	//device.freeMemory(depth_memory);
-
 	device.destroySwapchainKHR(swapchain);
 
-	//vmaDestroyAllocator(allocator);
+	vmaDestroyAllocator(allocator);
 	device.waitIdle();
 	device.destroy();
 

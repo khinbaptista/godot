@@ -3,12 +3,11 @@
 #include "typedefs.h"
 #include "version.h"
 
-//#define VMA_IMPLEMENTATION
-//#include "vk_mem_alloc.h"
-
 #include <algorithm>
 #include <vector>
 #include <vulkan/vulkan.hpp>
+
+#include "vk_mem_alloc.h"
 
 struct VkQueueFamilyIndices {
 	int graphics = -1;
@@ -69,7 +68,7 @@ protected:
 	// It's platform-independent, interface directly to the display (no OS)
 	// (ref: 'Vulkan Programming Guide' book, p. 139)
 
-	//VmaAllocator allocator;
+	VmaAllocator allocator;
 
 	vk::PhysicalDevice physical_device;
 	vk::Device device;
@@ -78,7 +77,7 @@ protected:
 
 	vk::SwapchainKHR swapchain;
 	vk::Extent2D swapchain_extent;
-	vk::Format swapchain_image_format;
+	vk::Format swapchain_format;
 	std::vector<vk::Image> swapchain_images;
 	std::vector<vk::ImageView> swapchain_imageviews;
 	std::vector<vk::Framebuffer> swapchain_framebuffers;
@@ -106,7 +105,7 @@ protected:
 	void pick_physical_device();
 	void create_logical_device();
 	void create_swapchain();
-	//void create_renderpass();
+	void create_renderpass();
 	void create_framebuffers();
 	void create_command_pool();
 	void create_command_buffers();
@@ -120,7 +119,7 @@ public:
 	vk::PhysicalDevice get_physical_device();
 	vk::PhysicalDeviceLimits get_device_limits();
 	vk::Device get_device();
-	//VmaAllocator *get_allocator();
+	VmaAllocator get_allocator();
 
 	vk::Queue get_queue_graphics();
 	vk::Queue get_queue_present();

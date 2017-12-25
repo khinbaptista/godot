@@ -1,3 +1,6 @@
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 #include "vk_helper.h"
 
 #include "error_macros.h"
@@ -64,43 +67,56 @@ uint32_t vk_FindMemoryType(
 }
 
 vk::Image vk_CreateImage(
-		uint32_t width, uint32_t height,
+		VmaAllocation &allocation, // out
+		vk::ImageCreateInfo image_info,
+		VmaAllocationCreateInfo alloc_info) {
+
+	vk::Image image;
+	VmaAllocator allocator = InstanceVK::get_singleton()->get_allocator();
+
+	auto result = vmaCreateImage(&allocator, &image_info, &alloc_info, &image, &allocation, nullptr);
+
+	ERR_EXPLAIN("Failed to create vulkan image");
+	ERR_FAIL_COND_V(result != VK_SUCCESS, vk::Image());
+
+	return image;
+}
+
+vk::Image vk_CreateImage(
+		VmaAllocation &allocation,
+		uint32_t width,
+		uint32_t height,
 		vk::Format format,
 		vk::ImageTiling tiling,
 		vk::ImageUsageFlags usage,
-		vk::MemoryPropertyFlags properties,
-		vk::DeviceMemory &memory,
-		vk::DeviceSize offset) {
+		VmaMemoryUsage memory_usage,
+		VmaAllocationCreateFlags allocation_flags,
+		uint32_t depth,
+		uint32_t mipLevels,
+		uint32_t arrayLayers,
+		vk::SampleCountFlagBits samples,
+		vk::ImageLayout initialLayout,
+		vk::SharingMode sharingMode) {
 
-	vk::Device device = InstanceVK::get_singleton()->get_device();
-
-	vk::ImageCreateInfo image_info = {};
+	vk::ImageCreateInfo image_info;
 	image_info.imageType = vk::ImageType::e2D;
 	image_info.extent.width = width;
 	image_info.extent.height = height;
-	image_info.extent.depth = 1;
-	image_info.mipLevels = 1;
-	image_info.arrayLayers = 1;
+	image_info.extent.depth = depth;
+	image_info.mipLevels = mipLevels;
+	image_info.arrayLayers = arrayLayers;
 	image_info.format = format;
 	image_info.tiling = tiling;
-	image_info.initialLayout = vk::ImageLayout::eUndefined;
+	image_info.initialLayout = initialLayout;
 	image_info.usage = usage;
-	image_info.samples = vk::SampleCountFlagBits::e1;
-	image_info.sharingMode = vk::SharingMode::eExclusive;
+	image_info.samples = samples;
+	image_info.sharingMode = sharingMode;
 
-	vk::Image image = device.createImage(image_info);
+	VmaAllocationCreateInfo alloc_info;
+	alloc_info.usage = memory_usage;
+	alloc_info.flags = allocation_flags;
 
-	vk::MemoryRequirements memreq;
-	memreq = device.getImageMemoryRequirements(image);
-
-	vk::MemoryAllocateInfo alloc_info = {};
-	alloc_info.allocationSize = memreq.size;
-	alloc_info.memoryTypeIndex = vk_FindMemoryType(memreq.memoryTypeBits, properties);
-
-	memory = device.allocateMemory(alloc_info);
-	device.bindImageMemory(image, memory, offset);
-
-	return image;
+	return vk_CreateImage(allocation, image_info, alloc_info);
 }
 
 vk::ImageView vk_CreateImageView(
@@ -125,5 +141,10 @@ vk::ImageView vk_CreateImageView(
 	view_info.subresourceRange.baseArrayLayer = baseArrayLayer;
 	view_info.subresourceRange.layerCount = layerCount;
 
-	return device.createImageView(view_info);
+	vk::ImageView imageview = device.createImageView(view_info);
+
+	ERR_EXPLAIN("Couldn't create vulkan image view");
+	ERR_FAIL_COND_V(!imageview, vk::ImageView());
+
+	return imageview;
 }

@@ -2,6 +2,7 @@
 
 Import('env')
 
-env.add_source_files(env.drivers_sources,"*.cpp")
+if (not env['vulkan']):
+	env.add_source_files(env.drivers_sources,"*.cpp")
 
 SConscript("shaders/SCsub")

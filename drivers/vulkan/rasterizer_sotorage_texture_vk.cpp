@@ -110,6 +110,7 @@ Ref<Image> RasterizerStorageVK::_get_vk_image_and_format(
 			image = image->duplicate();
 			image->decompress();
 			ERR_FAIL_COND_V(image->is_compressed(), image);
+
 			image->convert(Image::FORMAT_RGBA8);
 		}
 
