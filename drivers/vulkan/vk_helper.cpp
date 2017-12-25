@@ -106,23 +106,24 @@ vk::Image vk_CreateImage(
 vk::ImageView vk_CreateImageView(
 		vk::Image image,
 		vk::Format format,
-		vk::ImageAspectFlags aspect_flags) {
+		vk::ImageAspectFlags aspect_flags,
+		vk::ImageViewType view_type,
+		uint32_t levelCount,
+		uint32_t layerCount,
+		uint32_t baseMipLevel,
+		uint32_t baseArrayLayer) {
 
 	vk::Device device = InstanceVK::get_singleton()->get_device();
 
 	vk::ImageViewCreateInfo view_info = {};
 	view_info.image = image;
-	view_info.viewType = vk::ImageViewType::e2D;
+	view_info.viewType = view_type;
 	view_info.format = format;
-	view_info.components.r = vk::ComponentSwizzle::eIdentity;
-	view_info.components.g = vk::ComponentSwizzle::eIdentity;
-	view_info.components.b = vk::ComponentSwizzle::eIdentity;
-	view_info.components.a = vk::ComponentSwizzle::eIdentity;
 	view_info.subresourceRange.aspectMask = aspect_flags;
-	view_info.subresourceRange.baseMipLevel = 0;
-	view_info.subresourceRange.levelCount = 1;
-	view_info.subresourceRange.baseArrayLayer = 0;
-	view_info.subresourceRange.layerCount = 1;
+	view_info.subresourceRange.baseMipLevel = baseMipLevel;
+	view_info.subresourceRange.levelCount = levelCount;
+	view_info.subresourceRange.baseArrayLayer = baseArrayLayer;
+	view_info.subresourceRange.layerCount = layerCount;
 
 	return device.createImageView(view_info);
 }

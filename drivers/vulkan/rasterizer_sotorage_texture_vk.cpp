@@ -28,10 +28,10 @@ Ref<Image> RasterizerStorageVK::_get_vk_image_and_format(
 		case Image::FORMAT_R8: {
 			vk_format = vk::Format::eR8Unorm;
 		} break;
-		case Image::FORMAT_RG8:{
+		case Image::FORMAT_RG8: {
 			vk_format = vk::Format::eR8G8Unorm;
 		} break;
-		case Image::FORMAT_RGB8:{
+		case Image::FORMAT_RGB8: {
 			srgb = (config.srgb_decode_supported || (p_flags & VS::TEXTURE_FLAG_CONVERT_TO_LINEAR));
 			vk_format = srgb ? vk::Format::eR8G8B8Srgb : eR8G8B8Unorm;
 			srgb = true;
@@ -153,6 +153,7 @@ void RasterizerStorageVK::texture_allocate(
 
 	_get_vk_image_and_format(Ref<Image>(), texture->format, texture->flags, format, compressed, srgb);
 
+	texture->vk_format = format;
 	texture->alloc_width = texture->width;
 	texture->alloc_height = texture->height;
 
@@ -161,89 +162,136 @@ void RasterizerStorageVK::texture_allocate(
 	texture->data_size = 0;
 	texture->mipmaps = 1;
 
-	// create image, imageview and allocate device memory, bind to texture
-	// OR figure out how to use VmaAllocator (preferably)
+	// TODO: parameterize tiling, usage and properties
+	texture->image = vk_CreateImage(
+			texture->alloc_width, texture->alloc_height,
+			texture->vk_format, vk::ImageTiling::eLinear,
+			vk::ImageUsageFlags usage,
+			vk::MemoryPropertyFlags properties,
+			texture->memory);
+
+	// TODO: parameterize aspect flags, view type,
+	// baseMipLevel, levelCount, baseArrayLayer and layerCount
+	texture->imageview = vk_CreateImageView(
+			texture->image,
+			texture->vk_format,
+			vk::ImageAspectFlags,
+			vk::ImageViewType, // may be cubemap
+			optional uint32_t levelCount = 1,
+			optional uint32_t layerCount = 1,
+			optional uint32_t baseMipLevel = 0,
+			optional uint32_t baseArrayLayer = 0);
 }
 
 void RasterizerStorageVK::texture_set_data(
 		RID p_texture, const Ref<Image> &p_image, VS::CubeMapSide p_cube_side) {
 	Texture *texture = texture_owner.get(p_texture);
 	ERR_FAIL_COND(!texture);
+
+	// TODO: implement
 }
 
 Ref<Image> RasterizerStorageVK::texture_get_data(RID p_texture, VS::CubeMapSide p_cube_side) const {
 	return Ref<Image>();
+
+	// TODO: implement
 }
 
 void RasterizerStorageVK::texture_set_flags(RID p_texture, uint32_t p_flags) {}
 
 uint32_t RasterizerStorageVK::texture_get_flags(RID p_texture) const {
 	Texture *texture = texture_owner.get(p_texture);
-
 	ERR_FAIL_COND_V(!texture, 0);
+
 	return texture->flags;
 }
 
 Image::Format RasterizerStorageVK::texture_get_format(RID p_texture) const {
 	Texture *texture = texture_owner.get(p_texture);
-
 	ERR_FAIL_COND_V(!texture, Image::FORMAT_L8);
 
 	return texture->format;
 }
 
 uint32_t RasterizerStorageVK::texture_get_texid(RID p_texture) const {
-	Texture *texture = texture_owner.get(p_texture);
-
-	ERR_FAIL_COND_V(!texture, 0);
-	return 0;
-	//return texture->tex_id;
+	ERR_EXPLAIN("Cannot get 'tex_id' while using Vulkan renderer");
+	ERR_FAIL_V(0);
 }
 
 uint32_t RasterizerStorageVK::texture_get_width(RID p_texture) const {
 	Texture *texture = texture_owner.get(p_texture);
-
 	ERR_FAIL_COND_V(!texture, 0);
+
 	return texture->width;
 }
 
 uint32_t RasterizerStorageVK::texture_get_height(RID p_texture) const {
 	Texture *texture = texture_owner.get(p_texture);
-
 	ERR_FAIL_COND_V(!texture, 0);
+
 	return texture->height;
 }
 
 void RasterizerStorageVK::texture_set_size_override(RID p_texture, int p_width, int p_height) {
 	Texture *texture = texture_owner.get(p_texture);
 	ERR_FAIL_COND(!texture);
+	ERR_FAIL_COND(texture->render_target);
 
+	int max_dimension = static_cast<int>(InstanceVK::get_singleton()->get_device_limits().maxImageDimension2D);
+	ERR_FAIL_COND(p_width <= 0 || p_width > max_dimension);
+	ERR_FAIL_COND(p_height <= 0 || p_height > max_dimension);
+
+	//real texture size is in alloc width and height
 	texture->width = p_width;
 	texture->height = p_height;
 }
 
 void RasterizerStorageVK::texture_set_path(RID p_texture, const String &p_path) {
 	Texture *texture = texture_owner.get(p_texture);
-
 	ERR_FAIL_COND(!texture);
+
 	texture->path = p_path;
 }
 
 String RasterizerStorageVK::texture_get_path(RID p_texture) const {
 	Texture *texture = texture_owner.get(p_texture);
-
 	ERR_FAIL_COND_V(!texture, String());
+
 	return texture->path;
 }
 
-void RasterizerStorageVK::texture_set_shrink_all_x2_on_set_data(bool p_enable) {}
+void RasterizerStorageVK::texture_set_shrink_all_x2_on_set_data(bool p_enable) {
+	config.shrink_textures_x2 = p_enable;
+}
 
-void RasterizerStorageVK::texture_debug_usage(List<VS::TextureInfo> *r_info) {}
+void RasterizerStorageVK::textures_keep_original(bool p_enable) {
+	config.keep_original_textures = p_enable;
+}
+
+void RasterizerStorageVK::texture_debug_usage(List<VS::TextureInfo> *r_info) {
+	List<RID> textures;
+	texture_owner.get_owned_list(&textures);
+
+	for (List<RID>::Element *E = textures.front(); E; E = E->next()) {
+		Texture *t = texture_owner.get(E->get());
+		if (!t) continue;
+
+		VS::TextureInfo tinfo;
+		tinfo.path = t->path;
+		tinfo.format = t->format;
+		tinfo.size.x = t->alloc_width;
+		tinfo.size.y = t->alloc_height;
+		tinfo.bytes = t->total_data_size;
+		r_info->push_back(tinfo);
+	}
+}
 
 RID RasterizerStorageVK::texture_create_radiance_cubemap(RID p_source, int p_resolution) const {
 	Texture *texture = texture_owner.get(p_source);
 	ERR_FAIL_COND_V(!texture, RID());
 	ERR_FAIL_COND_V(!(texture->flags & VS::TEXTURE_FLAG_CUBEMAP), RID());
+
+	// TODO: implement
 
 	return RID();
 }
@@ -251,16 +299,23 @@ RID RasterizerStorageVK::texture_create_radiance_cubemap(RID p_source, int p_res
 void RasterizerStorageVK::texture_set_detect_3d_callback(
 		RID p_texture,
 		VisualServer::TextureDetectCallback p_callback,
-		void *p_userdata) {}
+		void *p_userdata) {
+
+	// TODO: implement
+}
 
 void RasterizerStorageVK::texture_set_detect_srgb_callback(
 		RID p_texture,
 		VisualServer::TextureDetectCallback p_callback,
-		void *p_userdata) {}
+		void *p_userdata) {
+
+	// TODO: implement
+}
 
 void RasterizerStorageVK::texture_set_detect_normal_callback(
 		RID p_texture,
 		VisualServer::TextureDetectCallback p_callback,
-		void *p_userdata) {}
+		void *p_userdata) {
 
-void RasterizerStorageVK::textures_keep_original(bool p_enable) {}
+	// TODO: implement
+}

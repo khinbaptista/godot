@@ -26,4 +26,9 @@ vk::Image vk_CreateImage(
 vk::ImageView vk_CreateImageView(
 		vk::Image,
 		vk::Format,
-		vk::ImageAspectFlags);
+		vk::ImageAspectFlags = vk::ImageAspectFlagBits::eColor,
+		vk::ImageViewType = vk::ImageViewType::e2D,
+		uint32_t levelCount = 1,
+		uint32_t layerCount = 1,
+		uint32_t baseMipLevel = 0,
+		uint32_t baseArrayLayer = 0);
