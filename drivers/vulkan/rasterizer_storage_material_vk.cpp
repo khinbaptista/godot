@@ -1,4 +1,4 @@
-#include "rasterizer_storage_vulkan.h"
+#include "rasterizer_storage_vk.h"
 
 #include "instance_vk.h"
 #include "vk_helper.h"
@@ -122,7 +122,7 @@ void RasterizerStorageVK::_material_create_pipeline(RasterizerStorageVK::Materia
 		pipeline_info.pColorBlendState = &rt->blend_info;
 		pipeline_info.pDynamicState = &dynamic_info;
 		pipeline_info.layout = material->pipeline_layout;
-		pipeline_info.renderPass = rt->render_pass;
+		pipeline_info.renderPass = rt->renderpass;
 		pipeline_info.subpass = 0;
 		pipeline_info.basePipelineHandle = nullptr;
 		pipeline_info.basePipelineIndex = -1;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "rasterizer_canvas_vulkan.h"
-#include "rasterizer_scene_vulkan.h"
-#include "rasterizer_storage_vulkan.h"
+#include "rasterizer_canvas_vk.h"
+#include "rasterizer_scene_vk.h"
+#include "rasterizer_storage_vk.h"
 #include "servers/visual/rasterizer.h"
 
 class RasterizerVK : public Rasterizer {
@@ -37,7 +37,7 @@ public:
 			const Rect2 &p_screen_rect,
 			int p_screen = 0);
 
-	virtual void end_frame();
+	virtual void end_frame(bool p_swap_buffers);
 	virtual void finalize();
 
 	static void make_current();

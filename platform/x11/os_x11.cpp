@@ -30,7 +30,7 @@
 
 #include "os_x11.h"
 #include "drivers/gles3/rasterizer_gles3.h"
-#include "drivers/vulkan/rasterizer_vulkan.h"
+#include "drivers/vulkan/rasterizer_vk.h"
 #include "errno.h"
 #include "key_mapping_x11.h"
 #include "print_string.h"

@@ -74,7 +74,13 @@ vk::Image vk_CreateImage(
 	vk::Image image;
 	VmaAllocator allocator = InstanceVK::get_singleton()->get_allocator();
 
-	auto result = vmaCreateImage(&allocator, &image_info, &alloc_info, &image, &allocation, nullptr);
+	auto result = vmaCreateImage(
+			allocator,
+			(const VkImageCreateInfo *)&image_info,
+			&alloc_info,
+			(VkImage*)&image,
+			&allocation,
+			nullptr);
 
 	ERR_EXPLAIN("Failed to create vulkan image");
 	ERR_FAIL_COND_V(result != VK_SUCCESS, vk::Image());

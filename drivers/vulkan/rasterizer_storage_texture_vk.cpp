@@ -1,4 +1,4 @@
-#include "rasterizer_storage_vulkan.h"
+#include "rasterizer_storage_vk.h"
 
 #include "instance_vk.h"
 #include "vk_helper.h"
@@ -33,12 +33,12 @@ Ref<Image> RasterizerStorageVK::_get_vk_image_and_format(
 		} break;
 		case Image::FORMAT_RGB8: {
 			srgb = (config.srgb_decode_supported || (p_flags & VS::TEXTURE_FLAG_CONVERT_TO_LINEAR));
-			vk_format = srgb ? vk::Format::eR8G8B8Srgb : eR8G8B8Unorm;
+			vk_format = srgb ? vk::Format::eR8G8B8Srgb : vk::Format::eR8G8B8Unorm;
 			srgb = true;
 		} break;
 		case Image::FORMAT_RGBA8: {
 			srgb = (config.srgb_decode_supported || (p_flags & VS::TEXTURE_FLAG_CONVERT_TO_LINEAR));
-			vk_format = srgb ? vk::Format::eR8G8B8A8Srgb : eR8G8B8A8Unorm;
+			vk_format = srgb ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8G8B8A8Unorm;
 			srgb = true;
 		} break;
 		case Image::FORMAT_RGBA4444: {
@@ -55,10 +55,10 @@ Ref<Image> RasterizerStorageVK::_get_vk_image_and_format(
 			vk_format = vk::Format::eR32G32Sfloat;
 		} break;
 		case Image::FORMAT_RGBF: {
-			vk_format = vk::Format::eR32G32A32Sfloat;
+			vk_format = vk::Format::eR32G32B32Sfloat;
 		} break;
 		case Image::FORMAT_RGBAF: {
-			vk_format = vk::Format::eR32G32A32A32Sfloat;
+			vk_format = vk::Format::eR32G32B32A32Sfloat;
 		} break;
 
 		case Image::FORMAT_RH: {
@@ -115,7 +115,7 @@ Ref<Image> RasterizerStorageVK::_get_vk_image_and_format(
 		}
 
 		srgb = (config.srgb_decode_supported || (p_flags & VS::TEXTURE_FLAG_CONVERT_TO_LINEAR));
-		vk_format = srgb ? vk::Format::eR8G8B8A8Srgb : eR8G8B8A8Unorm;
+		vk_format = srgb ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8G8B8A8Unorm;
 		srgb = true;
 		r_compressed = false;
 	}
@@ -165,23 +165,24 @@ void RasterizerStorageVK::texture_allocate(
 
 	// TODO: parameterize tiling, usage and properties
 	texture->image = vk_CreateImage(
+			texture->allocation,
 			texture->alloc_width, texture->alloc_height,
 			texture->vk_format, vk::ImageTiling::eLinear,
-			vk::ImageUsageFlags usage,
-			vk::MemoryPropertyFlags properties,
-			texture->memory);
+			//vk::ImageUsageFlags usage,
+			vk::ImageUsageFlagBits::eColorAttachment,
+			VMA_MEMORY_USAGE_CPU_ONLY);
 
 	// TODO: parameterize aspect flags, view type,
 	// baseMipLevel, levelCount, baseArrayLayer and layerCount
 	texture->imageview = vk_CreateImageView(
 			texture->image,
 			texture->vk_format,
-			vk::ImageAspectFlags,
-			vk::ImageViewType, // may be cubemap
-			optional uint32_t levelCount = 1,
-			optional uint32_t layerCount = 1,
-			optional uint32_t baseMipLevel = 0,
-			optional uint32_t baseArrayLayer = 0);
+			vk::ImageAspectFlagBits::eColor,
+			vk::ImageViewType::e2D);//, // may be cubemap
+			//optional uint32_t levelCount = 1,
+			//optional uint32_t layerCount = 1,
+			//optional uint32_t baseMipLevel = 0,
+			//optional uint32_t baseArrayLayer = 0);
 }
 
 void RasterizerStorageVK::texture_set_data(
@@ -295,6 +296,10 @@ RID RasterizerStorageVK::texture_create_radiance_cubemap(RID p_source, int p_res
 	// TODO: implement
 
 	return RID();
+}
+
+void RasterizerStorageVK::texture_set_proxy(RID p_proxy, RID p_base){
+
 }
 
 void RasterizerStorageVK::texture_set_detect_3d_callback(

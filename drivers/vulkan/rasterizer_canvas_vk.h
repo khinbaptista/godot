@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rasterizer_storage_vulkan.h"
+#include "rasterizer_storage_vk.h"
 #include "servers/visual/rasterizer.h"
 
 class RasterizerSceneVK;

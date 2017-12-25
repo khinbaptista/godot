@@ -45,7 +45,7 @@ Error InstanceVK::setup() {
 
 	create_framebuffers();
 	ERR_EXPLAIN("Failed to create framebuffers");
-	ERR_FAIL_COND_V(framebuffers.empty(), ERR_UNCONFIGURED);
+	ERR_FAIL_COND_V(swapchain_framebuffers.empty(), ERR_UNCONFIGURED);
 
 	create_command_pool();
 	ERR_EXPLAIN("Failed to create command pool");
@@ -483,7 +483,7 @@ void InstanceVK::create_command_pool() {
 }
 
 void InstanceVK::create_command_buffers() {
-	/*command_buffers.resize(framebuffers.size());
+	/*command_buffers.resize(swapchain_framebuffers.size());
 
 	vk::CommandBufferAllocateInfo alloc_info;
 	alloc_info.commandPool = command_pool;
@@ -504,7 +504,7 @@ void InstanceVK::create_command_buffers() {
 
 		vk::RenderPassBeginInfo render_info;
 		render_info.renderPass = renderpass;
-		render_info.framebuffer = framebuffers[i];
+		render_info.framebuffer = swapchain_framebuffers[i];
 		render_info.renderArea.offset = { 0, 0 };
 		render_info.renderArea.extent = swapchain_extent;
 		render_info.clearValueCount = static_cast<uint32_t>(clear_values.count());

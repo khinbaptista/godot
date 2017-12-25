@@ -1,4 +1,4 @@
-#include "rasterizer_vulkan.h"
+#include "rasterizer_vk.h"
 
 #include "os/os.h"
 #include "project_settings.h"
@@ -71,7 +71,7 @@ void RasterizerVK::blit_render_target_to_screen(RID p_render_target, const Rect2
 	// TODO after storage and canvas are created
 }
 
-void RasterizerVK::end_frame() {
+void RasterizerVK::end_frame(bool p_swap_buffers) {
 	//OS::get_singleton()->swap_buffers(); // necessary? -> no
 }
 

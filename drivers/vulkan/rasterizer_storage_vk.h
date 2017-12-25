@@ -3,7 +3,8 @@
 #include "self_list.h"
 #include "servers/visual/rasterizer.h"
 #include "servers/visual/shader_language.h"
-#include "shader_vulkan.h"
+#include "shader_vk.h"
+#include "vk_mem_alloc.h"
 
 #include <map>
 #include <vector>
@@ -194,7 +195,7 @@ public:
 		vk::Format vk_format;
 		vk::Image image;
 		vk::ImageView imageview;
-		vk::DeviceMemory memory;
+		VmaAllocation allocation;
 
 		bool using_srgb;
 
@@ -274,10 +275,11 @@ public:
 	virtual String texture_get_path(RID p_texture) const;
 
 	virtual void texture_set_shrink_all_x2_on_set_data(bool p_enable);
-
 	virtual void texture_debug_usage(List<VS::TextureInfo> *r_info);
-
 	virtual RID texture_create_radiance_cubemap(RID p_source, int p_resolution = -1) const;
+	virtual void textures_keep_original(bool p_enable);
+
+	virtual void texture_set_proxy(RID p_proxy, RID p_base);
 
 	virtual void texture_set_detect_3d_callback(
 			RID p_texture,
@@ -291,8 +293,6 @@ public:
 			RID p_texture,
 			VisualServer::TextureDetectCallback p_callback,
 			void *p_userdata);
-
-	virtual void textures_keep_original(bool p_enable);
 
 	/* SKY API */
 
@@ -676,6 +676,8 @@ public:
 	virtual void mesh_set_blend_shape_mode(RID p_mesh, VS::BlendShapeMode p_mode);
 	virtual VS::BlendShapeMode mesh_get_blend_shape_mode(RID p_mesh) const;
 
+	virtual void mesh_surface_update_region(RID p_mesh, int p_surface, int p_offset, const PoolVector<uint8_t> &p_data);
+
 	virtual void mesh_surface_set_material(RID p_mesh, int p_surface, RID p_material);
 	virtual RID mesh_surface_get_material(RID p_mesh, int p_surface) const;
 
@@ -1012,6 +1014,21 @@ public:
 	virtual GIProbeCompression gi_probe_get_dynamic_data_get_preferred_compression() const;
 	virtual RID gi_probe_dynamic_data_create(int p_width, int p_height, int p_depth, GIProbeCompression p_compression);
 	virtual void gi_probe_dynamic_data_update(RID p_gi_probe_data, int p_depth_slice, int p_slice_count, int p_mipmap, const void *p_data);
+
+	/* LIGHTMAP CAPTURE */
+
+	virtual RID lightmap_capture_create();
+	virtual void lightmap_capture_set_bounds(RID p_capture, const AABB &p_bounds);
+	virtual AABB lightmap_capture_get_bounds(RID p_capture) const;
+	virtual void lightmap_capture_set_octree(RID p_capture, const PoolVector<uint8_t> &p_octree);
+	virtual PoolVector<uint8_t> lightmap_capture_get_octree(RID p_capture) const;
+	virtual void lightmap_capture_set_octree_cell_transform(RID p_capture, const Transform &p_xform);
+	virtual Transform lightmap_capture_get_octree_cell_transform(RID p_capture) const;
+	virtual void lightmap_capture_set_octree_cell_subdiv(RID p_capture, int p_subdiv);
+	virtual int lightmap_capture_get_octree_cell_subdiv(RID p_capture) const;
+	virtual void lightmap_capture_set_energy(RID p_capture, float p_energy);
+	virtual float lightmap_capture_get_energy(RID p_capture) const;
+	virtual const PoolVector<LightmapCaptureOctree> *lightmap_capture_get_octree_ptr(RID p_capture) const;
 
 	/* PARTICLES */
 

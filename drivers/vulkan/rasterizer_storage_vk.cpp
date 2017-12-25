@@ -1,4 +1,4 @@
-#include "rasterizer_storage_vulkan.h"
+#include "rasterizer_storage_vk.h"
 
 /* SKY API */
 
@@ -22,8 +22,8 @@ void RasterizerStorageVK::mesh_add_surface(
 		RID p_mesh, uint32_t p_format, VS::PrimitiveType p_primitive,
 		const PoolVector<uint8_t> &p_array, int p_vertex_count,
 		const PoolVector<uint8_t> &p_index_array, int p_index_count,
-		const Rect3 &p_aabb, const Vector<PoolVector<uint8_t> > &p_blend_shapes,
-		const Vector<Rect3> &p_bone_aabbs) {
+		const AABB &p_aabb, const Vector<PoolVector<uint8_t> > &p_blend_shapes,
+		const Vector<AABB> &p_bone_aabbs) {
 }
 
 void RasterizerStorageVK::mesh_set_blend_shape_count(RID p_mesh, int p_amount) {}
@@ -38,6 +38,8 @@ VS::BlendShapeMode RasterizerStorageVK::mesh_get_blend_shape_mode(RID p_mesh) co
 
 	return mesh->blend_shape_mode;
 }
+
+void RasterizerStorageVK::mesh_surface_update_region(RID p_mesh, int p_surface, int p_offset, const PoolVector<uint8_t> &p_data) {}
 
 void RasterizerStorageVK::mesh_surface_set_material(RID p_mesh, int p_surface, RID p_material) {}
 
@@ -78,10 +80,10 @@ VS::PrimitiveType RasterizerStorageVK::mesh_surface_get_primitive_type(RID p_mes
 	return mesh->surfaces[p_surface]->primitive;
 }
 
-Rect3 RasterizerStorageVK::mesh_surface_get_aabb(RID p_mesh, int p_surface) const {
+AABB RasterizerStorageVK::mesh_surface_get_aabb(RID p_mesh, int p_surface) const {
 	const Mesh *mesh = mesh_owner.getornull(p_mesh);
-	ERR_FAIL_COND_V(!mesh, Rect3());
-	ERR_FAIL_INDEX_V(p_surface, mesh->surfaces.size(), Rect3());
+	ERR_FAIL_COND_V(!mesh, AABB());
+	ERR_FAIL_INDEX_V(p_surface, mesh->surfaces.size(), AABB());
 
 	return mesh->surfaces[p_surface]->aabb;
 }
@@ -90,10 +92,10 @@ Vector<PoolVector<uint8_t> > RasterizerStorageVK::mesh_surface_get_blend_shapes(
 	return Vector<PoolVector<uint8_t> >();
 }
 
-Vector<Rect3> RasterizerStorageVK::mesh_surface_get_skeleton_aabb(RID p_mesh, int p_surface) const {
+Vector<AABB> RasterizerStorageVK::mesh_surface_get_skeleton_aabb(RID p_mesh, int p_surface) const {
 	const Mesh *mesh = mesh_owner.getornull(p_mesh);
-	ERR_FAIL_COND_V(!mesh, Vector<Rect3>());
-	ERR_FAIL_INDEX_V(p_surface, mesh->surfaces.size(), Vector<Rect3>());
+	ERR_FAIL_COND_V(!mesh, Vector<AABB>());
+	ERR_FAIL_INDEX_V(p_surface, mesh->surfaces.size(), Vector<AABB>());
 
 	return mesh->surfaces[p_surface]->skeleton_bone_aabb;
 }
@@ -102,17 +104,17 @@ void RasterizerStorageVK::mesh_remove_surface(RID p_mesh, int p_index) {}
 
 int RasterizerStorageVK::mesh_get_surface_count(RID p_mesh) const {}
 
-void RasterizerStorageVK::mesh_set_custom_aabb(RID p_mesh, const Rect3 &p_aabb) {}
+void RasterizerStorageVK::mesh_set_custom_aabb(RID p_mesh, const AABB &p_aabb) {}
 
-Rect3 RasterizerStorageVK::mesh_get_custom_aabb(RID p_mesh) const {
+AABB RasterizerStorageVK::mesh_get_custom_aabb(RID p_mesh) const {
 	const Mesh *mesh = mesh_owner.getornull(p_mesh);
-	ERR_FAIL_COND_V(!mesh, Rect3());
+	ERR_FAIL_COND_V(!mesh, AABB());
 
 	return mesh->custom_aabb;
 }
 
-Rect3 RasterizerStorageVK::mesh_get_aabb(RID p_mesh, RID p_skeleton) const {
-	return Rect3();
+AABB RasterizerStorageVK::mesh_get_aabb(RID p_mesh, RID p_skeleton) const {
+	return AABB();
 }
 
 void RasterizerStorageVK::mesh_clear(RID p_mesh) {}
@@ -247,9 +249,9 @@ int RasterizerStorageVK::multimesh_get_visible_instances(RID p_multimesh) const 
 	return multimesh->visible_instances;
 }
 
-Rect3 RasterizerStorageVK::multimesh_get_aabb(RID p_multimesh) const {
+AABB RasterizerStorageVK::multimesh_get_aabb(RID p_multimesh) const {
 	MultiMesh *multimesh = multimesh_owner.getornull(p_multimesh);
-	ERR_FAIL_COND_V(!multimesh, Rect3());
+	ERR_FAIL_COND_V(!multimesh, AABB());
 
 	//update pending AABBs
 	//const_cast<RasterizerStorageVK *>(this)->update_dirty_multimeshes();
@@ -293,9 +295,9 @@ RID RasterizerStorageVK::immediate_get_material(RID p_immediate) const {
 	return im->material;
 }
 
-Rect3 RasterizerStorageVK::immediate_get_aabb(RID p_immediate) const {
+AABB RasterizerStorageVK::immediate_get_aabb(RID p_immediate) const {
 	Immediate *im = immediate_owner.get(p_immediate);
-	ERR_FAIL_COND_V(!im, Rect3());
+	ERR_FAIL_COND_V(!im, AABB());
 
 	return im->aabb;
 }
@@ -481,9 +483,9 @@ VS::LightType RasterizerStorageVK::light_get_type(RID p_light) const {
 	return light->type;
 }
 
-Rect3 RasterizerStorageVK::light_get_aabb(RID p_light) const {
+AABB RasterizerStorageVK::light_get_aabb(RID p_light) const {
 	const Light *light = light_owner.getornull(p_light);
-	ERR_FAIL_COND_V(!light, Rect3());
+	ERR_FAIL_COND_V(!light, AABB());
 
 	switch (light->type) {
 
@@ -491,22 +493,22 @@ Rect3 RasterizerStorageVK::light_get_aabb(RID p_light) const {
 
 			float len = light->param[VS::LIGHT_PARAM_RANGE];
 			float size = Math::tan(Math::deg2rad(light->param[VS::LIGHT_PARAM_SPOT_ANGLE])) * len;
-			return Rect3(Vector3(-size, -size, -len), Vector3(size * 2, size * 2, len));
+			return AABB(Vector3(-size, -size, -len), Vector3(size * 2, size * 2, len));
 		} break;
 		case VS::LIGHT_OMNI: {
 
 			float r = light->param[VS::LIGHT_PARAM_RANGE];
-			return Rect3(-Vector3(r, r, r), Vector3(r, r, r) * 2);
+			return AABB(-Vector3(r, r, r), Vector3(r, r, r) * 2);
 		} break;
 		case VS::LIGHT_DIRECTIONAL: {
 
-			return Rect3();
+			return AABB();
 		} break;
 		default: {}
 	}
 
-	ERR_FAIL_V(Rect3());
-	return Rect3();
+	ERR_FAIL_V(AABB());
+	return AABB();
 }
 
 float RasterizerStorageVK::light_get_param(RID p_light, VS::LightParam p_param) {
@@ -573,11 +575,11 @@ void RasterizerStorageVK::reflection_probe_set_enable_shadows(RID p_probe, bool 
 
 void RasterizerStorageVK::reflection_probe_set_cull_mask(RID p_probe, uint32_t p_layers) {}
 
-Rect3 RasterizerStorageVK::reflection_probe_get_aabb(RID p_probe) const {
+AABB RasterizerStorageVK::reflection_probe_get_aabb(RID p_probe) const {
 	const ReflectionProbe *reflection_probe = reflection_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!reflection_probe, Rect3());
+	ERR_FAIL_COND_V(!reflection_probe, AABB());
 
-	Rect3 aabb;
+	AABB aabb;
 	aabb.position = -reflection_probe->extents;
 	aabb.size = reflection_probe->extents * 2.0;
 
@@ -625,7 +627,7 @@ bool RasterizerStorageVK::reflection_probe_renders_shadows(RID p_probe) const {
 
 RID RasterizerStorageVK::gi_probe_create() {
 	GIProbe *gip = memnew(GIProbe);
-	gip->bounds = Rect3(Vector3(), Vector3(1, 1, 1));
+	gip->bounds = AABB(Vector3(), Vector3(1, 1, 1));
 	gip->dynamic_range = 1.0;
 	gip->energy = 1.0;
 	gip->propagation = 1.0;
@@ -639,11 +641,11 @@ RID RasterizerStorageVK::gi_probe_create() {
 	return gi_probe_owner.make_rid(gip);
 }
 
-void RasterizerStorageVK::gi_probe_set_bounds(RID p_probe, const Rect3 &p_bounds) {}
+void RasterizerStorageVK::gi_probe_set_bounds(RID p_probe, const AABB &p_bounds) {}
 
-Rect3 RasterizerStorageVK::gi_probe_get_bounds(RID p_probe) const {
+AABB RasterizerStorageVK::gi_probe_get_bounds(RID p_probe) const {
 	const GIProbe *gip = gi_probe_owner.getornull(p_probe);
-	ERR_FAIL_COND_V(!gip, Rect3());
+	ERR_FAIL_COND_V(!gip, AABB());
 
 	return gip->bounds;
 }
@@ -811,6 +813,46 @@ void RasterizerStorageVK::gi_probe_dynamic_data_update(
 		RID p_gi_probe_data, int p_depth_slice, int p_slice_count, int p_mipmap, const void *p_data) {
 }
 
+/* LIGHTMAP CAPTURE */
+
+RID RasterizerStorageVK::lightmap_capture_create() {
+	return RID();
+}
+
+void RasterizerStorageVK::lightmap_capture_set_bounds(RID p_capture, const AABB &p_bounds) {}
+
+AABB RasterizerStorageVK::lightmap_capture_get_bounds(RID p_capture) const {
+	return AABB();
+}
+
+void RasterizerStorageVK::lightmap_capture_set_octree(RID p_capture, const PoolVector<uint8_t> &p_octree) {}
+
+PoolVector<uint8_t> RasterizerStorageVK::lightmap_capture_get_octree(RID p_capture) const {
+	return PoolVector<uint8_t>();
+}
+
+void RasterizerStorageVK::lightmap_capture_set_octree_cell_transform(RID p_capture, const Transform &p_xform) {}
+
+Transform RasterizerStorageVK::lightmap_capture_get_octree_cell_transform(RID p_capture) const {
+	return Transform();
+}
+
+void RasterizerStorageVK::lightmap_capture_set_octree_cell_subdiv(RID p_capture, int p_subdiv) {}
+
+int RasterizerStorageVK::lightmap_capture_get_octree_cell_subdiv(RID p_capture) const {
+	return 0;
+}
+
+void RasterizerStorageVK::lightmap_capture_set_energy(RID p_capture, float p_energy) {}
+
+float RasterizerStorageVK::lightmap_capture_get_energy(RID p_capture) const {
+	return 0.0f;
+}
+
+const PoolVector<RasterizerStorage::LightmapCaptureOctree> *RasterizerStorageVK::lightmap_capture_get_octree_ptr(RID p_capture) const {
+	return nullptr;
+}
+
 /* PARTICLES */
 
 RID RasterizerStorageVK::particles_create() {
@@ -832,7 +874,7 @@ void RasterizerStorageVK::particles_set_explosiveness_ratio(RID p_particles, flo
 
 void RasterizerStorageVK::particles_set_randomness_ratio(RID p_particles, float p_ratio) {}
 
-void RasterizerStorageVK::particles_set_custom_aabb(RID p_particles, const Rect3 &p_aabb) {}
+void RasterizerStorageVK::particles_set_custom_aabb(RID p_particles, const AABB &p_aabb) {}
 
 void RasterizerStorageVK::particles_set_speed_scale(RID p_particles, float p_scale) {}
 
@@ -854,13 +896,13 @@ void RasterizerStorageVK::particles_set_draw_pass_mesh(RID p_particles, int p_pa
 
 void RasterizerStorageVK::particles_request_process(RID p_particles) {}
 
-Rect3 RasterizerStorageVK::particles_get_current_aabb(RID p_particles) {
-	return Rect3();
+AABB RasterizerStorageVK::particles_get_current_aabb(RID p_particles) {
+	return AABB();
 }
 
-Rect3 RasterizerStorageVK::particles_get_aabb(RID p_particles) const {
+AABB RasterizerStorageVK::particles_get_aabb(RID p_particles) const {
 	const Particles *particles = particles_owner.getornull(p_particles);
-	ERR_FAIL_COND_V(!particles, Rect3());
+	ERR_FAIL_COND_V(!particles, AABB());
 
 	return particles->custom_aabb;
 }

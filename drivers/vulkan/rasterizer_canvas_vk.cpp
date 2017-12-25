@@ -1,7 +1,7 @@
-#include "rasterizer_canvas_vulkan.h"
+#include "rasterizer_canvas_vk.h"
 #include "os/os.h"
 #include "project_settings.h"
-#include "rasterizer_scene_vulkan.h"
+#include "rasterizer_scene_vk.h"
 #include "servers/visual/visual_server_raster.h"
 
 static _FORCE_INLINE_ void store_transform2d(const Transform2D &p_mtx, float *p_array) {

@@ -1,4 +1,4 @@
-#include "rasterizer_storage_vulkan.h"
+#include "rasterizer_storage_vk.h"
 
 #include "instance_vk.h"
 #include "vk_helper.h"
@@ -141,7 +141,7 @@ void RasterizerStorageVK::_render_target_allocate(RasterizerStorageVK::RenderTar
 		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 		dependency.dstSubpass = 0;
 		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-		dependency.srcAccessMask = 0;
+		dependency.srcAccessMask = vk::AccessFlags();
 		dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 		dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
 
@@ -167,18 +167,12 @@ RID RasterizerStorageVK::render_target_create() {
 	t->alloc_height = 0;
 	t->alloc_width = 0;
 	t->format = Image::FORMAT_R8;
-	//t->target = GL_TEXTURE_2D;
-	//t->gl_format_cache = 0;
-	//t->gl_internal_format_cache = 0;
-	//t->gl_type_cache = 0;
 	t->data_size = 0;
 	t->compressed = false;
 	t->srgb = false;
 	t->total_data_size = 0;
 	t->ignore_mipmaps = false;
 	t->mipmaps = 1;
-	t->active = true;
-	//t->tex_id = 0;
 	t->render_target = rt;
 
 	rt->texture = texture_owner.make_rid(t);
